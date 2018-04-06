@@ -1,0 +1,99 @@
+This is a collection of tools to analyze results from the local 
+gyrokinetic code GS2.
+
+Written by Nicolas Christen (nicolas.christen92@gmail.com),
+based on scripts from Michael Barnes.
+
+----------------------------------------------------------------------
+PREREQUISITES
+----------------------------------------------------------------------
+
+LaTeX (to install: https://www.tug.org/texlive/quickinstall.html)
+
+python3 with following packages (to install them: pip install pckg_name):
+    - netCDF4
+    - numpy
+    - f90nml
+    - scipy
+    - matplotlib
+    - math
+    - PyPDF2
+    - imageio
+
+---
+
+To set up and then use a python3 virtual environment on most Unix machines
+(for ARCHER see below):
+
+$ cd ~
+$ virtualenv -p python3 venv
+
+$ source ~/venv/bin/activate
+...
+$ source deactivate
+
+---
+
+To set up and then use a python3 virtual environment on ARCHER:
+
+$ cd ~
+$ module load anaconda/2.2.0-python3
+$ conda create -n venv --clone=/home/y07/y07/cse/anaconda/2.2.0-python3
+
+$ module load anaconda/2.2.0-python3
+$ source activate venv
+...
+$ source deactivate
+
+----------------------------------------------------------------------
+WHAT THESE SCRIPTS DO
+----------------------------------------------------------------------
+
+It is assumed that the user has GS2 input files and the corresponding 
+output NETCDF files in a single folder [work_dir]. The user specifies 
+the list [fnames] of files he wants to analyze, as well as the list [tasks]
+of which plotting scripts he wishes to run (see gs2_analysis.py for all
+possibilities). These can either be tasks that analyze a single pair of 
+in/out files or tasks which analyze a collection of in/out pairs (e.g. 
+for a parameter scan).
+
+The code first reads parameters from the input and output files. It then 
+computes quantities that may be useful to the user (spatial grids, time 
+grids and fields).
+
+Then, for every in/out pair of files, it runs those tasks that analyze single
+runs and it also stores data which will be required by tasks analyzing the entire 
+collection of runs. Finally, it runs the tasks analyzing the entire collection.
+
+----------------------------------------------------------------------
+RUN
+----------------------------------------------------------------------
+
+python3 gs2_analysis.py [options]
+
+Options:
+    -t --tasks     : Task(s) to complete. Default is 'fluxes'.
+                     Check gs2_analysis.py for all possibilities.
+    -w --work_dir  : Path to directory containing GS2 input and output files.
+                     Default is current directory.
+    -f --fnames    : Name(s) of simulation(s), without extension of file(s).
+                     Must be specified if not in quick mode (-q, --quick).
+    -s --scan_name : Name of scan, without any extension. Must be specified if
+                     multiple fnames are provided and quick mode is not enabled (-q, --quick).
+    -o --out_dir   : Path to directory where plots will be saved. Default is current directory.
+    --twin         : Specify fraction of time over which the solution is nonlinearly
+                     saturated (0.0 -> 1.0). Default is 0.5.
+    -q --quick     : Quick mode, all parameters are set to values from
+                     gs2_quick_parameters.py file.
+    -n --no_plot   : Saving output from tasks to 'my_file.my_task.dat', without plotting
+                     (useful when re-plotting large files multiple times).
+    -p --only_plot : When output from tasks has already been saved to 'my_file.my_task.dat'
+                     files, so no reading from NETCDF files required.
+
+----------------------------------------------------------------------
+ADDING YOUR OWN PLOTTING TASK
+----------------------------------------------------------------------
+
+To add your own plotting task, you can follow the instructions given after the 'TODO' 
+statements in the scripts (grep for 'TODO'). The variables which are available to use 
+are also described in detail.
