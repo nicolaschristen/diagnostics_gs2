@@ -33,7 +33,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_dmid = 0
 
     # Select time for plot of phi vs ballooning angle
-    my_it = 1
+    my_it = 1000
 
     # make movies of phi and growthrate along ballooning angle ?
     make_movies = False
@@ -80,7 +80,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     jtwist = int(myin['kt_grids_box_parameters']['jtwist'])
     
     # number of t-steps in Floquet period
-    Tf = 2*pi*shat/g_exb
+    Tf = abs(2*pi*shat/g_exb)
     print('Floquet period : ' + str(Tf))
     Nf = int(round(Tf/delt))
     print('Number of t-steps in Floquet period : ' + str(Nf))
@@ -95,7 +95,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     ikx_min = ikx_max+1
     
     # number of t-steps before ExB re-map
-    N = int(round(dkx/(g_exb*delt*dky)))
+    N = abs(int(round(dkx/(g_exb*delt*dky))))
     print('Number of t-steps before ExB re-map : ' + str(N))
 
     phi2_gs2 = myout['phi2_by_mode'][:,:,:]
