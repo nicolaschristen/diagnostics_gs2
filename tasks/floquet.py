@@ -33,7 +33,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_dmid = 0
 
     # Select time for plot of phi vs ballooning angle
-    my_it = 1000
+    my_it = 250
 
     # make movies of phi and growthrate along ballooning angle ?
     make_movies = False
@@ -112,9 +112,12 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
 
     # get kx from kx_star
     kx = np.zeros((nt,naky,nakx))
-    for it in range(nt):
+    # @ it = 0, kx = kx_star
+    # First step is taken with 0.5*dt
+    # Other steps taken with full dt
+    for it in range(1,nt):
         for iky in range(naky):
-            ikx_shift = int(round(g_exb*ky[iky]*delt*it/dkx))
+            ikx_shift = int(round(g_exb*ky[iky]*delt*(it-0.5)/dkx))
             for ikx in range(nakx):
                 kx[it,iky,ikx] = kx_star[ikx] + ikx_shift*dkx
  
@@ -130,7 +133,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     ikx_shift_old = 0
     gamma_mid = np.zeros((nt,nakx))
     for it in range(1,nt):
-        ikx_shift = int(round(g_exb*ky[my_iky]*delt*it/dkx))
+        ikx_shift = int(round(g_exb*ky[my_iky]*delt*(it-0.5)/dkx))
         shifted = ikx_shift - ikx_shift_old
         for ikx in range(nakx):
             if ikx + shifted >= 0 and ikx + shifted < nakx:
@@ -151,7 +154,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     it = 1
     for ifloq in range(((nt-1)//Nf)):
         while (it <= (ifloq+1)*Nf):
-            ikx_shift = int(round(g_exb*ky[my_iky]*delt*(it-ifloq*Nf)/dkx))
+            ikx_shift = int(round(g_exb*ky[my_iky]*delt*((it-0.5)-ifloq*Nf)/dkx))
             for ikx in range(nakx):
                 if ((ikx-ikx_shift) >= 0 and (ikx-ikx_shift) < nakx):
                     if phi2_bytheta[it-1,my_iky,ikx-ikx_shift_old,(ntheta-1)//2]==0:
@@ -195,7 +198,10 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
         # BLACK MAGIC LINE :
         # if the position of delt and it are swapped in the following multiplication,
         # the resulting ikx_shift can be different ! (e.g. it=297 for ~/gs2/flowtest/dkx_scan/dkx_2.in)
-        ikx_shift = int(round(g_exb*ky[my_iky]*delt*it/dkx))
+        if it>=1:
+            ikx_shift = int(round(g_exb*ky[my_iky]*delt*(it-0.5)/dkx))
+        else:
+            ikx_shift = 0
     
         # fill in part with kx<=0
         # ikx such that kx(kx_star[it,ikx]) = dmid*dkx
