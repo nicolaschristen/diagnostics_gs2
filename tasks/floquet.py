@@ -36,7 +36,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = 250
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = False
+    make_movies = True
 
     #
     #
@@ -257,6 +257,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     my_vars['t'] = t
     my_vars['delt'] = delt
     my_vars['kx'] = kx
+    my_vars['nakx'] = nakx
     my_vars['kx_star'] = kx_star
     my_vars['dkx'] = dkx
     my_vars['bloonang_chain'] = bloonang_chain
@@ -310,6 +311,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     t = my_vars['t']
     delt = my_vars['delt']
     kx = my_vars['kx']
+    nakx = my_vars['nakx']
     kx_star = my_vars['kx_star']
     dkx = my_vars['dkx']
     bloonang_chain = my_vars['bloonang_chain']
@@ -445,50 +447,50 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     gplots.merge_pdfs(pdflist,outname,run,ifile)
     
     # make movie of growthrate at mid-plane vs kx over time
-    if (make_movies and phi_t_present):
-        
-        moviename = run.out_dir + 'growth_mid_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.mp4'
-        images = []
+    #if (make_movies and phi_t_present):
+    #    
+    #    moviename = run.out_dir + 'growth_mid_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.mp4'
+    #    images = []
 
-        # find global min and max of kx
-        kx_min = 0.
-        kx_max = 0.
-        for it in range(nt):
-            for ikx in range(nakx):
-                if np.min(kx[it,my_iky,ikx]) < kx_min:
-                    kx_min = np.min(kx[it,my_iky,ikx])
-                if np.max(kx[it,my_iky,ikx]) > kx_max:
-                    kx_max = np.max(kx[it,my_iky,ikx])
-       
-        print("\ncreating movie of growthrate at mid-plane vs kx ...")
-        for it in range(nt):
-            
-            sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
-       
-            plt.xlabel('$k_x$')
-            plt.ylabel('$\\gamma (\\theta=0)$')
-            plt.title('$t=$ '+str(t[it]))
-            plt.grid(True)
-            plt.gca().set_xlim(kx_min,kx_max)
-            plt.gca().set_ylim(bottom=-0.5)
-            plt.gca().set_ylim(top=0.5)
-            plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
-            plt.plot(kx[it,my_iky,:], gamma_mid[it,:], marker='o', \
-                    markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
+    #    # find global min and max of kx
+    #    kx_min = 0.
+    #    kx_max = 0.
+    #    for it in range(nt):
+    #        for ikx in range(nakx):
+    #            if np.min(kx[it,my_iky,ikx]) < kx_min:
+    #                kx_min = np.min(kx[it,my_iky,ikx])
+    #            if np.max(kx[it,my_iky,ikx]) > kx_max:
+    #                kx_max = np.max(kx[it,my_iky,ikx])
+    #   
+    #    print("\ncreating movie of growthrate at mid-plane vs kx ...")
+    #    for it in range(nt):
+    #        
+    #        sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
+    #   
+    #        plt.xlabel('$k_x$')
+    #        plt.ylabel('$\\gamma (\\theta=0)$')
+    #        plt.title('$t=$ '+str(t[it]))
+    #        plt.grid(True)
+    #        plt.gca().set_xlim(kx_min,kx_max)
+    #        plt.gca().set_ylim(bottom=-0.5)
+    #        plt.gca().set_ylim(top=0.5)
+    #        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
+    #        plt.plot(kx[it,my_iky,:], gamma_mid[it,:], marker='o', \
+    #                markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
 
-            pngname = run.out_dir + 'tmp_image.png'
-            plt.savefig(pngname)
-            
-            images.append(imageio.imread(pngname))
-            os.system('rm -rf ' + pngname)
+    #        pngname = run.out_dir + 'tmp_image.png'
+    #        plt.savefig(pngname)
+    #        
+    #        images.append(imageio.imread(pngname))
+    #        os.system('rm -rf ' + pngname)
 
-            plt.clf()
-            plt.cla()
+    #        plt.clf()
+    #        plt.cla()
 
-            sys.stdout.flush()
-        
-        imageio.mimsave(moviename, images, format='FFMPEG')
-        print("\n... movie completed.")
+    #        sys.stdout.flush()
+    #    
+    #    imageio.mimsave(moviename, images, format='FFMPEG')
+    #    print("\n... movie completed.")
 
     # plot growthrate vs theta-theta0 at time t[my_it]
     plt.xlabel('$\\theta - \\theta_0$')
@@ -505,49 +507,49 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     plt.cla()
 
     # make movie of growthrate vs ballooning angle over time
-    if (make_movies and phi_t_present):
-        
-        moviename = run.out_dir + 'growth_bloon_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.mp4'
-        images = []
+    #if (make_movies and phi_t_present):
+    #    
+    #    moviename = run.out_dir + 'growth_bloon_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.mp4'
+    #    images = []
 
-        # find global min and max of ballooning angle
-        bloonang_min = 0.
-        bloonang_max = 0.
-        for it in range(nt):
-            if np.min(bloonang_chain[it]) < bloonang_min:
-                bloonang_min = np.min(bloonang_chain[it])
-            if np.max(bloonang_chain[it]) > bloonang_max:
-                bloonang_max = np.max(bloonang_chain[it])
-       
-        print("\ncreating movie of growthrate vs ballooning angle ...")
-        for it in range(nt):
-            
-            sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
-       
-            plt.xlabel('$\\theta -\\theta_0$')
-            plt.ylabel('$\\gamma$')
-            plt.title('$t=$ '+str(t[it]))
-            plt.grid(True)
-            plt.gca().set_xlim(bloonang_min,bloonang_max)
-            plt.gca().set_ylim(bottom=-0.5)
-            plt.gca().set_ylim(top=0.5)
-            plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
-            plt.plot(bloonang_chain[it], gamma_chain[it], marker='o', \
-                    markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
+    #    # find global min and max of ballooning angle
+    #    bloonang_min = 0.
+    #    bloonang_max = 0.
+    #    for it in range(nt):
+    #        if np.min(bloonang_chain[it]) < bloonang_min:
+    #            bloonang_min = np.min(bloonang_chain[it])
+    #        if np.max(bloonang_chain[it]) > bloonang_max:
+    #            bloonang_max = np.max(bloonang_chain[it])
+    #   
+    #    print("\ncreating movie of growthrate vs ballooning angle ...")
+    #    for it in range(nt):
+    #        
+    #        sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
+    #   
+    #        plt.xlabel('$\\theta -\\theta_0$')
+    #        plt.ylabel('$\\gamma$')
+    #        plt.title('$t=$ '+str(t[it]))
+    #        plt.grid(True)
+    #        plt.gca().set_xlim(bloonang_min,bloonang_max)
+    #        plt.gca().set_ylim(bottom=-0.5)
+    #        plt.gca().set_ylim(top=0.5)
+    #        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
+    #        plt.plot(bloonang_chain[it], gamma_chain[it], marker='o', \
+    #                markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
 
-            pngname = run.out_dir + 'tmp_image.png'
-            plt.savefig(pngname)
-            
-            images.append(imageio.imread(pngname))
-            os.system('rm -rf ' + pngname)
+    #        pngname = run.out_dir + 'tmp_image.png'
+    #        plt.savefig(pngname)
+    #        
+    #        images.append(imageio.imread(pngname))
+    #        os.system('rm -rf ' + pngname)
 
-            plt.clf()
-            plt.cla()
+    #        plt.clf()
+    #        plt.cla()
 
-            sys.stdout.flush()
-        
-        imageio.mimsave(moviename, images, format='FFMPEG')
-        print("\n... movie completed.")
+    #        sys.stdout.flush()
+    #    
+    #    imageio.mimsave(moviename, images, format='FFMPEG')
+    #    print("\n... movie completed.")
     
     # plot phi2 vs t for each kx
     plt.xlabel('$t$')
