@@ -33,10 +33,10 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_dmid = 0
 
     # Select time for plot of phi vs ballooning angle
-    my_it = 250
+    my_it = [10*i+1000 for i in range(7)]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = True
+    make_movies = False
 
     #
     #
@@ -70,6 +70,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     t = myout['t']
     delt = myin['knobs']['delt']
     nt = t.size
+    nwrite = myin['gs2_diagnostics_knobs']['nwrite']
 
     theta = myout['theta']
     ntheta = theta.size
@@ -117,7 +118,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     # Other steps taken with full dt
     for it in range(1,nt):
         for iky in range(naky):
-            ikx_shift = int(round(g_exb*ky[iky]*delt*(it-0.5)/dkx))
+            ikx_shift = int(round(g_exb*ky[iky]*delt*(nwrite*it-0.5)/dkx))
             for ikx in range(nakx):
                 kx[it,iky,ikx] = kx_star[ikx] + ikx_shift*dkx
  
@@ -133,7 +134,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     ikx_shift_old = 0
     gamma_mid = np.zeros((nt,nakx))
     for it in range(1,nt):
-        ikx_shift = int(round(g_exb*ky[my_iky]*delt*(it-0.5)/dkx))
+        ikx_shift = int(round(g_exb*ky[my_iky]*delt*(nwrite*it-0.5)/dkx))
         shifted = ikx_shift - ikx_shift_old
         for ikx in range(nakx):
             if ikx + shifted >= 0 and ikx + shifted < nakx:
@@ -154,7 +155,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     it = 1
     for ifloq in range(((nt-1)//Nf)):
         while (it <= (ifloq+1)*Nf):
-            ikx_shift = int(round(g_exb*ky[my_iky]*delt*((it-0.5)-ifloq*Nf)/dkx))
+            ikx_shift = int(round(g_exb*ky[my_iky]*delt*((nwrite*it-0.5)-ifloq*Nf)/dkx))
             for ikx in range(nakx):
                 if ((ikx-ikx_shift) >= 0 and (ikx-ikx_shift) < nakx):
                     if phi2_bytheta[it-1,my_iky,ikx-ikx_shift_old,(ntheta-1)//2]==0:
@@ -199,7 +200,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
         # if the position of delt and it are swapped in the following multiplication,
         # the resulting ikx_shift can be different ! (e.g. it=297 for ~/gs2/flowtest/dkx_scan/dkx_2.in)
         if it>=1:
-            ikx_shift = int(round(g_exb*ky[my_iky]*delt*(it-0.5)/dkx))
+            ikx_shift = int(round(g_exb*ky[my_iky]*delt*(nwrite*it-0.5)/dkx))
         else:
             ikx_shift = 0
     
@@ -237,7 +238,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
                     shifted = ikx_shift - ikx_shift_old
                     if it > 0:
                         if ikx_members[imember] + shifted >= 0 and ikx_members[imember] + shifted < nakx:
-                            gamma = 1./(2.*delt)*np.log(phi2_bytheta[it,my_iky,ikx_members[imember],itheta]/phi2_bytheta[it-1,my_iky,ikx_members[imember]+shifted,itheta])
+                            gamma = 1./(2.*nwrite*delt)*np.log(phi2_bytheta[it,my_iky,ikx_members[imember],itheta]/phi2_bytheta[it-1,my_iky,ikx_members[imember]+shifted,itheta])
                         else:
                             gamma = np.nan
                     else:
@@ -343,22 +344,23 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
 
     # plot phi2 of chosen chain vs ballooning angle at chosen time
     if (phi_t_present):
-        
-        plt.xlabel('$\\theta -\\theta_0$')
-        plt.ylabel('$\\vert \\phi \\vert ^2$')
-        plt.title('$t=$ '+str(t[my_it]))
-        plt.grid(True)
-        plt.gca().set_xlim(np.min(bloonang_chain[my_it]),np.max(bloonang_chain[my_it]))
-        plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
-        plt.plot(bloonang_chain[my_it], phi2bloon_chain[my_it], marker='o', \
-                markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
+       
+        for it in my_it:
+            plt.xlabel('$\\theta -\\theta_0$')
+            plt.ylabel('$\\vert \\phi \\vert ^2$')
+            plt.title('$t=$ '+str(t[it]))
+            plt.grid(True)
+            plt.gca().set_xlim(np.min(bloonang_chain[it]),np.max(bloonang_chain[it]))
+            plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
+            plt.plot(bloonang_chain[it], phi2bloon_chain[it], marker='o', \
+                    markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
 
-        pdfname = 'balloon_it_' + str(my_it)
-        pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.pdf'
-        plt.savefig(pdfname)
-        
-        plt.clf()
-        plt.cla()
+            pdfname = 'balloon_it_' + str(it)
+            pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.pdf'
+            plt.savefig(pdfname)
+            
+            plt.clf()
+            plt.cla()
 
     # make movie of phi2 vs ballooning angle over time
     if (make_movies and phi_t_present):
@@ -369,6 +371,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
         # find global min and max of ballooning angle
         bloonang_min = 0.
         bloonang_max = 0.
+        # NDCTEST
+        #for it in range(nt//5,nt//5*2):
         for it in range(nt):
             if np.min(bloonang_chain[it]) < bloonang_min:
                 bloonang_min = np.min(bloonang_chain[it])
@@ -376,6 +380,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
                 bloonang_max = np.max(bloonang_chain[it])
        
         print("\ncreating movie of phi vs ballooning angle ...")
+        # NDCTEST
+        #for it in range(nt//5,nt//5*2):
         for it in range(nt):
             
             sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
@@ -493,18 +499,19 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     #    print("\n... movie completed.")
 
     # plot growthrate vs theta-theta0 at time t[my_it]
-    plt.xlabel('$\\theta - \\theta_0$')
-    plt.ylabel('$\\gamma$')
-    plt.title('Growthrate at $t='+str(t[my_it])+'$')
-    plt.grid(True)
-    plt.plot(bloonang_chain[my_it], gamma_chain[my_it][:], color=gplots.myblue)
+    for it in my_it:
+        plt.xlabel('$\\theta - \\theta_0$')
+        plt.ylabel('$\\gamma$')
+        plt.title('Growthrate at $t='+str(t[it])+'$')
+        plt.grid(True)
+        plt.plot(bloonang_chain[it], gamma_chain[it][:], color=gplots.myblue)
 
-    pdfname = 'growth_bloon_it_'+str(my_it)
-    pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.pdf'
-    plt.savefig(pdfname)
-    
-    plt.clf()
-    plt.cla()
+        pdfname = 'growth_bloon_it_'+str(it)
+        pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.pdf'
+        plt.savefig(pdfname)
+        
+        plt.clf()
+        plt.cla()
 
     # make movie of growthrate vs ballooning angle over time
     #if (make_movies and phi_t_present):
