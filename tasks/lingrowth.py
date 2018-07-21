@@ -52,7 +52,7 @@ def my_task_single(ifile, run, myin, myout):
     else:
         
         datfile_name = run.out_dir + run.fnames[ifile] + '.lingrowth.dat'
-        with open(dafile_name, 'rb') as datfile:
+        with open(datfile_name, 'rb') as datfile:
             plot_vars = pickle.load(datfile)
         ikx_list = plot_vars['ikx_list']
         kx = plot_vars['kx']
