@@ -32,8 +32,9 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_iky = 1
     my_dmid = 0
 
-    # Select time for plot of phi vs ballooning angle
-    my_it = [10*i+1000 for i in range(7)]
+    # Select time index for plot of phi vs ballooning angle
+    #my_it = [10*i+3000 for i in range(6)]
+    my_it = [10]
 
     # make movies of phi and growthrate along ballooning angle ?
     make_movies = False
@@ -67,10 +68,15 @@ def my_task_single(ifile, run, myin, myout, task_space):
 
 def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
 
+    # NDCTEST: replace all instances by 0.5
+    first_step = 0.5
+
     t = myout['t']
     delt = myin['knobs']['delt']
+    print('Time step size : ' + str(delt))
     nt = t.size
     nwrite = myin['gs2_diagnostics_knobs']['nwrite']
+    print('nwrite : ' + str(nwrite))
 
     theta = myout['theta']
     ntheta = theta.size
@@ -80,16 +86,17 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     shat = myin['theta_grid_parameters']['shat']
     jtwist = int(myin['kt_grids_box_parameters']['jtwist'])
     
-    # number of t-steps in Floquet period
+    # Floquet period
     Tf = abs(2*pi*shat/g_exb)
     print('Floquet period : ' + str(Tf))
+    # number of t-steps in Floquet period
     Nf = int(round(Tf/delt))
     print('Number of t-steps in Floquet period : ' + str(Nf))
 
     kx_gs2 = myout['kx']
     ky = myout['ky']
     dky = 1./myin['kt_grids_box_parameters']['y0']
-    dkx = 2.*pi*shat*dky/jtwist
+    dkx = 2.*pi*abs(shat)*dky/jtwist
     nakx = kx_gs2.size
     naky = ky.size
     ikx_max = int(round((nakx-1)/2))
@@ -118,7 +125,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     # Other steps taken with full dt
     for it in range(1,nt):
         for iky in range(naky):
-            ikx_shift = int(round(g_exb*ky[iky]*delt*(nwrite*it-0.5)/dkx))
+            ikx_shift = int(round(g_exb*ky[iky]*delt*(nwrite*it-first_step)/dkx))
             for ikx in range(nakx):
                 kx[it,iky,ikx] = kx_star[ikx] + ikx_shift*dkx
  
@@ -134,7 +141,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     ikx_shift_old = 0
     gamma_mid = np.zeros((nt,nakx))
     for it in range(1,nt):
-        ikx_shift = int(round(g_exb*ky[my_iky]*delt*(nwrite*it-0.5)/dkx))
+        ikx_shift = int(round(g_exb*ky[my_iky]*delt*(nwrite*it-first_step)/dkx))
         shifted = ikx_shift - ikx_shift_old
         for ikx in range(nakx):
             if ikx + shifted >= 0 and ikx + shifted < nakx:
@@ -143,31 +150,32 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
                     print('it='+str(it))
                     print('ikx='+str(ikx+shifted))
                 gamma_mid[it,ikx] = gamma_mid[it,ikx] + \
-                        1./(2.*delt)*np.log(phi2_bytheta[it,my_iky,ikx,(ntheta-1)//2]/phi2_bytheta[it-1,my_iky,ikx+shifted,(ntheta-1)//2])
+                        1./(2.*nwrite*delt)*np.log(phi2_bytheta[it,my_iky,ikx,(ntheta-1)//2]/phi2_bytheta[it-1,my_iky,ikx+shifted,(ntheta-1)//2])
             else:
                 gamma_mid[it,ikx] = np.nan
         ikx_shift_old = ikx_shift
 
     # averaged version
 
-    gamma_mid_avg = np.zeros(((nt-1)//Nf,nakx))
+    N_floq_periods = (nt-1)//(Nf//nwrite)
+    gamma_mid_avg = np.zeros((N_floq_periods,nakx))
     ikx_shift_old = 0
     it = 1
-    for ifloq in range(((nt-1)//Nf)):
-        while (it <= (ifloq+1)*Nf):
-            ikx_shift = int(round(g_exb*ky[my_iky]*delt*((nwrite*it-0.5)-ifloq*Nf)/dkx))
+    for ifloq in range(N_floq_periods):
+        while (it <= (ifloq+1)*(Nf//nwrite)):
+            ikx_shift = int(round(g_exb*ky[my_iky]*delt*((nwrite*it-first_step)-ifloq*Nf)/dkx))
             for ikx in range(nakx):
                 if ((ikx-ikx_shift) >= 0 and (ikx-ikx_shift) < nakx):
                     if phi2_bytheta[it-1,my_iky,ikx-ikx_shift_old,(ntheta-1)//2]==0:
                         print('phi is zero')
                     gamma_mid_avg[ifloq,ikx] = gamma_mid_avg[ifloq,ikx] + \
-                            1./(2.*delt)*np.log(phi2_bytheta[it,my_iky,ikx-ikx_shift,(ntheta-1)//2] / phi2_bytheta[it-1,my_iky,ikx-ikx_shift_old,(ntheta-1)//2])
+                            1./(2.*nwrite*delt)*np.log(phi2_bytheta[it,my_iky,ikx-ikx_shift,(ntheta-1)//2] / phi2_bytheta[it-1,my_iky,ikx-ikx_shift_old,(ntheta-1)//2])
                 else:
                     gamma_mid_avg[ifloq,ikx] = np.nan
             ikx_shift_old = ikx_shift
             it = it+1
         ikx_shift_old = 0
-        gamma_mid_avg[ifloq,:] = gamma_mid_avg[ifloq,:]/Nf
+        gamma_mid_avg[ifloq,:] = gamma_mid_avg[ifloq,:]/(Nf//nwrite)
 
 
     #
@@ -200,7 +208,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
         # if the position of delt and it are swapped in the following multiplication,
         # the resulting ikx_shift can be different ! (e.g. it=297 for ~/gs2/flowtest/dkx_scan/dkx_2.in)
         if it>=1:
-            ikx_shift = int(round(g_exb*ky[my_iky]*delt*(nwrite*it-0.5)/dkx))
+            ikx_shift = int(round(g_exb*ky[my_iky]*delt*(nwrite*it-first_step)/dkx))
         else:
             ikx_shift = 0
     
@@ -257,6 +265,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     my_vars['Nf'] = Nf
     my_vars['t'] = t
     my_vars['delt'] = delt
+    my_vars['nwrite'] = nwrite
     my_vars['kx'] = kx
     my_vars['nakx'] = nakx
     my_vars['kx_star'] = kx_star
@@ -334,7 +343,10 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     plt.ylabel('$\\ln \\left(\\sum_{K_x}\\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$')
     plt.title('Sum along a single ballooning mode')
     plt.grid(True)
+    # NDCTEST: shorten time trace
+    #plt.plot(t[0:600], np.log(sum_phi2_chain[0:600]), color=gplots.myblue, linewidth=3.0) 
     plt.plot(t, np.log(sum_phi2_chain), color=gplots.myblue, linewidth=3.0) 
+    # endNDCTEST
     pdfname = 'floquet_vs_t'
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid) + '.pdf'
     plt.savefig(pdfname)
@@ -371,18 +383,18 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
         # find global min and max of ballooning angle
         bloonang_min = 0.
         bloonang_max = 0.
-        # NDCTEST
-        #for it in range(nt//5,nt//5*2):
-        for it in range(nt):
+        # NDCTEST: to shorten movie
+        for it in range(400):
+        #for it in range(nt):
             if np.min(bloonang_chain[it]) < bloonang_min:
                 bloonang_min = np.min(bloonang_chain[it])
             if np.max(bloonang_chain[it]) > bloonang_max:
                 bloonang_max = np.max(bloonang_chain[it])
        
         print("\ncreating movie of phi vs ballooning angle ...")
-        # NDCTEST
-        #for it in range(nt//5,nt//5*2):
-        for it in range(nt):
+        # NDCTEST: to shorten movie
+        for it in range(400):
+        #for it in range(nt):
             
             sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
        
@@ -588,6 +600,7 @@ def store_for_task_scan(my_vars, task_space):
 
     task_space.t = my_vars['t']
     task_space.delt = my_vars['delt']
+    task_space.nwrite = my_vars['nwrite']
     task_space.dkx = my_vars['dkx']
     task_space.Tf = my_vars['Nf']*my_vars['delt']
     task_space.sum_phi2_chain = my_vars['sum_phi2_chain']
@@ -603,7 +616,7 @@ def task_scan(run, full_space):
     # ie after N_start Floquet oscillations
     # Normalise sum_phi2 by sum_phi2[it_start] for each run
     
-    N_start = 5
+    N_start = 2
     
     sum_phi2 = []
     t = []
@@ -618,8 +631,9 @@ def task_scan(run, full_space):
             Tf = full_space[ifile]['floquet'].Tf
             delt[ifile] = full_space[ifile]['floquet'].delt
             dkx[ifile] = full_space[ifile]['floquet'].dkx
+            nwrite = full_space[ifile]['floquet'].nwrite
 
-            it_start = int(round(N_start*Tf/delt[ifile]))
+            it_start = int(round((N_start*Tf/delt[ifile])/nwrite))
 
             sum_phi2_tmp = np.zeros(len(full_space[ifile]['floquet'].sum_phi2_chain)-it_start)
             for it in range(sum_phi2_tmp.size):
@@ -634,7 +648,7 @@ def task_scan(run, full_space):
 
             [a,dummy] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
             slope[ifile] = a
-            
+        
         idxsort = np.argsort(delt)
         delt = delt[idxsort]
         dkx = dkx[idxsort]

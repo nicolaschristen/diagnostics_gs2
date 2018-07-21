@@ -75,6 +75,13 @@ class fieldobj:
         #    for j in range(ny):
         #        Ey_gs2[ntime-1,j,i] = np.exp(-kx_gs2[i]**2*200)*np.exp(-ky[j]**2*200)
 
+        phi_xyt=[]
+        Ex_xyt=[]
+        Ey_xyt=[]
+        Ex=[]
+        Ey=[]
+        Ex2=[]
+        Ey2=[]
         if (mygrids.nx > 1) and (mygrids.ny > 1):
             
             print()

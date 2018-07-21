@@ -9,7 +9,7 @@ import gs2_tasks as gtasks
 import copy
 
 # TODO: add 'your_task' to the array.
-tasks_choices = ['fluxes', 'zonal', 'tcorr', 'flowtest', 'floquet']
+tasks_choices = ['fluxes', 'zonal', 'tcorr', 'flowtest', 'floquet','lingrowth']
 
 # Fom command-line arguments, get info about this analysis run (filenames, tasks to complete ...)
 run = grunpar.runobj(tasks_choices)
