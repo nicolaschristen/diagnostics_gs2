@@ -39,25 +39,16 @@ def my_task_single(ifile, run, myin, myout):
                 gamma[iky,ikx] = get_growthrate(t,phi2,it_start,ikx,iky)
         
         # Save to .dat file
-        plot_vars = {}
-        plot_vars['ikx_list'] = ikx_list
-        plot_vars['kx'] = kx
-        plot_vars['ky'] = ky
-        plot_vars['gamma'] = gamma
         datfile_name = run.out_dir + run.fnames[ifile] + '.lingrowth.dat'
         with open(datfile_name, 'wb') as datfile:
-            pickle.dump(plot_vars,datfile)
+            pickle.dump([ikx_list,kx,ky,gamma],datfile)
    
     # or read from .dat file
     else:
         
         datfile_name = run.out_dir + run.fnames[ifile] + '.lingrowth.dat'
         with open(datfile_name, 'rb') as datfile:
-            plot_vars = pickle.load(datfile)
-        ikx_list = plot_vars['ikx_list']
-        kx = plot_vars['kx']
-        ky = plot_vars['ky']
-        gamma = plot_vars['gamma']
+            [ikx_list,kx,ky,gamma] = pickle.load(datfile)
 
     # Plotting
     if not run.no_plot:
