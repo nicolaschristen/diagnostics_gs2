@@ -378,7 +378,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
     datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
     # Compute and save to dat file
     if not run.only_plot:
-        myfluxes = fluxes.fluxobj(myout, mygrids, mytime)
+        myfluxes = fluxobj(myout, mygrids, mytime)
         with open(datfile_name, 'wb') as datfile:
             pickle.dump(myfluxes,datfile)
     # Read from dat file
@@ -387,4 +387,4 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
             myfluxes = pickle.load(datfile)
     
     if not run.no_plot:
-        myfluxes.plot(ifile, run, myin, myout, mygrids, mytime, myfields, mytxt)
+        plot(ifile, run, myin, myout, mygrids, mytime, myfields, mytxt)
