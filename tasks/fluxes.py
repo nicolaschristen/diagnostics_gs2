@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 import numpy as np
+import pickle
 
 import gs2_plotting as gplot
 from plot_phi2_vs_time import plot_phi2_ky_vs_t
@@ -371,3 +372,19 @@ def plot_flux_vs_vpth(mygrids,flx,title):
         fig = plot_2d(z,mygrids.theta,mygrids.vpa,z_min,z_max,xlab,ylab,title+' (is= '+str(idx+1)+')',cmap)
 
     return fig
+
+def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
+
+    datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
+    # Compute and save to dat file
+    if not run.only_plot:
+        myfluxes = fluxes.fluxobj(myout, mygrids, mytime)
+        with open(datfile_name, 'wb') as datfile:
+            pickle.dump(myfluxes,datfile)
+    # Read from dat file
+    else:
+        with open(datfile_name, 'rb') as datfile:
+            myfluxes = pickle.load(datfile)
+    
+    if not run.no_plot:
+        myfluxes.plot(ifile, run, myin, myout, mygrids, mytime, myfields, mytxt)

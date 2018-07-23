@@ -52,9 +52,8 @@ import lingrowth
 def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfields, mytxt, task_space):
 
     if (task == 'fluxes'):
-        
-        myfluxes = fluxes.fluxobj(myout, mygrids, mytime)
-        myfluxes.plot(ifile, run, myin, myout, mygrids, mytime, myfields, mytxt)
+       
+        fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt)
 
     if (task == 'zonal'):
 
