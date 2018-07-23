@@ -4,11 +4,11 @@ from matplotlib import pyplot as plt
 import gs2_plotting as gplot
 import pickle
 
-# User parameters
-dump_at_start = 0.3 # fraction of initial time to dump when fitting
-ikx_list = [-1] # choose which kx to plot, negative means plot all
-
 def my_task_single(ifile, run, myin, myout):
+
+    # User parameters
+    dump_at_start = 0.3 # fraction of initial time to dump when fitting
+    ikx_list = [-1] # choose which kx to plot, negative means plot all
 
     # Compute and save growthrate
     if not run.only_plot:

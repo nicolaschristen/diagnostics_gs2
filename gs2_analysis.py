@@ -32,6 +32,10 @@ mytxt = []
 
 # Loop over all files specified by user
 for ifile in range(len(run.fnames)):
+
+    # .txt file in which the user can print stuff out
+    txtname = run.out_dir + 'info_' + run.fnames[ifile] + '.txt'
+    mytxt = open(txtname, 'w')
     
     if not run.only_plot:
         # Get input parameters for this GS2 simulation from .in file
@@ -45,10 +49,6 @@ for ifile in range(len(run.fnames)):
         mytime = gtime.timeobj(myout, run.twin)
         # Extract fields from output
         myfields = gfields.fieldobj(myout, mygrids, mytime)
-
-        # Create .txt file in which the user can print stuff out
-        txtname = run.out_dir + 'info_' + run.fnames[ifile] + '.txt'
-        mytxt = open(txtname, 'w')
 
     # Loop over all tasks that have been requested by user
     for itask in range(len(run.tasks)):

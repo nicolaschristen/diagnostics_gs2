@@ -384,7 +384,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
         bloonang_min = 0.
         bloonang_max = 0.
         # NDCTEST: to shorten movie
-        for it in range(400):
+        for it in range(300,601):
         #for it in range(nt):
             if np.min(bloonang_chain[it]) < bloonang_min:
                 bloonang_min = np.min(bloonang_chain[it])
@@ -393,7 +393,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
        
         print("\ncreating movie of phi vs ballooning angle ...")
         # NDCTEST: to shorten movie
-        for it in range(400):
+        for it in range(300,601):
         #for it in range(nt):
             
             sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
@@ -571,7 +571,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     #    print("\n... movie completed.")
     
     # plot phi2 vs t for each kx
-    plt.xlabel('$t$')
+    plt.xlabel('$$t\\ [r_r/v_{thr}]$$')
     my_ylabel = '$\\ln \\left(\\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$'
     plt.ylabel(my_ylabel)
     plt.grid(True)
@@ -579,7 +579,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     my_legend = []
     for ikx in range(kx_star.size):
         plt.plot(t, np.log(phi2[:,1,ikx]), color=my_colorlist[ikx])
-        my_legend.append("kx = "+str(kx_star[ikx]))
+        my_legend.append('$\\rho_i\\bar{k}_x = '+str(kx_star[ikx])+'$')
     plt.legend(my_legend)
 
     pdfname = 'phi2_by_kx'
