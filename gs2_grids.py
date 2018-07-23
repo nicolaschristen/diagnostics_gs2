@@ -52,8 +52,8 @@ class gridobj:
      
         self.vpa = cp.copy(myout['vpa'])
         if self.vpa is not None:
-            self.vpa = self.vpa.size
+            self.nvpa = self.vpa.size
         else:
-            self.vpa = 0
+            self.nvpa = 0
      
         print('complete')  
