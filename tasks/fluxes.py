@@ -21,7 +21,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
         nspec = myin['species_knobs']['nspec']
         spec_names = []
         for ispec in range(nspec):
-            spec_names[ispec] = myin['species_parameters_'+str(ispec+1)]['type']
+            spec_names.append(myin['species_parameters_'+str(ispec+1)]['type'])
         naky = (myin['kt_grids_box_parameters']['ny']-1)//3 + 1
     
         ky = mygrids.ky
@@ -265,17 +265,17 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
         write_fluxes_vs_kxky = False
         tmp_pdf_id = 1
         pdflist = []
-        if pflx_kx_ky_tavg is not None:
+        if pflx_kxky_tavg is not None:
             title = '$\Gamma_{GS2}$'
-            plot_flux_vs_kxky(pflx_kxky_tavg,title)
+            plot_flux_vs_kxky(mygrids,pflx_kxky_tavg,title)
             write_fluxes_vs_kxky = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplot.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
             tmp_pdf_id = tmp_pdf_id+1
-        if qflx_kx_ky_tavg is not None:
+        if qflx_kxky_tavg is not None:
             title = '$Q_{GS2}$'
-            plot_flux_vs_kxky(qflx_kxky_tavg,title)
+            plot_flux_vs_kxky(mygrids,qflx_kxky_tavg,title)
             write_fluxes_vs_kxky = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplot.save_plot(tmp_pdfname, run, ifile)
@@ -283,7 +283,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
             tmp_pdf_id = tmp_pdf_id+1
         if vflx_kxky_tavg is not None:
             title = '$\Pi_{GS2}$'
-            plot_flux_vs_kxky(vflx_kxky_tavg,title)
+            plot_flux_vs_kxky(mygrids,vflx_kxky_tavg,title)
             write_fluxes_vs_kxky = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplot.save_plot(tmp_pdfname, run, ifile)
@@ -301,25 +301,25 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
         write_vpathetasym = False
         tmp_pdf_id = 1
         pdflist = []
-        if pflx_vpth_tavg is not None:
+        if pflx_vpth_tavg is not None and mygrids.vpa is not None:
             title = '$\Gamma_{GS2}$'
-            plot_flux_vs_vpth(pflx_vpth_tavg,title)
+            plot_flux_vs_vpth(mygrids,pflx_vpth_tavg,title)
             write_vpathetasym = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplot.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
             tmp_pdf_id = tmp_pdf_id+1
-        if qflx_vpth_tavg is not None:
+        if qflx_vpth_tavg is not None and mygrids.vpa is not None:
             title = '$Q_{GS2}$'
-            plot_flux_vs_vpth(qflx_vpth_tavg,title)
+            plot_flux_vs_vpth(mygrids,qflx_vpth_tavg,title)
             write_vpathetasym = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplot.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
             tmp_pdf_id = tmp_pdf_id+1
-        if vflx_vpth_tavg is not None:
+        if vflx_vpth_tavg is not None and mygrids.vpa is not None:
             title = '$\Pi_{GS2}$'
-            plot_flux_vs_vpth(vflx_vpth_tavg,title)
+            plot_flux_vs_vpth(mygrids,vflx_vpth_tavg,title)
             write_vpathetasym = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplot.save_plot(tmp_pdfname, run, ifile)

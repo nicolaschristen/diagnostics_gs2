@@ -1,4 +1,5 @@
 import numpy as np
+import copy as cp
 from math import pi
 
 class gridobj:
@@ -43,10 +44,16 @@ class gridobj:
             ygrid_fft = np.arange(1,dtype=float)
             self.ygrid = np.arange(1,dtype=float)
      
-        self.theta = np.copy(myout['theta'])
-        self.ntheta = self.theta.size
+        self.theta = cp.copy(myout['theta'])
+        if self.theta is not None:
+            self.ntheta = self.theta.size
+        else:
+            self.ntheta = 0
      
-        self.vpa = np.copy(myout['vpa'])
-        self.nvpa = self.vpa.size
+        self.vpa = cp.copy(myout['vpa'])
+        if self.vpa is not None:
+            self.vpa = self.vpa.size
+        else:
+            self.vpa = 0
      
         print('complete')  
