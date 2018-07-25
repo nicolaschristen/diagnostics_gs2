@@ -17,7 +17,10 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
         ny = mygrids.ny
         nxmid = mygrids.nxmid
 
-        islin = myin['nonlinear_terms_knobs']['nonlinear_mode']
+        islin = False
+        if myin['nonlinear_terms_knobs']['nonlinear_mode']=='off':
+            islin = True
+
         nspec = myin['species_knobs']['nspec']
         spec_names = []
         for ispec in range(nspec):
@@ -239,11 +242,52 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
             title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$'
             if islin:
                 title = '$\\ln$' + title
-                for iky in range(naky) :
+                plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+                for iky in range(1,naky) :
                     plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
             else:
-                for iky in range(naky) :
-                    plt.plot(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
+                plt.plot(time, phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+                for iky in range(1,naky) :
+                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
+            plt.xlabel('$t (a/v_t)$')
+            plt.title(title)
+            plt.legend(prop={'size': 11}, ncol=6)
+
+            plt.grid(True)
+            write_fluxes_vs_t = True
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+
+            title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$ for low $k_y$'
+            if islin:
+                title = '$\\ln$' + title
+                plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+                for iky in range(1,5) :
+                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
+            else:
+                plt.plot(time, phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+                for iky in range(1,5) :
+                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
+            plt.xlabel('$t (a/v_t)$')
+            plt.title(title)
+            plt.legend()
+            plt.grid(True)
+            write_fluxes_vs_t = True
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+
+            title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$ for high $k_y$'
+            if islin:
+                title = '$\\ln$' + title
+                for iky in range(naky-5,naky) :
+                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
+            else:
+                for iky in range(naky-5,naky) :
+                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
             plt.xlabel('$t (a/v_t)$')
             plt.title(title)
             plt.legend()
