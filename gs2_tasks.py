@@ -53,7 +53,12 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 
     if (task == 'fluxes'):
        
-        fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt)
+        fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
+
+    if (task == 'fluxes_stitch'):
+       
+        stitching = True
+        fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching)
 
     if (task == 'zonal'):
 
@@ -107,3 +112,7 @@ def complete_task_scan(task, run, full_space):
     if (task == 'floquet'):
 
         floquet.task_scan(run, full_space)
+
+    if (task == 'fluxes_stitch'):
+       
+        fluxes.stitching_fluxes(run)

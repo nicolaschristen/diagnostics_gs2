@@ -384,7 +384,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
         bloonang_min = 0.
         bloonang_max = 0.
         # NDCTEST: to shorten movie
-        for it in range(300,601):
+        for it in range(401):
         #for it in range(nt):
             if np.min(bloonang_chain[it]) < bloonang_min:
                 bloonang_min = np.min(bloonang_chain[it])
@@ -393,7 +393,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
        
         print("\ncreating movie of phi vs ballooning angle ...")
         # NDCTEST: to shorten movie
-        for it in range(300,601):
+        for it in range(401):
         #for it in range(nt):
             
             sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
@@ -668,6 +668,8 @@ def task_scan(run, full_space):
             my_legend.append('$\\Delta k_x =$'+str(full_space[ifile]['floquet'].dkx))
             plt.plot(t[ifile], np.log(sum_phi2[ifile]), color=my_colorlist[ifile], linewidth=3.0)
         plt.legend(my_legend)
+        axes = plt.gca()
+        axes.set_ylim([-0.5, 13.75])
         
         pdfname = 'tmp_1'
         gplots.save_plot(pdfname, run, ifile)

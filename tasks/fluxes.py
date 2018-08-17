@@ -2,11 +2,12 @@ from matplotlib import pyplot as plt
 from matplotlib import rcParams
 import numpy as np
 import pickle
+import copy as cp
 
 import gs2_plotting as gplot
 from plot_phi2_vs_time import plot_phi2_ky_vs_t
 
-def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
+def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False):
 
     # Compute and save to dat file
     if not run.only_plot:
@@ -136,11 +137,14 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
  
         # Save computed quantities
         datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
+        dict_to_save = {'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,'pflx_kxky_tavg':pflx_kxky_tavg,
+                'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,'pflx_vpth_tavg':pflx_vpth_tavg,
+                'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
+                'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
+                'naky':naky,'ky':ky,'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
+                'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky}
         with open(datfile_name,'wb') as datfile:
-            pickle.dump([pflx,qflx,vflx,xchange,pflx_kxky_tavg,qflx_kxky_tavg,vflx_kxky_tavg,
-                    pflx_vpth_tavg,qflx_vpth_tavg,vflx_vpth_tavg,pioq,nvpa,ntheta,nx,
-                    ny,nxmid,islin,nspec,spec_names,naky,ky,time,time_steady,it_min,it_max,
-                    phi2_avg,phi2_by_ky],datfile)
+            pickle.dump(dict_to_save,datfile)
 
         # Save time obj
         datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
@@ -157,10 +161,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
 
         datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
         with open(datfile_name,'rb') as datfile:
-            [pflx,qflx,vflx,xchange,pflx_kxky_tavg,qflx_kxky_tavg,vflx_kxky_tavg,
-                    pflx_vpth_tavg,qflx_vpth_tavg,vflx_vpth_tavg,pioq,nvpa,ntheta,nx,
-                    ny,nxmid,islin,nspec,spec_names,naky,ky,time,time_steady,it_min,it_max,
-                    phi2_avg,phi2_by_ky] = pickle.load(datfile)
+            mydict = pickle.load(datfile)
 
         datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
         with open(datfile_name,'rb') as datfile:
@@ -169,97 +170,193 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
         datfile_name = run.out_dir + run.fnames[ifile] + '.grids.dat'
         with open(datfile_name,'rb') as datfile:
             mygrids = pickle.load(datfile)
-
     
-    if not run.no_plot:
+    if not run.no_plot and not stitching: # plot fluxes for this single file
+            
+        plot_fluxes(ifile,run,mytime,mydict)
+
+def stitching_fluxes(run):
+
+    # Only executed if we want to plot the data
+    if run.no_plot:
+        return
+
+    Nfile = len(run.fnames)
+    full_fluxes = [dict() for ifile in range(Nfile)]
+    full_time = [dict() for ifile in range(Nfile)]
+    full_grids = [dict() for ifile in range(Nfile)]
+
+    # Reading .dat file for each run
+    # and calc how long the stitched array will be
+    Nt_tot = 0
+    for ifile in range(Nfile):
+        datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
+        with open(datfile_name,'rb') as datfile:
+            full_fluxes[ifile] = pickle.load(datfile)
+        datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
+        with open(datfile_name,'rb') as datfile:
+            full_time[ifile] = pickle.load(datfile)
+        Nt_tot += full_fluxes[ifile]['pflx'].shape[0]
     
-        print()
-        print("producing plots of fluxes vs time...", end='')
+    # A lot of stuff is the same for all runs
+    islin = full_fluxes[0]['islin']
+    twin = full_time[0].twin
+    nspec = full_fluxes[0]['nspec']
+    spec_names = full_fluxes[0]['spec_names']
+    nx = full_fluxes[0]['nx']
+    ny = full_fluxes[0]['ny']
+    naky = full_fluxes[0]['naky']
+    ky = full_fluxes[0]['ky']
+    datfile_name = run.out_dir + run.fnames[0] + '.grids.dat'
+    with open(datfile_name,'rb') as datfile:
+        my_grids = pickle.load(datfile)
 
-        print('---GS2 FLUXES---',file=mytxt)
-        write_fluxes_vs_t = False
-        tmp_pdf_id = 1
-        pdflist = []
-        if phi2_avg is not None:
-            title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x,k_y}$'
-            if islin:
-                title = '$\ln$'+title
-                gplot.plot_1d(time,np.log(phi2_avg),'$t (a/v_{t})$',title)
-            else:
-                gplot.plot_1d(time,phi2_avg,'$t (a/v_{t})$',title)
-            plt.grid(True)
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if pflx is not None:
-            title = '$\Gamma_{GS2}$'
-            plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title,mytxt)
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if qflx is not None:
-            title = '$Q_{GS2}$'
-            plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title,mytxt)
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if vflx is not None:
-            title = '$\Pi_{GS2}$'
-            plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,mytxt)
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        #if myout['es_energy_exchange_present']:
-        #    title = 'energy exchange'
-        #    gplot.plot_1d(mytime.time,self.xchange,"$t (v_t/a)$",title)
-        #    write_fluxes_vs_t = True
-        #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-        #    gplot.save_plot(tmp_pdfname, run, ifile)
-        #    pdflist.append(tmp_pdfname)
-        #    tmp_pdf_id = tmp_pdf_id+1
-        if pioq is not None:
-            title = '$\Pi_{GS2}/Q_{GS2}$'
-            for idx in range(nspec):
-                plt.plot(mytime.time_steady,pioq[it_min:it_max,idx],label=spec_names[idx])
-            plt.title(title)
-            plt.xlabel('$t (a/v_t)$')
-            plt.legend()
-            plt.grid(True)
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if phi2_by_ky is not None:
-            title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$'
-            if islin:
-                title = '$\\ln$' + title
-                plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
-                for iky in range(1,naky) :
-                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
-            else:
-                plt.plot(time, phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
-                for iky in range(1,naky) :
-                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
-            plt.xlabel('$t (a/v_t)$')
-            plt.title(title)
-            plt.legend(prop={'size': 11}, ncol=6)
+    # Stitching the arrays together
+    stitch_my_time = cp.deepcopy(full_time[0])
+    stitch_my_time.ntime = Nt_tot
+    stitch_my_time.time = np.zeros(Nt_tot)
 
-            plt.grid(True)
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
+    stitch_pflx = np.zeros((Nt_tot,nspec))
+    stitch_qflx = np.zeros((Nt_tot,nspec))
+    stitch_vflx = np.zeros((Nt_tot,nspec))
+    stitch_pioq = np.zeros((Nt_tot,nspec))
+    stitch_phi2_avg = np.zeros(Nt_tot)
+    stitch_phi2_by_ky = np.zeros((Nt_tot,naky))
 
+    it_tot = 0
+    for ifile in range(Nfile):
+        for it in range(full_time[ifile].ntime):
+            stitch_my_time.time[it_tot] = full_time[ifile].time[it]
+            for ispec in range(nspec):
+                stitch_pflx[it_tot,ispec] = full_fluxes[ifile]['pflx'][it,ispec]
+                stitch_qflx[it_tot,ispec] = full_fluxes[ifile]['qflx'][it,ispec]
+                stitch_vflx[it_tot,ispec] = full_fluxes[ifile]['vflx'][it,ispec]
+                stitch_pioq[it_tot,ispec] = full_fluxes[ifile]['pioq'][it,ispec]
+            stitch_phi2_avg[it_tot] = full_fluxes[ifile]['phi2_avg'][it]
+            stitch_phi2_by_ky[it_tot,:] = full_fluxes[ifile]['phi2_by_ky'][it,:]
+            it_tot += 1
+
+    stitch_my_time.it_min = int(np.ceil((1.0-twin)*stitch_my_time.ntime))
+    stitch_my_time.it_max = stitch_my_time.ntime-1
+    stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
+    stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
+
+    # Plotting the stitched fluxes
+    ifile = None
+    stitch_dict = {'pflx':stitch_pflx,'qflx':stitch_qflx,'vflx':stitch_vflx,'pioq':stitch_pioq,
+            'nx':nx,'ny':ny,'islin':islin,'nspec':nspec,'spec_names':spec_names,
+            'naky':naky,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky}
+    plot_fluxes(ifile,run,stitch_my_time,stitch_dict)
+
+def plot_fluxes(ifile,run,mytime,mydict):
+
+    time = mytime.time
+    time_steady = mytime.time_steady
+    it_min = mytime.it_min
+    it_max = mytime.it_max
+
+    islin = mydict['islin']
+    pflx = mydict['pflx']
+    qflx = mydict['qflx']
+    vflx = mydict['vflx']
+    pioq = mydict['pioq']
+    nspec = mydict['nspec']
+    spec_names = mydict['spec_names']
+    phi2_avg = mydict['phi2_avg']
+    phi2_by_ky = mydict['phi2_by_ky']
+    nx = mydict['nx']
+    ny = mydict['ny']
+    naky = mydict['naky']
+    ky = mydict['ky']
+    
+    print()
+    print("producing plots of fluxes vs time...", end='')
+
+    write_fluxes_vs_t = False
+    tmp_pdf_id = 1
+    pdflist = []
+    if phi2_avg is not None:
+        title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x,k_y}$'
+        if islin:
+            title = '$\ln$'+title
+            gplot.plot_1d(time,np.log(phi2_avg),'$t (a/v_{t})$',title)
+        else:
+            gplot.plot_1d(time,phi2_avg,'$t (a/v_{t})$',title)
+        plt.grid(True)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+    if pflx is not None:
+        title = '$\Gamma_{GS2}$'
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+    if qflx is not None:
+        title = '$Q_{GS2}$'
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+    if vflx is not None:
+        title = '$\Pi_{GS2}$'
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+    #if myout['es_energy_exchange_present']:
+    #    title = 'energy exchange'
+    #    gplot.plot_1d(mytime.time,self.xchange,"$t (v_t/a)$",title)
+    #    write_fluxes_vs_t = True
+    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    #    gplot.save_plot(tmp_pdfname, run, ifile)
+    #    pdflist.append(tmp_pdfname)
+    #    tmp_pdf_id = tmp_pdf_id+1
+    if pioq is not None:
+        title = '$\Pi_{GS2}/Q_{GS2}$'
+        for idx in range(nspec):
+            plt.plot(mytime.time_steady,pioq[it_min:it_max,idx],label=spec_names[idx])
+        plt.title(title)
+        plt.xlabel('$t (a/v_t)$')
+        plt.legend()
+        plt.grid(True)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+    if phi2_by_ky is not None:
+        title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$'
+        if islin:
+            title = '$\\ln$' + title
+            plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+            for iky in range(1,naky) :
+                plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
+        else:
+            plt.plot(time, phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+            for iky in range(1,naky) :
+                plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
+        plt.xlabel('$t (a/v_t)$')
+        plt.title(title)
+        plt.legend(prop={'size': 11}, ncol=6)
+
+        plt.grid(True)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+
+        if naky>4:
+            
+            tmp_pdf_id = tmp_pdf_id+1
             title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$ for low $k_y$'
             if islin:
                 title = '$\\ln$' + title
@@ -267,9 +364,9 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
                 for iky in range(1,5) :
                     plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
             else:
-                plt.plot(time, phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+                plt.plot(time[:], phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
                 for iky in range(1,5) :
-                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
+                    plt.semilogy(time[:], phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
             plt.xlabel('$t (a/v_t)$')
             plt.title(title)
             plt.legend()
@@ -297,87 +394,88 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,mytxt):
             gplot.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
 
-        if write_fluxes_vs_t:
-            merged_pdfname = 'fluxes_vs_t'
-            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+    if write_fluxes_vs_t:
+        merged_pdfname = 'fluxes_vs_t'
+        if ifile==None: # This is the case when we stitch fluxes together
+            merged_pdfname = 'fluxes_vs_t_stitch'
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-        print('complete')
-        
-        print()
-        print('producing plots of fluxes vs (kx,ky)...', end='')
+    print('complete')
+    
+    #print()
+    #print('producing plots of fluxes vs (kx,ky)...', end='')
 
-        write_fluxes_vs_kxky = False
-        tmp_pdf_id = 1
-        pdflist = []
-        if pflx_kxky_tavg is not None:
-            title = '$\Gamma_{GS2}$'
-            plot_flux_vs_kxky(mygrids,pflx_kxky_tavg,title)
-            write_fluxes_vs_kxky = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if qflx_kxky_tavg is not None:
-            title = '$Q_{GS2}$'
-            plot_flux_vs_kxky(mygrids,qflx_kxky_tavg,title)
-            write_fluxes_vs_kxky = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if vflx_kxky_tavg is not None:
-            title = '$\Pi_{GS2}$'
-            plot_flux_vs_kxky(mygrids,vflx_kxky_tavg,title)
-            write_fluxes_vs_kxky = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
+    #write_fluxes_vs_kxky = False
+    #tmp_pdf_id = 1
+    #pdflist = []
+    #if pflx_kxky_tavg is not None:
+    #    title = '$\Gamma_{GS2}$'
+    #    plot_flux_vs_kxky(mygrids,pflx_kxky_tavg,title)
+    #    write_fluxes_vs_kxky = True
+    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    #    gplot.save_plot(tmp_pdfname, run, ifile)
+    #    pdflist.append(tmp_pdfname)
+    #    tmp_pdf_id = tmp_pdf_id+1
+    #if qflx_kxky_tavg is not None:
+    #    title = '$Q_{GS2}$'
+    #    plot_flux_vs_kxky(mygrids,qflx_kxky_tavg,title)
+    #    write_fluxes_vs_kxky = True
+    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    #    gplot.save_plot(tmp_pdfname, run, ifile)
+    #    pdflist.append(tmp_pdfname)
+    #    tmp_pdf_id = tmp_pdf_id+1
+    #if vflx_kxky_tavg is not None:
+    #    title = '$\Pi_{GS2}$'
+    #    plot_flux_vs_kxky(mygrids,vflx_kxky_tavg,title)
+    #    write_fluxes_vs_kxky = True
+    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    #    gplot.save_plot(tmp_pdfname, run, ifile)
+    #    pdflist.append(tmp_pdfname)
 
-        if write_fluxes_vs_kxky:
-            merged_pdfname = 'fluxes_vs_kxky'
-            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+    #if write_fluxes_vs_kxky:
+    #    merged_pdfname = 'fluxes_vs_kxky'
+    #    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-        print('complete')
+    #print('complete')
 
-        print()
-        print('producing plots of fluxes vs (vpa,theta)...',end='')
+    #print()
+    #print('producing plots of fluxes vs (vpa,theta)...',end='')
 
-        write_vpathetasym = False
-        tmp_pdf_id = 1
-        pdflist = []
-        if pflx_vpth_tavg is not None and mygrids.vpa is not None:
-            title = '$\Gamma_{GS2}$'
-            plot_flux_vs_vpth(mygrids,pflx_vpth_tavg,title)
-            write_vpathetasym = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if qflx_vpth_tavg is not None and mygrids.vpa is not None:
-            title = '$Q_{GS2}$'
-            plot_flux_vs_vpth(mygrids,qflx_vpth_tavg,title)
-            write_vpathetasym = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        if vflx_vpth_tavg is not None and mygrids.vpa is not None:
-            title = '$\Pi_{GS2}$'
-            plot_flux_vs_vpth(mygrids,vflx_vpth_tavg,title)
-            write_vpathetasym = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
+    #write_vpathetasym = False
+    #tmp_pdf_id = 1
+    #pdflist = []
+    #if pflx_vpth_tavg is not None and mygrids.vpa is not None:
+    #    title = '$\Gamma_{GS2}$'
+    #    plot_flux_vs_vpth(mygrids,pflx_vpth_tavg,title)
+    #    write_vpathetasym = True
+    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    #    gplot.save_plot(tmp_pdfname, run, ifile)
+    #    pdflist.append(tmp_pdfname)
+    #    tmp_pdf_id = tmp_pdf_id+1
+    #if qflx_vpth_tavg is not None and mygrids.vpa is not None:
+    #    title = '$Q_{GS2}$'
+    #    plot_flux_vs_vpth(mygrids,qflx_vpth_tavg,title)
+    #    write_vpathetasym = True
+    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    #    gplot.save_plot(tmp_pdfname, run, ifile)
+    #    pdflist.append(tmp_pdfname)
+    #    tmp_pdf_id = tmp_pdf_id+1
+    #if vflx_vpth_tavg is not None and mygrids.vpa is not None:
+    #    title = '$\Pi_{GS2}$'
+    #    plot_flux_vs_vpth(mygrids,vflx_vpth_tavg,title)
+    #    write_vpathetasym = True
+    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    #    gplot.save_plot(tmp_pdfname, run, ifile)
+    #    pdflist.append(tmp_pdfname)
+    #    tmp_pdf_id = tmp_pdf_id+1
 
-        if write_vpathetasym:  
-            merged_pdfname = 'fluxes_vs_vpa_theta'
-            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+    #if write_vpathetasym:  
+    #    merged_pdfname = 'fluxes_vs_vpa_theta'
+    #    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-        print('complete')
+    #print('complete')
 
-
-def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,mytxt):
+def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,):
 
     fig=plt.figure(figsize=(12,8))
     dum = np.empty(mytime.ntime_steady)
@@ -403,8 +501,6 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,mytxt):
             flxavg = mytime.timeavg(flx[:,idx])
             dum.fill(flxavg)
         plt.plot(mytime.time_steady,dum,'--')
-        line = title + '(is= ' + str(idx+1) + '): ' + str(flxavg)
-        print(line,file=mytxt)
 
     plt.xlabel('$t (a/v_t)$')
     plt.xlim([mytime.time[0],mytime.time[mytime.ntime-1]])
