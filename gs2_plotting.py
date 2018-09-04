@@ -6,6 +6,9 @@ import os
 
 myred = [183./255, 53./255, 53./255]
 myblue = [53./255, 118./255, 183./255]
+oxblue = [0.,33./255,71./255]
+oxbluel = [68./255,104./255,125./255]
+oxbluell = [72./255,145./255,220./255]
 
 def save_plot(pdfname, run, ifile = None):
 
