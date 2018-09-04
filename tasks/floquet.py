@@ -37,7 +37,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = [10]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = False
+    make_movies = True
 
     #
     #
@@ -420,6 +420,20 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
         
         imageio.mimsave(moviename, images, format='FFMPEG')
         print("\n... movie completed.")
+
+        # NDCTEST: plotting mutliple times together
+        #plt.xlabel('$\\theta -\\theta_0$')
+        #plt.ylabel('$\\vert \\phi \\vert ^2$')
+        #plt.grid(True)
+        #plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
+        #line2, = plt.plot(bloonang_chain[210], phi2bloon_chain[210], marker='None', linestyle='--', linewidth=4.0, color=gplots.oxbluel)
+        #line3, = plt.plot(bloonang_chain[310], phi2bloon_chain[310], marker='None', linestyle=':', linewidth=3.0, color=gplots.oxbluell)
+        #line1, = plt.plot(bloonang_chain[110], phi2bloon_chain[110], marker='None', linewidth=5.0, color=gplots.oxblue)
+        #plt.legend([line1,line2,line3], ['$t=$ '+"{:.1f}".format(t[110]),'$t=$ '+"{:.1f}".format(t[210]),'$t=$ '+"{:.1f}".format(t[310])])
+        #plt.savefig('two_times_floquet.pdf')
+        #plt.clf()
+        #plt.cla()
+        # endNDCTEST
     
     # plot instantaneous growthrate at mid-plane vs kx
     pdflist = []
