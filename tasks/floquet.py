@@ -103,7 +103,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     ikx_min = ikx_max+1
     
     # number of t-steps before ExB re-map
-    N = abs(int(round(dkx/(g_exb*delt*dky))))
+    N = max(1, abs(int(round(dkx/(g_exb*delt*dky)))))
     print('Number of t-steps before ExB re-map : ' + str(N))
 
     phi2_gs2 = myout['phi2_by_mode'][:,:,:]
@@ -112,22 +112,22 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     if phi_t_present:
         phi2_bytheta_gs2 = np.sum(np.power(myout['phi_t'],2), axis=4)
    
-    # sorting kx_gs2 to get monotonic kx_star
-    kx_star = np.concatenate((kx_gs2[ikx_min:],kx_gs2[:ikx_min]))
+    # sorting kx_gs2 to get monotonic kx_bar
+    kx_bar = np.concatenate((kx_gs2[ikx_min:],kx_gs2[:ikx_min]))
     phi2 = np.concatenate((phi2_gs2[:,:,ikx_min:], phi2_gs2[:,:,:ikx_min]), axis=2)
     if phi_t_present:
         phi2_bytheta = np.concatenate((phi2_bytheta_gs2[:,:,ikx_min:,:], phi2_bytheta_gs2[:,:,:ikx_min,:]), axis=2)
 
-    # get kx from kx_star
+    # get kx from kx_bar
     kx = np.zeros((nt,naky,nakx))
-    # @ it = 0, kx = kx_star
+    # @ it = 0, kx = kx_bar
     # First step is taken with 0.5*dt
     # Other steps taken with full dt
     for it in range(1,nt):
         for iky in range(naky):
             ikx_shift = int(round(g_exb*ky[iky]*delt*(nwrite*it-first_step)/dkx))
             for ikx in range(nakx):
-                kx[it,iky,ikx] = kx_star[ikx] + ikx_shift*dkx
+                kx[it,iky,ikx] = kx_bar[ikx] + ikx_shift*dkx
  
     # index of kx=0
     ikx0 = (nakx-1)//2
@@ -141,41 +141,21 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     ikx_shift_old = 0
     gamma_mid = np.zeros((nt,nakx))
     for it in range(1,nt):
+        # By how many ikx have we shifted since t=0 ?
         ikx_shift = int(round(g_exb*ky[my_iky]*delt*(nwrite*it-first_step)/dkx))
+        # By how many ikx have we shifted between the last and the present time step ?
         shifted = ikx_shift - ikx_shift_old
         for ikx in range(nakx):
+            # Check if kx_star(t-dt) is in [kx_min,kx_max]
             if ikx + shifted >= 0 and ikx + shifted < nakx:
                 if phi2_bytheta[it-1,my_iky,ikx+shifted,(ntheta-1)//2]==0:
                     print('phi is zero')
                     print('it='+str(it))
                     print('ikx='+str(ikx+shifted))
-                gamma_mid[it,ikx] = gamma_mid[it,ikx] + \
-                        1./(2.*nwrite*delt)*np.log(phi2_bytheta[it,my_iky,ikx,(ntheta-1)//2]/phi2_bytheta[it-1,my_iky,ikx+shifted,(ntheta-1)//2])
+                gamma_mid[it,ikx] = 1./(2.*nwrite*delt)*np.log(phi2_bytheta[it,my_iky,ikx,(ntheta-1)//2]/phi2_bytheta[it-1,my_iky,ikx+shifted,(ntheta-1)//2])
             else:
                 gamma_mid[it,ikx] = np.nan
         ikx_shift_old = ikx_shift
-
-    # averaged version
-
-    N_floq_periods = (nt-1)//(Nf//nwrite)
-    gamma_mid_avg = np.zeros((N_floq_periods,nakx))
-    ikx_shift_old = 0
-    it = 1
-    for ifloq in range(N_floq_periods):
-        while (it <= (ifloq+1)*(Nf//nwrite)):
-            ikx_shift = int(round(g_exb*ky[my_iky]*delt*((nwrite*it-first_step)-ifloq*Nf)/dkx))
-            for ikx in range(nakx):
-                if ((ikx-ikx_shift) >= 0 and (ikx-ikx_shift) < nakx):
-                    if phi2_bytheta[it-1,my_iky,ikx-ikx_shift_old,(ntheta-1)//2]==0:
-                        print('phi is zero')
-                    gamma_mid_avg[ifloq,ikx] = gamma_mid_avg[ifloq,ikx] + \
-                            1./(2.*nwrite*delt)*np.log(phi2_bytheta[it,my_iky,ikx-ikx_shift,(ntheta-1)//2] / phi2_bytheta[it-1,my_iky,ikx-ikx_shift_old,(ntheta-1)//2])
-                else:
-                    gamma_mid_avg[ifloq,ikx] = np.nan
-            ikx_shift_old = ikx_shift
-            it = it+1
-        ikx_shift_old = 0
-        gamma_mid_avg[ifloq,:] = gamma_mid_avg[ifloq,:]/(Nf//nwrite)
 
 
     #
@@ -268,14 +248,13 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     my_vars['nwrite'] = nwrite
     my_vars['kx'] = kx
     my_vars['nakx'] = nakx
-    my_vars['kx_star'] = kx_star
+    my_vars['kx_bar'] = kx_bar
     my_vars['dkx'] = dkx
     my_vars['bloonang_chain'] = bloonang_chain
     my_vars['phi2'] = phi2
     my_vars['phi2bloon_chain'] = phi2bloon_chain
     my_vars['sum_phi2_chain'] = sum_phi2_chain
     my_vars['gamma_mid'] = gamma_mid
-    my_vars['gamma_mid_avg'] = gamma_mid_avg
     my_vars['gamma_chain'] = gamma_chain
     my_vars['phi_t_present'] = phi_t_present
 
@@ -322,14 +301,13 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     delt = my_vars['delt']
     kx = my_vars['kx']
     nakx = my_vars['nakx']
-    kx_star = my_vars['kx_star']
+    kx_bar = my_vars['kx_bar']
     dkx = my_vars['dkx']
     bloonang_chain = my_vars['bloonang_chain']
     phi2 = my_vars['phi2']
     phi2bloon_chain = my_vars['phi2bloon_chain']
     sum_phi2_chain = my_vars['sum_phi2_chain']
     gamma_mid = my_vars['gamma_mid']
-    gamma_mid_avg = my_vars['gamma_mid_avg']
     gamma_chain = my_vars['gamma_chain']
     phi_t_present = my_vars['phi_t_present']
     
@@ -384,8 +362,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
         bloonang_min = 0.
         bloonang_max = 0.
         # NDCTEST: to shorten movie
-        for it in range(401):
-        #for it in range(nt):
+        #for it in range(401):
+        for it in range(nt):
             if np.min(bloonang_chain[it]) < bloonang_min:
                 bloonang_min = np.min(bloonang_chain[it])
             if np.max(bloonang_chain[it]) > bloonang_max:
@@ -393,8 +371,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
        
         print("\ncreating movie of phi vs ballooning angle ...")
         # NDCTEST: to shorten movie
-        for it in range(401):
-        #for it in range(nt):
+        #for it in range(401):
+        for it in range(nt):
             
             sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
        
@@ -455,29 +433,6 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     outname = outname + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid)
     gplots.merge_pdfs(pdflist,outname,run,ifile)
 
-    # plot Floquet-averaged growthrate at mid-plane vs kx
-    
-    pdflist = []
-
-    for ifloq in range((nt-1)//Nf):
-        plt.xlabel('$k_x$')
-        plt.ylabel('$\\langle\\gamma\\rangle_{T_F}$')
-        plt.title('Growthrate at $\\theta = 0$ averaged over $'+"{:0.1f}".format(t[ifloq*Nf])+'\\leq t\\leq'+ "{:0.1f}".format(t[(ifloq+1)*Nf-1]) +'$')
-        plt.grid(True)
-        plt.plot(kx[ifloq*Nf,my_iky,:], gamma_mid_avg[ifloq,:], color=gplots.myblue)
-        
-        pdfname = 'tmp_' + str(ifloq)
-        gplots.save_plot(pdfname, run, ifile)
-        
-        plt.clf()
-        plt.cla()
-
-        pdflist.append(pdfname)
-
-    outname = 'growth_mid_avg'
-    outname = outname + '_iky_' + str(my_iky) + '_dmid_' + str(my_dmid)
-    gplots.merge_pdfs(pdflist,outname,run,ifile)
-    
     # make movie of growthrate at mid-plane vs kx over time
     #if (make_movies and phi_t_present):
     #    
@@ -589,11 +544,11 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     my_ylabel = '$\\ln \\left(\\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$'
     plt.ylabel(my_ylabel)
     plt.grid(True)
-    my_colorlist = plt.cm.plasma(np.linspace(0,1,kx_star.size))
+    my_colorlist = plt.cm.plasma(np.linspace(0,1,kx_bar.size))
     my_legend = []
-    for ikx in range(kx_star.size):
+    for ikx in range(kx_bar.size):
         plt.plot(t, np.log(phi2[:,1,ikx]), color=my_colorlist[ikx])
-        my_legend.append('$\\rho_i\\bar{k}_x = '+str(kx_star[ikx])+'$')
+        my_legend.append('$\\rho_i\\bar{k}_x = '+str(kx_bar[ikx])+'$')
     plt.legend(my_legend)
 
     pdfname = 'phi2_by_kx'
