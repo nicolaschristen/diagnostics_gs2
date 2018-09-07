@@ -197,6 +197,8 @@ def stitching_fluxes(run):
         with open(datfile_name,'rb') as datfile:
             full_time[ifile] = pickle.load(datfile)
         Nt_tot += full_fluxes[ifile]['pflx'].shape[0]
+        if ifile > 0:
+            Nt_tot -= 1 # removing duplicate at restart point
     
     # A lot of stuff is the same for all runs
     islin = full_fluxes[0]['islin']
@@ -225,7 +227,11 @@ def stitching_fluxes(run):
 
     it_tot = 0
     for ifile in range(Nfile):
-        for it in range(full_time[ifile].ntime):
+        if ifile == 0:
+            it_range = range(full_time[0].ntime)
+        else:
+            it_range = range(1,full_time[ifile].ntime) # excluding duplicate when restarting
+        for it in it_range:
             stitch_my_time.time[it_tot] = full_time[ifile].time[it]
             for ispec in range(nspec):
                 stitch_pflx[it_tot,ispec] = full_fluxes[ifile]['pflx'][it,ispec]
@@ -270,8 +276,9 @@ def plot_fluxes(ifile,run,mytime,mydict):
     ky = mydict['ky']
     
     print()
-    print("producing plots of fluxes vs time...", end='')
+    print(">>> producing plots of fluxes vs time...")
 
+    print("-- plotting avg(phi2)")
     write_fluxes_vs_t = False
     tmp_pdf_id = 1
     pdflist = []
@@ -288,6 +295,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
+    print("-- plotting particle flux")
     if pflx is not None:
         title = '$\Gamma_{GS2}$'
         plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title)
@@ -296,6 +304,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
+    print("-- plotting heat flux")
     if qflx is not None:
         title = '$Q_{GS2}$'
         plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title)
@@ -304,6 +313,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
+    print("-- plotting momentum flux")
     if vflx is not None:
         title = '$\Pi_{GS2}$'
         plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,)
@@ -320,6 +330,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     #    gplot.save_plot(tmp_pdfname, run, ifile)
     #    pdflist.append(tmp_pdfname)
     #    tmp_pdf_id = tmp_pdf_id+1
+    print("-- plotting momentum/heat flux ratio")
     if pioq is not None:
         title = '$\Pi_{GS2}/Q_{GS2}$'
         for idx in range(nspec):
@@ -333,17 +344,21 @@ def plot_fluxes(ifile,run,mytime,mydict):
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
+    print("-- plotting phi2 by ky")
     if phi2_by_ky is not None:
         title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$'
+        # Create list of colors
+        cmap = plt.get_cmap('nipy_spectral')
+        my_colors = [cmap(i) for i in np.linspace(0,1,naky-1)]
         if islin:
             title = '$\\ln$' + title
-            plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+            plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed',color='black')
             for iky in range(1,naky) :
-                plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
+                plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
         else:
-            plt.plot(time, phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+            plt.plot(time, phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed',color='black')
             for iky in range(1,naky) :
-                plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
+                plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
         plt.xlabel('$t (a/v_t)$')
         plt.title(title)
         plt.legend(prop={'size': 11}, ncol=6)
@@ -358,19 +373,28 @@ def plot_fluxes(ifile,run,mytime,mydict):
             
             tmp_pdf_id = tmp_pdf_id+1
             title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$ for low $k_y$'
+            #plt.figure(figsize=(8,8)) # NDCDEL
             if islin:
                 title = '$\\ln$' + title
-                plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+                plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed',color='black')
                 for iky in range(1,5) :
-                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
+                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
             else:
-                plt.plot(time[:], phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed')
+                plt.plot(time[:], phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed',color='black')
+                #for iky in range(1,4) :# NDCDEL
                 for iky in range(1,5) :
-                    plt.semilogy(time[:], phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
+                    plt.semilogy(time[:], phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
+            #plt.xlabel('$t$') # NDCDEL
             plt.xlabel('$t (a/v_t)$')
+            #plt.ylabel('$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$') # NDCDEL
             plt.title(title)
             plt.legend()
             plt.grid(True)
+            # NDCDEL
+            #axes = plt.gca()
+            #axes.set_xlim([0,500])
+            #plt.savefig('terrific.pdf')
+            # endNDCDEL
             write_fluxes_vs_t = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplot.save_plot(tmp_pdfname, run, ifile)
@@ -381,10 +405,10 @@ def plot_fluxes(ifile,run,mytime,mydict):
             if islin:
                 title = '$\\ln$' + title
                 for iky in range(naky-5,naky) :
-                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]))
+                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
             else:
                 for iky in range(naky-5,naky) :
-                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]))
+                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
             plt.xlabel('$t (a/v_t)$')
             plt.title(title)
             plt.legend()
@@ -397,7 +421,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     if write_fluxes_vs_t:
         merged_pdfname = 'fluxes_vs_t'
         if ifile==None: # This is the case when we stitch fluxes together
-            merged_pdfname = 'fluxes_vs_t_stitch'
+            merged_pdfname += '_'+run.scan_name
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
     print('complete')
@@ -501,9 +525,10 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,):
             flxavg = mytime.timeavg(flx[:,idx])
             dum.fill(flxavg)
         plt.plot(mytime.time_steady,dum,'--')
+        print('flux avg for '+spec_names[idx]+': '+str(flxavg))
 
     plt.xlabel('$t (a/v_t)$')
-    plt.xlim([mytime.time[0],mytime.time[mytime.ntime-1]])
+    plt.xlim([mytime.time[0],mytime.time[-1]])
     plt.title(title)
     plt.legend()
     plt.grid(True)
