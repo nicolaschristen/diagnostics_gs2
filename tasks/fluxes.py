@@ -137,14 +137,14 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
  
         # Save computed quantities
         datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
-        dict_to_save = {'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,'pflx_kxky_tavg':pflx_kxky_tavg,
+        mydict = {'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,'pflx_kxky_tavg':pflx_kxky_tavg,
                 'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,'pflx_vpth_tavg':pflx_vpth_tavg,
                 'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
                 'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
                 'naky':naky,'ky':ky,'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
                 'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky}
         with open(datfile_name,'wb') as datfile:
-            pickle.dump(dict_to_save,datfile)
+            pickle.dump(mydict,datfile)
 
         # Save time obj
         datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
