@@ -46,6 +46,19 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
         phi2_avg = myfields.phi2_avg
         if myout['phi2_by_ky_present']:
             phi2_by_ky = myout['phi2_by_ky']
+        
+        if myout['phi2_by_mode_present']:
+            phi2_kxky = np.concatenate((myout['phi2_by_mode'][:,:,nxmid:],myout['phi2_by_mode'][:,:,:nxmid]),axis=2)
+            mydim = (mygrids.ny,mygrids.nx)
+            phi2_kxky_tavg = np.zeros(mydim, dtype=float)
+            for ik in range(ny):
+                for it in range(nx):
+                    phi2_kxky_tavg[ik,it] = mytime.timeavg(phi2_kxky[:,ik,it])
+        else:
+            mydim = (mytime.ntime,mygrids.ny,mygrids.nx)
+            phi2_kxky = np.zeros(mydim, dtype=float)
+            mydim = (mygrids.ny,mygrids.nx)
+            phi2_kxky_tavg = np.zeros(mydim, dtype=float)
 
         if myout['es_part_flux_present']:
             pflx = myout['es_part_flux']
@@ -150,7 +163,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
                 'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
                 'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
                 'naky':naky,'kx':kx,'ky':ky,'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
-                'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,'has_flowshear':has_flowshear}
+                'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,'has_flowshear':has_flowshear,
+                'phi2_kxky_tavg':phi2_kxky_tavg,'phi2_kxky':phi2_kxky}
         with open(datfile_name,'wb') as datfile:
             pickle.dump(mydict,datfile)
 
@@ -232,8 +246,18 @@ def stitching_fluxes(run):
     stitch_qflx = np.zeros((Nt_tot,nspec))
     stitch_vflx = np.zeros((Nt_tot,nspec))
     stitch_pioq = np.zeros((Nt_tot,nspec))
+    
+    stitch_pflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
+    stitch_qflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
+    stitch_vflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
+    stitch_pflx_kxky_tavg = np.zeros((nspec,ny,nx))
+    stitch_qflx_kxky_tavg = np.zeros((nspec,ny,nx))
+    stitch_vflx_kxky_tavg = np.zeros((nspec,ny,nx))
+
     stitch_phi2_avg = np.zeros(Nt_tot)
     stitch_phi2_by_ky = np.zeros((Nt_tot,naky))
+    stitch_phi2_kxky = np.zeros((Nt_tot,ny,nx))
+    stitch_phi2_kxky_tavg = np.zeros((ny,nx))
 
     it_tot = 0
     for ifile in range(Nfile):
@@ -248,6 +272,17 @@ def stitching_fluxes(run):
                 stitch_qflx[it_tot,ispec] = full_fluxes[ifile]['qflx'][it,ispec]
                 stitch_vflx[it_tot,ispec] = full_fluxes[ifile]['vflx'][it,ispec]
                 stitch_pioq[it_tot,ispec] = full_fluxes[ifile]['pioq'][it,ispec]
+                
+                for ikx in range(nx):
+                    for iky in range(ny):
+                        stitch_pflx_kxky[it_tot,ispec,iky,ikx] = full_fluxes[ifile]['pflx_kxky'][it,ispec,iky,ikx]
+                        stitch_qflx_kxky[it_tot,ispec,iky,ikx] = full_fluxes[ifile]['qflx_kxky'][it,ispec,iky,ikx]
+                        stitch_vflx_kxky[it_tot,ispec,iky,ikx] = full_fluxes[ifile]['vflx_kxky'][it,ispec,iky,ikx]
+                
+            for ikx in range(nx):
+                for iky in range(ny):
+                    stitch_phi2_kxky[it_tot,iky,ikx] = full_fluxes[ifile]['phi2_kxky'][it,iky,ikx]
+            
             stitch_phi2_avg[it_tot] = full_fluxes[ifile]['phi2_avg'][it]
             stitch_phi2_by_ky[it_tot,:] = full_fluxes[ifile]['phi2_by_ky'][it,:]
             it_tot += 1
@@ -257,13 +292,22 @@ def stitching_fluxes(run):
     stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
     stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
 
+    # Computing time averaged versions of stitched fluxes vs (kx,ky)
+    for ik in range(ny):
+        for it in range(nx):
+            stitch_phi2_kxky_tavg[ik,it] = stitch_my_time.timeavg(stitch_phi2_kxky[:,ik,it])
+            for ispec in range(myout['nspec']):
+                stitch_pflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_pflx_kxky[:,ispec,ik,it])
+                stitch_qflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_qflx_kxky[:,ispec,ik,it])
+                stitch_vflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_vflx_kxky[:,ispec,ik,it])
+
     # Plotting the stitched fluxes
     ifile = None
     stitch_dict = {'pflx':stitch_pflx,'qflx':stitch_qflx,'vflx':stitch_vflx,'pioq':stitch_pioq,
             'nx':nx,'ny':ny,'islin':islin,'has_flowshear':has_flowshear,'nspec':nspec,'spec_names':spec_names,
             'naky':naky,'kx':kx,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
             'pflx_kxky_tavg':stitch_pflx_kxky_tavg,'qflx_kxky_tavg':stitch_qflx_kxky_tavg,
-            'vflx_kxky_tavg':stitch_vflx_kxky_tavg}
+            'vflx_kxky_tavg':stitch_vflx_kxky_tavg,'phi2_kxky_tavg':stitch_phi2_kxky_tavg}
     plot_fluxes(ifile,run,stitch_my_time,stitch_dict)
 
 def plot_fluxes(ifile,run,mytime,mydict):
@@ -302,6 +346,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     # potential
     phi2_avg = mydict['phi2_avg']
     phi2_by_ky = mydict['phi2_by_ky']
+    phi2_kxky_tavg = mydict['phi2_kxky_tavg']
     
     print()
     print(">>> producing plots of fluxes vs time...")
@@ -457,9 +502,6 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print()
     print('producing plots of fluxes vs (kx,ky)...', end='')
 
-    # NDCDEL
-    print(pflx_kxky_tavg[0,1,:])
-    # endNDCDEL
     write_fluxes_vs_kxky = False
     tmp_pdf_id = 1
     pdflist = []
@@ -490,6 +532,14 @@ def plot_fluxes(ifile,run,mytime,mydict):
             pdflist.append(tmp_pdfname)
             tmp_pdf_id = tmp_pdf_id+1
         write_fluxes_vs_kxky = True
+
+    # Plot phi2 averaged over t and theta, vs (kx,ky)
+    title = '\\langle\\vert\\varphi\\vert^2\\rangle_{t,\\theta}'
+    plot_phi2_vs_kxky(kx,ky,phi2_kxky_tavg,title,has_flowshear)
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id += 1
 
     if write_fluxes_vs_kxky:
         merged_pdfname = 'fluxes_vs_kxky'
@@ -532,7 +582,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     #    merged_pdfname = 'fluxes_vs_vpa_theta'
     #    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-    print('complete')
+    #print('complete')
 
 def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,):
 
@@ -580,14 +630,33 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
         xlab = '$k_{x}\\rho_i$'
     ylab = '$k_{y}\\rho_i$'
 
-    cmap = 'RdBu'
-    z = flx[ispec,:,:]
-    z_min, z_max = z.min(), z.max()
+    cmap = 'afmhot_r'
+    z = np.abs(flx[ispec,:,:]) # take absolute value of contribution to fluxes
+    z_min, z_max = 0.0, z.max()
+    
+    title = 'Contributions to ' + title
     if ispec > 1:
         title += ' (impurity ' + str(ispec-1) + ')'
     else:
         title += ' (' + spec_names[ispec] + 's)'
     fig = plot_2d(z,kx,ky,z_min,z_max,xlab,ylab,title,cmap)
+
+    return fig
+
+def plot_phi2_vs_kxky(kx,ky,phi2,title,has_flowshear):
+
+    from gs2_plotting import plot_2d
+
+    if has_flowshear:
+        xlab = '$\\bar{k}_{x}\\rho_i$'
+    else:
+        xlab = '$k_{x}\\rho_i$'
+    ylab = '$k_{y}\\rho_i$'
+
+    cmap = 'afmhot_r'
+    phi2_min, phi2_max = 0.0, phi2.max()
+    
+    fig = plot_2d(phi2,kx,ky,phi2_min,phi2_max,xlab,ylab,title,cmap)
 
     return fig
 
