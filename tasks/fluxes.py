@@ -22,12 +22,20 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
         if myin['nonlinear_terms_knobs']['nonlinear_mode']=='off':
             islin = True
 
+        has_flowshear = False
+        try:
+            if myin['dist_fn_knobs']['g_exb'] != 0.:
+                has_flowshear = True
+        except:
+            pass # ignore error if g_exb not defined
+
         nspec = myin['species_knobs']['nspec']
         spec_names = []
         for ispec in range(nspec):
             spec_names.append(myin['species_parameters_'+str(ispec+1)]['type'])
         naky = (myin['kt_grids_box_parameters']['ny']-1)//3 + 1
     
+        kx = mygrids.kx
         ky = mygrids.ky
 
         time = mytime.time
@@ -141,8 +149,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
                 'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,'pflx_vpth_tavg':pflx_vpth_tavg,
                 'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
                 'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
-                'naky':naky,'ky':ky,'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
-                'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky}
+                'naky':naky,'kx':kx,'ky':ky,'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
+                'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,'has_flowshear':has_flowshear}
         with open(datfile_name,'wb') as datfile:
             pickle.dump(mydict,datfile)
 
@@ -202,12 +210,14 @@ def stitching_fluxes(run):
     
     # A lot of stuff is the same for all runs
     islin = full_fluxes[0]['islin']
+    has_flowshear = full_fluxes[0]['has_flowshear']
     twin = full_time[0].twin
     nspec = full_fluxes[0]['nspec']
     spec_names = full_fluxes[0]['spec_names']
     nx = full_fluxes[0]['nx']
     ny = full_fluxes[0]['ny']
     naky = full_fluxes[0]['naky']
+    kx = full_fluxes[0]['kx']
     ky = full_fluxes[0]['ky']
     datfile_name = run.out_dir + run.fnames[0] + '.grids.dat'
     with open(datfile_name,'rb') as datfile:
@@ -250,30 +260,48 @@ def stitching_fluxes(run):
     # Plotting the stitched fluxes
     ifile = None
     stitch_dict = {'pflx':stitch_pflx,'qflx':stitch_qflx,'vflx':stitch_vflx,'pioq':stitch_pioq,
-            'nx':nx,'ny':ny,'islin':islin,'nspec':nspec,'spec_names':spec_names,
-            'naky':naky,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky}
+            'nx':nx,'ny':ny,'islin':islin,'has_flowshear':has_flowshear,'nspec':nspec,'spec_names':spec_names,
+            'naky':naky,'kx':kx,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
+            'pflx_kxky_tavg':stitch_pflx_kxky_tavg,'qflx_kxky_tavg':stitch_qflx_kxky_tavg,
+            'vflx_kxky_tavg':stitch_vflx_kxky_tavg}
     plot_fluxes(ifile,run,stitch_my_time,stitch_dict)
 
 def plot_fluxes(ifile,run,mytime,mydict):
 
+    islin = mydict['islin']
+    has_flowshear = mydict['has_flowshear']
+    
+    # t grid
     time = mytime.time
     time_steady = mytime.time_steady
     it_min = mytime.it_min
     it_max = mytime.it_max
 
-    islin = mydict['islin']
+    # k grids
+    nx = mydict['nx']
+    ny = mydict['ny']
+    naky = mydict['naky']
+    kx = mydict['ky']
+    ky = mydict['ky']
+
+    # species
+    nspec = mydict['nspec']
+    spec_names = mydict['spec_names']
+
+    # fluxes vs t
     pflx = mydict['pflx']
     qflx = mydict['qflx']
     vflx = mydict['vflx']
     pioq = mydict['pioq']
-    nspec = mydict['nspec']
-    spec_names = mydict['spec_names']
+
+    # fluxes vs (kx,ky)
+    pflx_kxky_tavg = mydict['pflx_kxky_tavg']
+    qflx_kxky_tavg = mydict['qflx_kxky_tavg']
+    vflx_kxky_tavg = mydict['vflx_kxky_tavg']
+
+    # potential
     phi2_avg = mydict['phi2_avg']
     phi2_by_ky = mydict['phi2_by_ky']
-    nx = mydict['nx']
-    ny = mydict['ny']
-    naky = mydict['naky']
-    ky = mydict['ky']
     
     print()
     print(">>> producing plots of fluxes vs time...")
@@ -426,41 +454,42 @@ def plot_fluxes(ifile,run,mytime,mydict):
 
     print('complete')
     
-    #print()
-    #print('producing plots of fluxes vs (kx,ky)...', end='')
+    print()
+    print('producing plots of fluxes vs (kx,ky)...', end='')
 
-    #write_fluxes_vs_kxky = False
-    #tmp_pdf_id = 1
-    #pdflist = []
-    #if pflx_kxky_tavg is not None:
-    #    title = '$\Gamma_{GS2}$'
-    #    plot_flux_vs_kxky(mygrids,pflx_kxky_tavg,title)
-    #    write_fluxes_vs_kxky = True
-    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    #    gplot.save_plot(tmp_pdfname, run, ifile)
-    #    pdflist.append(tmp_pdfname)
-    #    tmp_pdf_id = tmp_pdf_id+1
-    #if qflx_kxky_tavg is not None:
-    #    title = '$Q_{GS2}$'
-    #    plot_flux_vs_kxky(mygrids,qflx_kxky_tavg,title)
-    #    write_fluxes_vs_kxky = True
-    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    #    gplot.save_plot(tmp_pdfname, run, ifile)
-    #    pdflist.append(tmp_pdfname)
-    #    tmp_pdf_id = tmp_pdf_id+1
-    #if vflx_kxky_tavg is not None:
-    #    title = '$\Pi_{GS2}$'
-    #    plot_flux_vs_kxky(mygrids,vflx_kxky_tavg,title)
-    #    write_fluxes_vs_kxky = True
-    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    #    gplot.save_plot(tmp_pdfname, run, ifile)
-    #    pdflist.append(tmp_pdfname)
+    write_fluxes_vs_kxky = False
+    tmp_pdf_id = 1
+    pdflist = []
+    if pflx_kxky_tavg is not None:
+        title = '$\Gamma_{GS2}$'
+        for ispec in range(nspec):
+            plot_flux_vs_kxky(ispec,spec_names,kx,ky,pflx_kxky_tavg,title,has_flowshear)
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+        write_fluxes_vs_kxky = True
+    if qflx_kxky_tavg is not None:
+        title = '$Q_{GS2}$'
+        plot_flux_vs_kxky(kx,ky,qflx_kxky_tavg,title)
+        write_fluxes_vs_kxky = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+    if vflx_kxky_tavg is not None:
+        title = '$\Pi_{GS2}$'
+        plot_flux_vs_kxky(kx,ky,vflx_kxky_tavg,title)
+        write_fluxes_vs_kxky = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
 
-    #if write_fluxes_vs_kxky:
-    #    merged_pdfname = 'fluxes_vs_kxky'
-    #    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+    if write_fluxes_vs_kxky:
+        merged_pdfname = 'fluxes_vs_kxky'
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-    #print('complete')
+    print('complete')
 
     #print()
     #print('producing plots of fluxes vs (vpa,theta)...',end='')
@@ -497,7 +526,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     #    merged_pdfname = 'fluxes_vs_vpa_theta'
     #    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-    #print('complete')
+    print('complete')
 
 def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,):
 
@@ -535,17 +564,20 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,):
 
     return fig
 
-def plot_flux_vs_kxky(mygrids,flx,title):
+def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
 
     from gs2_plotting import plot_2d
 
-    xlab = '$k_{x}\\rho$'
-    ylab = '$k_{y}\\rho$'
+    if has_flowshear:
+        xlab = '$bar{k}_{x}\\rho_i$'
+    else:
+        xlab = '$k_{x}\\rho_i$'
+    ylab = '$k_{y}\\rho_i$'
+
     cmap = 'RdBu'
-    for idx in range(flx.shape[0]):
-        z = flx[idx,:,:]
-        z_min, z_max = z.min(), z.max()
-        fig = plot_2d(z,mygrids.kx,mygrids.ky,z_min,z_max,xlab,ylab,title+' (is= '+str(idx+1)+')',cmap)
+    z = flx[ispec,:,:]
+    z_min, z_max = z.min(), z.max()
+    fig = plot_2d(z,kx,ky,z_min,z_max,xlab,ylab,title+' for '+spec_names[ispec],cmap)
 
     return fig
 
