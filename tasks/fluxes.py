@@ -80,8 +80,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
         # need to multiply this by rhoc/(g_exb*rmaj**2)
         #prandtl = np.copy(vflx[:,0]*tprim[0]/(qflx[:,0]*q)
 
-        if myout['es_part_by_mode_present']:
-            pflx_kxky = np.concatenate((myout['es_part_by_mode'][:,:,:,nxmid:],myout['es_part_by_mode'][:,:,:,:nxmid]),axis=3)
+        if myout['es_part_flux_by_mode_present']:
+            pflx_kxky = np.concatenate((myout['es_part_flux_by_mode'][:,:,:,nxmid:],myout['es_part_flux_by_mode'][:,:,:,:nxmid]),axis=3)
             pflx_kxky_tavg = np.arange(myout['nspec']*nx*ny,dtype=float).reshape(myout['nspec'],ny,nx)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
@@ -93,8 +93,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             mydim = (myout['nspec'],mygrids.ny,mygrids.nx)
             pflx_kxky_tavg = np.zeros(mydim, dtype=float)
 
-        if myout['es_heat_by_mode_present']:
-            qflx_kxky = np.concatenate((myout['es_heat_by_mode'][:,:,:,nxmid:],myout['es_heat_by_mode'][:,:,:,:nxmid]),axis=3)
+        if myout['es_heat_flux_by_mode_present']:
+            qflx_kxky = np.concatenate((myout['es_heat_flux_by_mode'][:,:,:,nxmid:],myout['es_heat_flux_by_mode'][:,:,:,:nxmid]),axis=3)
             qflx_kxky_tavg = np.copy(pflx_kxky_tavg)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
@@ -106,8 +106,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             mydim = (myout['nspec'],mygrids.ny,mygrids.nx)
             qflx_kxky_tavg = np.zeros(mydim, dtype=float)
 
-        if myout['es_mom_by_mode_present']:
-            vflx_kxky = np.concatenate((myout['es_mom_by_mode'][:,:,:,nxmid:],myout['es_mom_by_mode'][:,:,:,:nxmid]),axis=3)
+        if myout['es_mom_flux_by_mode_present']:
+            vflx_kxky = np.concatenate((myout['es_mom_flux_by_mode'][:,:,:,nxmid:],myout['es_mom_flux_by_mode'][:,:,:,:nxmid]),axis=3)
             vflx_kxky_tavg = np.copy(pflx_kxky_tavg)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):

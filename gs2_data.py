@@ -26,11 +26,11 @@ out_varnames = [
         # turbulent energy exchange [t,spec]
         'es_energy_exchange',
         # electrostatic particle flux by k [t,spec,ky,kx]
-        'es_part_by_mode',
+        'es_part_flux_by_mode',
         # electrostatic heat flux by k [t,spec,ky,kx]
-        'es_heat_by_mode',
+        'es_heat_flux_by_mode',
         # electrostatic momentum flux by k [t,spec,ky,kx]
-        'es_mom_by_mode',
+        'es_mom_flux_by_mode',
         # parallel velocity grid
         'vpa',
         # electrostatic particle flux function of vpa and theta [t,spec,vpa,theta]
