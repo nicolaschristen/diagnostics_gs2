@@ -80,8 +80,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
         # need to multiply this by rhoc/(g_exb*rmaj**2)
         #prandtl = np.copy(vflx[:,0]*tprim[0]/(qflx[:,0]*q)
 
-        if myout['es_part_by_k_present']:
-            pflx_kxky = np.concatenate((myout['es_part_by_k'][:,:,:,nxmid:],myout['es_part_by_k'][:,:,:,:nxmid]),axis=3)
+        if myout['es_part_by_mode_present']:
+            pflx_kxky = np.concatenate((myout['es_part_by_mode'][:,:,:,nxmid:],myout['es_part_by_mode'][:,:,:,:nxmid]),axis=3)
             pflx_kxky_tavg = np.arange(myout['nspec']*nx*ny,dtype=float).reshape(myout['nspec'],ny,nx)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
@@ -93,8 +93,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             mydim = (myout['nspec'],mygrids.ny,mygrids.nx)
             pflx_kxky_tavg = np.zeros(mydim, dtype=float)
 
-        if myout['es_heat_by_k_present']:
-            qflx_kxky = np.concatenate((myout['es_heat_by_k'][:,:,:,nxmid:],myout['es_heat_by_k'][:,:,:,:nxmid]),axis=3)
+        if myout['es_heat_by_mode_present']:
+            qflx_kxky = np.concatenate((myout['es_heat_by_mode'][:,:,:,nxmid:],myout['es_heat_by_mode'][:,:,:,:nxmid]),axis=3)
             qflx_kxky_tavg = np.copy(pflx_kxky_tavg)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
@@ -106,8 +106,8 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             mydim = (myout['nspec'],mygrids.ny,mygrids.nx)
             qflx_kxky_tavg = np.zeros(mydim, dtype=float)
 
-        if myout['es_mom_by_k_present']:
-            vflx_kxky = np.concatenate((myout['es_mom_by_k'][:,:,:,nxmid:],myout['es_mom_by_k'][:,:,:,:nxmid]),axis=3)
+        if myout['es_mom_by_mode_present']:
+            vflx_kxky = np.concatenate((myout['es_mom_by_mode'][:,:,:,nxmid:],myout['es_mom_by_mode'][:,:,:,:nxmid]),axis=3)
             vflx_kxky_tavg = np.copy(pflx_kxky_tavg)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
@@ -281,7 +281,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     nx = mydict['nx']
     ny = mydict['ny']
     naky = mydict['naky']
-    kx = mydict['ky']
+    kx = mydict['kx']
     ky = mydict['ky']
 
     # species
@@ -457,6 +457,9 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print()
     print('producing plots of fluxes vs (kx,ky)...', end='')
 
+    # NDCDEL
+    print(pflx_kxky_tavg[0,1,:])
+    # endNDCDEL
     write_fluxes_vs_kxky = False
     tmp_pdf_id = 1
     pdflist = []
@@ -471,19 +474,22 @@ def plot_fluxes(ifile,run,mytime,mydict):
         write_fluxes_vs_kxky = True
     if qflx_kxky_tavg is not None:
         title = '$Q_{GS2}$'
-        plot_flux_vs_kxky(kx,ky,qflx_kxky_tavg,title)
+        for ispec in range(nspec):
+            plot_flux_vs_kxky(ispec,spec_names,kx,ky,qflx_kxky_tavg,title,has_flowshear)
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
         write_fluxes_vs_kxky = True
-        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-        gplot.save_plot(tmp_pdfname, run, ifile)
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
     if vflx_kxky_tavg is not None:
         title = '$\Pi_{GS2}$'
-        plot_flux_vs_kxky(kx,ky,vflx_kxky_tavg,title)
+        for ispec in range(nspec):
+            plot_flux_vs_kxky(ispec,spec_names,kx,ky,vflx_kxky_tavg,title,has_flowshear)
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
         write_fluxes_vs_kxky = True
-        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-        gplot.save_plot(tmp_pdfname, run, ifile)
-        pdflist.append(tmp_pdfname)
 
     if write_fluxes_vs_kxky:
         merged_pdfname = 'fluxes_vs_kxky'
@@ -569,7 +575,7 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
     from gs2_plotting import plot_2d
 
     if has_flowshear:
-        xlab = '$bar{k}_{x}\\rho_i$'
+        xlab = '$\\bar{k}_{x}\\rho_i$'
     else:
         xlab = '$k_{x}\\rho_i$'
     ylab = '$k_{y}\\rho_i$'
@@ -577,7 +583,11 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
     cmap = 'RdBu'
     z = flx[ispec,:,:]
     z_min, z_max = z.min(), z.max()
-    fig = plot_2d(z,kx,ky,z_min,z_max,xlab,ylab,title+' for '+spec_names[ispec],cmap)
+    if ispec > 1:
+        title += ' (impurity ' + str(ispec-1) + ')'
+    else:
+        title += ' (' + spec_names[ispec] + 's)'
+    fig = plot_2d(z,kx,ky,z_min,z_max,xlab,ylab,title,cmap)
 
     return fig
 
