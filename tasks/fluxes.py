@@ -86,7 +86,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
                     for it in range(nx):
-                        pflx_kxky_tavg[ispec,ik,it] = timeavg(pflx_kxky[:,ispec,ik,it])
+                        pflx_kxky_tavg[ispec,ik,it] = mytime.timeavg(pflx_kxky[:,ispec,ik,it])
         else:
             mydim = (mytime.ntime,myout['nspec'],mygrids.ny,mygrids.nx)
             pflx_kxky = np.zeros(mydim, dtype=float)
@@ -99,7 +99,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
                     for it in range(nx):
-                        qflx_kxky_tavg[ispec,ik,it] = timeavg(qflx_kxky[:,ispec,ik,it])
+                        qflx_kxky_tavg[ispec,ik,it] = mytime.timeavg(qflx_kxky[:,ispec,ik,it])
         else:
             mydim = (mytime.ntime,myout['nspec'],mygrids.ny,mygrids.nx)
             qflx_kxky = np.zeros(mydim, dtype=float)
@@ -112,7 +112,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             for ispec in range(myout['nspec']):
                 for ik in range(ny):
                     for it in range(nx):
-                        vflx_kxky_tavg[ispec,ik,it] = timeavg(vflx_kxky[:,ispec,ik,it])
+                        vflx_kxky_tavg[ispec,ik,it] = mytime.timeavg(vflx_kxky[:,ispec,ik,it])
         else:
             mydim = (mytime.ntime,myout['nspec'],mygrids.ny,mygrids.nx)
             vflx_kxky = np.zeros(mydim, dtype=float)
@@ -125,7 +125,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             for ispec in range(myout['nspec']):
                 for iv in range(nvpa):
                     for ig in range(ntheta):
-                        pflx_vpth_tavg[ispec,iv,ig] = timeavg(pflx_vpth[:,ispec,iv,ig])
+                        pflx_vpth_tavg[ispec,iv,ig] = mytime.timeavg(pflx_vpth[:,ispec,iv,ig])
         
         qflx_vpth = myout['es_heat_sym']
         qflx_vpth_tavg = np.copy(pflx_vpth_tavg)
@@ -133,7 +133,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             for ispec in range(myout['nspec']):
                 for iv in range(nvpa):
                     for ig in range(ntheta):
-                        qflx_vpth_tavg[ispec,iv,ig] = timeavg(qflx_vpth[:,ispec,iv,ig])
+                        qflx_vpth_tavg[ispec,iv,ig] = mytime.timeavg(qflx_vpth[:,ispec,iv,ig])
         
         vflx_vpth = myout['es_mom_sym'] 
         vflx_vpth_tavg = np.copy(pflx_vpth_tavg)
@@ -141,7 +141,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             for ispec in range(myout['nspec']):
                 for iv in range(nvpa):
                     for ig in range(ntheta):
-                        vflx_vpth_tavg[ispec,iv,ig] = timeavg(vflx_vpth[:,ispec,iv,ig])
+                        vflx_vpth_tavg[ispec,iv,ig] = mytime.timeavg(vflx_vpth[:,ispec,iv,ig])
  
         # Save computed quantities
         datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
