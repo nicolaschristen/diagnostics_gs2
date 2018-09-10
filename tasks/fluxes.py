@@ -505,6 +505,14 @@ def plot_fluxes(ifile,run,mytime,mydict):
     write_fluxes_vs_kxky = False
     tmp_pdf_id = 1
     pdflist = []
+
+    # Plot phi2 averaged over t and theta, vs (kx,ky)
+    plot_phi2_vs_kxky(kx,ky,phi2_kxky_tavg,has_flowshear)
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id += 1
+
     if pflx_kxky_tavg is not None:
         title = '$\Gamma_{GS2}$'
         for ispec in range(nspec):
@@ -532,14 +540,6 @@ def plot_fluxes(ifile,run,mytime,mydict):
             pdflist.append(tmp_pdfname)
             tmp_pdf_id = tmp_pdf_id+1
         write_fluxes_vs_kxky = True
-
-    # Plot phi2 averaged over t and theta, vs (kx,ky)
-    title = '\\langle\\vert\\varphi\\vert^2\\rangle_{t,\\theta}'
-    plot_phi2_vs_kxky(kx,ky,phi2_kxky_tavg,title,has_flowshear)
-    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    gplot.save_plot(tmp_pdfname, run, ifile)
-    pdflist.append(tmp_pdfname)
-    tmp_pdf_id += 1
 
     if write_fluxes_vs_kxky:
         merged_pdfname = 'fluxes_vs_kxky'
@@ -630,7 +630,7 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
         xlab = '$k_{x}\\rho_i$'
     ylab = '$k_{y}\\rho_i$'
 
-    cmap = 'afmhot_r'
+    cmap = 'Blues' # 'Reds','Blues'
     z = np.abs(flx[ispec,:,:]) # take absolute value of contribution to fluxes
     z_min, z_max = 0.0, z.max()
     
@@ -643,20 +643,25 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
 
     return fig
 
-def plot_phi2_vs_kxky(kx,ky,phi2,title,has_flowshear):
+def plot_phi2_vs_kxky(kx,ky,phi2,has_flowshear):
 
     from gs2_plotting import plot_2d
 
+    title = '$\\langle\\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$'
+    title += ' $\\forall$ $k_y\\neq 0$'
+    
     if has_flowshear:
         xlab = '$\\bar{k}_{x}\\rho_i$'
     else:
         xlab = '$k_{x}\\rho_i$'
     ylab = '$k_{y}\\rho_i$'
 
-    cmap = 'afmhot_r'
-    phi2_min, phi2_max = 0.0, phi2.max()
-    
-    fig = plot_2d(phi2,kx,ky,phi2_min,phi2_max,xlab,ylab,title,cmap)
+    cmap = 'RdBu'# 'RdBu_r','Blues'
+    z = phi2[1:,:] # taking out zonal modes because they are much larger
+    z_min, z_max = z.min(), z.max()
+
+    use_logcolor = True
+    fig = plot_2d(z,kx,ky[1:],z_min,z_max,xlab,ylab,title,cmap,use_logcolor)
 
     return fig
 
