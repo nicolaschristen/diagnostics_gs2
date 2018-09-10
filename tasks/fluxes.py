@@ -158,7 +158,9 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
  
         # Save computed quantities
         datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
-        mydict = {'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,'pflx_kxky_tavg':pflx_kxky_tavg,
+        mydict = {'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,
+                'pflx_kxky':pflx_kxky,'qflx_kxky':qflx_kxky,'vflx_kxky':vflx_kxky,
+                'pflx_kxky_tavg':pflx_kxky_tavg,
                 'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,'pflx_vpth_tavg':pflx_vpth_tavg,
                 'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
                 'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
