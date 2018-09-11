@@ -22,7 +22,7 @@ def my_task_single(ifile, run, myin, myout):
         nakx = kx.size
         ky = myout['ky']
         naky = ky.size
-        phi2 = myout['phi2_by_mode'] # modulus squared, avged over theta [t,ky,kx]
+        phi2 = myout['phi2_by_mode'] # modulus squared, avged over theta (indices: [t,ky,kx])
 
         if grid_option=='range':
             # In range, plot the only kx
@@ -66,6 +66,7 @@ def my_task_single(ifile, run, myin, myout):
         plt.legend(my_legend)
         pdfname = 'lingrowth'
         gplot.save_plot(pdfname, run, ifile)
+        print('Maximum linear growthrate: '+str(np.nanmax(gamma)))
 
 def get_growthrate(t,phi2,it_start,ikx,iky):
    

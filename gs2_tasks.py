@@ -12,6 +12,7 @@ import time_correlation as tcorr
 import flowtest
 import floquet
 import lingrowth
+import potential
 
 
 # Complete part of tasks that require a single in/out pair of files.
@@ -82,6 +83,10 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
     if (task == 'lingrowth'):
 
         lingrowth.my_task_single(ifile, run, myin, myout)
+
+    if (task == 'potential'):
+
+        potential.my_task_single(ifile, run, myin, myout, mygrids)
 
 # Complete part of tasks that require the collection of in/out pairs (e.g. plotting a parameter scan).
 

@@ -298,7 +298,7 @@ def stitching_fluxes(run):
     for ik in range(ny):
         for it in range(nx):
             stitch_phi2_kxky_tavg[ik,it] = stitch_my_time.timeavg(stitch_phi2_kxky[:,ik,it])
-            for ispec in range(myout['nspec']):
+            for ispec in range(nspec):
                 stitch_pflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_pflx_kxky[:,ispec,ik,it])
                 stitch_qflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_qflx_kxky[:,ispec,ik,it])
                 stitch_vflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_vflx_kxky[:,ispec,ik,it])
@@ -545,6 +545,8 @@ def plot_fluxes(ifile,run,mytime,mydict):
 
     if write_fluxes_vs_kxky:
         merged_pdfname = 'fluxes_vs_kxky'
+        if ifile==None: # This is the case when we stitch fluxes together
+            merged_pdfname += '_'+run.scan_name
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
     print('complete')

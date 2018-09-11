@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from matplotlib import rcParams
 from PyPDF2 import PdfFileMerger, PdfFileReader
 import os
@@ -72,13 +73,20 @@ def plot_1d(x,y,xlab,title='',ylab=''):
         plt.title(title)
     return fig
 
-def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu'):
+def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor=False):
 
     fig = plt.figure(figsize=(12,8))
     x,y = np.meshgrid(xin,yin)
+
+    if use_logcolor:
+        color_norm = mcolors.LogNorm(zmin,zmax)
+    else:
+        color_norm = mcolors.Normalize()
+
     plt.imshow(z, cmap=cmp, vmin=zmin, vmax=zmax,
                extent=[x.min(),x.max(),y.min(),y.max()],
-               interpolation='nearest', origin='lower', aspect='auto')
+               interpolation='nearest', origin='lower', aspect='auto',
+               norm=color_norm)
     plt.axis([x.min(), x.max(), y.min(), y.max()])
     plt.colorbar()
     plt.xlabel(xlab)
