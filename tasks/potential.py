@@ -106,7 +106,7 @@ def my_task_single(ifile, run, myin, myout, mygrids):
             if t_outgrid < t.max():
                 it_drop = int(np.ceil((t_outgrid+0.5*delt)/(nwrite*delt))) # add delt/2 because first step in GS2 uses dt/2
             else:
-                it_drop = None
+                it_drop = -1
 
             # Continue filling phi2_kxky by following it as it moves across kxgrid
             ikxgrid = ikx_start_list[iplot]
@@ -216,7 +216,7 @@ def my_task_single(ifile, run, myin, myout, mygrids):
                     horizontalalignment='center')
             
             # Draw vertical line where kx is dropped from the sim
-            if it_drop is not None:
+            if it_drop > 0 :
                 plt.axvline(x=t_outgrid,color='k',linestyle='--',linewidth=2)
             # Add textbox
             txt_xpos = 0.5*(1.-(max(t_plot)-min(t_plot))/(xmax-xmin)) + (t_outgrid-min(t_plot))/(xmax-xmin)
