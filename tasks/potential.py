@@ -110,7 +110,11 @@ def my_task_single(ifile, run, myin, myout, mygrids):
 
             # Continue filling phi2_kxky by following it as it moves across kxgrid
             ikxgrid = ikx_start_list[iplot]
-            for it in range(it_start_list[iplot]+1,min(t.size,it_drop)):
+            if it_drop > 0 :
+                it_max = it_drop
+            else:
+                it_max = t.size
+            for it in range(it_start_list[iplot]+1,it_max):
 
                 t_plot.append(t[it])
 
