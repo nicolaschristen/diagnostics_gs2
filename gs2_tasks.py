@@ -13,7 +13,7 @@ import flowtest
 import floquet
 import lingrowth
 import potential
-
+import along_tube
 
 # Complete part of tasks that require a single in/out pair of files.
 
@@ -61,6 +61,9 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
         stitching = True
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching)
 
+    if (task == 'along_tube'):
+        along_tube.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
+
     if (task == 'zonal'):
 
         myzonal = zonal.zonalobj(mygrids, mytime, myfields)
@@ -107,8 +110,13 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 def complete_task_scan(task, run, full_space):
 
     if (task in ('basic','fluxes','zonal','tcorr')):
-        
         return
+    
+    # OB ~ Scan in triangularity and elongation.
+    if (task == 'tri_kap_nl'):
+        fluxes.trikap(run)
+    elif (task == 'tri_kap_lin'):
+        lingrowth.trikap(run)
 
     if (task == 'flowtest'):
 

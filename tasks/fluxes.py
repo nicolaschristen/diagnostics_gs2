@@ -11,75 +11,16 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
 
     # Compute and save to dat file
     if not run.only_plot:
-    
-        nvpa = mygrids.nvpa
-        ntheta = mygrids.ntheta
-        nx = mygrids.nx
-        ny = mygrids.ny
-        nxmid = mygrids.nxmid
-
-        islin = False
-        if myin['nonlinear_terms_knobs']['nonlinear_mode']=='off':
-            islin = True
-
-        has_flowshear = False
-        try:
-            if myin['dist_fn_knobs']['g_exb'] != 0.:
-                has_flowshear = True
-        except:
-            pass # ignore error if g_exb not defined
-
-        nspec = myin['species_knobs']['nspec']
+        # OB 140918 ~ mygrids.ny = naky. Before, ny was defined as mygrids.ny, but I have changed it to ny specified in the input file, so we have both.
+        #             (Same for x, and I replaced all further ny,nx that should have been naky and nakx, respectively)
+        
         spec_names = []
-        for ispec in range(nspec):
+        for ispec in range(myout['nspec']):
             spec_names.append(myin['species_parameters_'+str(ispec+1)]['type'])
-        naky = (myin['kt_grids_box_parameters']['ny']-1)//3 + 1
-    
-        kx = mygrids.kx
-        ky = mygrids.ky
-
-        time = mytime.time
-        time_steady = mytime.time_steady
-        it_min = mytime.it_min
-        it_max = mytime.it_max
         
-        phi2_avg = myfields.phi2_avg
-        if myout['phi2_by_ky_present']:
-            phi2_by_ky = myout['phi2_by_ky']
+        qflx = get_dict_item('es_heat_flux',myout)
+        vflx = get_dict_item('es_mom_flux',myout)
         
-        if myout['phi2_by_mode_present']:
-            phi2_kxky = np.concatenate((myout['phi2_by_mode'][:,:,nxmid:],myout['phi2_by_mode'][:,:,:nxmid]),axis=2)
-            mydim = (mygrids.ny,mygrids.nx)
-            phi2_kxky_tavg = np.zeros(mydim, dtype=float)
-            for ik in range(ny):
-                for it in range(nx):
-                    phi2_kxky_tavg[ik,it] = mytime.timeavg(phi2_kxky[:,ik,it])
-        else:
-            mydim = (mytime.ntime,mygrids.ny,mygrids.nx)
-            phi2_kxky = np.zeros(mydim, dtype=float)
-            mydim = (mygrids.ny,mygrids.nx)
-            phi2_kxky_tavg = np.zeros(mydim, dtype=float)
-
-        if myout['es_part_flux_present']:
-            pflx = myout['es_part_flux']
-        else:
-            pflx = np.arange(1,dtype=float)
-
-        if myout['es_heat_flux_present']:
-            qflx = myout['es_heat_flux']
-        else:
-            qflx = np.arange(1,dtype=float)
-
-        if myout['es_mom_flux_present']:
-            vflx = myout['es_mom_flux']
-        else:
-            vflx = np.arange(1,dtype=float)
-
-        if myout['es_energy_exchange_present']:
-            xchange = myout['es_energy_exchange']
-        else:
-            xchange = np.arange(1,dtype=float)
-
         if myout['es_heat_flux_present'] and myout['es_mom_flux_present']:
             # avoid divide by zero with qflx
             # in this case, set pi/Q = 0
@@ -93,111 +34,163 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
         # need to multiply this by rhoc/(g_exb*rmaj**2)
         #prandtl = np.copy(vflx[:,0]*tprim[0]/(qflx[:,0]*q)
 
-        if myout['es_part_flux_by_mode_present']:
-            pflx_kxky = np.concatenate((myout['es_part_flux_by_mode'][:,:,:,nxmid:],myout['es_part_flux_by_mode'][:,:,:,:nxmid]),axis=3)
-            pflx_kxky_tavg = np.arange(myout['nspec']*nx*ny,dtype=float).reshape(myout['nspec'],ny,nx)
-            for ispec in range(myout['nspec']):
-                for ik in range(ny):
-                    for it in range(nx):
-                        pflx_kxky_tavg[ispec,ik,it] = mytime.timeavg(pflx_kxky[:,ispec,ik,it])
-        else:
-            mydim = (mytime.ntime,myout['nspec'],mygrids.ny,mygrids.nx)
-            pflx_kxky = np.zeros(mydim, dtype=float)
-            mydim = (myout['nspec'],mygrids.ny,mygrids.nx)
-            pflx_kxky_tavg = np.zeros(mydim, dtype=float)
-
-        if myout['es_heat_flux_by_mode_present']:
-            qflx_kxky = np.concatenate((myout['es_heat_flux_by_mode'][:,:,:,nxmid:],myout['es_heat_flux_by_mode'][:,:,:,:nxmid]),axis=3)
-            qflx_kxky_tavg = np.copy(pflx_kxky_tavg)
-            for ispec in range(myout['nspec']):
-                for ik in range(ny):
-                    for it in range(nx):
-                        qflx_kxky_tavg[ispec,ik,it] = mytime.timeavg(qflx_kxky[:,ispec,ik,it])
-        else:
-            mydim = (mytime.ntime,myout['nspec'],mygrids.ny,mygrids.nx)
-            qflx_kxky = np.zeros(mydim, dtype=float)
-            mydim = (myout['nspec'],mygrids.ny,mygrids.nx)
-            qflx_kxky_tavg = np.zeros(mydim, dtype=float)
-
-        if myout['es_mom_flux_by_mode_present']:
-            vflx_kxky = np.concatenate((myout['es_mom_flux_by_mode'][:,:,:,nxmid:],myout['es_mom_flux_by_mode'][:,:,:,:nxmid]),axis=3)
-            vflx_kxky_tavg = np.copy(pflx_kxky_tavg)
-            for ispec in range(myout['nspec']):
-                for ik in range(ny):
-                    for it in range(nx):
-                        vflx_kxky_tavg[ispec,ik,it] = mytime.timeavg(vflx_kxky[:,ispec,ik,it])
-        else:
-            mydim = (mytime.ntime,myout['nspec'],mygrids.ny,mygrids.nx)
-            vflx_kxky = np.zeros(mydim, dtype=float)
-            mydim = (myout['nspec'],mygrids.ny,mygrids.nx)
-            vflx_kxky_tavg = np.zeros(mydim, dtype=float)
-
-        pflx_vpth = myout['es_part_sym']
-        pflx_vpth_tavg = np.arange(myout['nspec']*nvpa*ntheta,dtype=float).reshape(myout['nspec'],nvpa,ntheta)
-        if myout['es_part_sym_present']:
-            for ispec in range(myout['nspec']):
-                for iv in range(nvpa):
-                    for ig in range(ntheta):
-                        pflx_vpth_tavg[ispec,iv,ig] = mytime.timeavg(pflx_vpth[:,ispec,iv,ig])
+        (pflx_kxky,pflx_kxky_tavg) = get_dict_item('es_part_flux_by_mode', myout, mygrids=mygrids, mytime=mytime)
+        (qflx_kxky,qflx_kxky_tavg) = get_dict_item('es_heat_flux_by_mode', myout, mygrids=mygrids, mytime=mytime)
+        (vflx_kxky,vflx_kxky_tavg) = get_dict_item('es_mom_flux_by_mode', myout, mygrids=mygrids, mytime=mytime)
         
-        qflx_vpth = myout['es_heat_sym']
-        qflx_vpth_tavg = np.copy(pflx_vpth_tavg)
-        if myout['es_heat_sym_present']:
-            for ispec in range(myout['nspec']):
-                for iv in range(nvpa):
-                    for ig in range(ntheta):
-                        qflx_vpth_tavg[ispec,iv,ig] = mytime.timeavg(qflx_vpth[:,ispec,iv,ig])
+        (pflx_vpth, pflx_vpth_tavg) = get_dict_item('es_part_sym', myout, mygrids=mygrids, mytime=mytime)
+        (qflx_vpth, qflx_vpth_tavg) = get_dict_item('es_heat_sym', myout, mygrids=mygrids, mytime=mytime)
+        (vflx_vpth, vflx_vpth_tavg) = get_dict_item('es_mom_sym', myout, mygrids=mygrids, mytime=mytime)
         
-        vflx_vpth = myout['es_mom_sym'] 
-        vflx_vpth_tavg = np.copy(pflx_vpth_tavg)
-        if myout['es_mom_sym_present']:
-            for ispec in range(myout['nspec']):
-                for iv in range(nvpa):
-                    for ig in range(ntheta):
-                        vflx_vpth_tavg[ispec,iv,ig] = mytime.timeavg(vflx_vpth[:,ispec,iv,ig])
- 
-        # Save computed quantities
-        datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
-        mydict = {'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,
+        (phi2_kxky,phi2_kxky_tavg) = get_dict_item('phi2_by_mode', myout, mygrids=mygrids, mytime=mytime) 
+        
+        # Save computed quantities      OB 140918 ~ added tri,kap to saved dat.
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.fluxes.dat'
+        mydict = {'pflx':get_dict_item('es_part_flux',myout),'qflx':qflx,'vflx':vflx,'xchange':get_dict_item('es_energy_exchange',myout),
                 'pflx_kxky':pflx_kxky,'qflx_kxky':qflx_kxky,'vflx_kxky':vflx_kxky,
-                'pflx_kxky_tavg':pflx_kxky_tavg,
-                'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,'pflx_vpth_tavg':pflx_vpth_tavg,
-                'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
-                'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
-                'naky':naky,'kx':kx,'ky':ky,'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
-                'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,'has_flowshear':has_flowshear,
-                'phi2_kxky_tavg':phi2_kxky_tavg,'phi2_kxky':phi2_kxky}
+                'pflx_kxky_tavg':pflx_kxky_tavg,'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,
+                'pflx_vpth_tavg':pflx_vpth_tavg,'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,
+                'pioq':pioq,'nvpa':mygrids.nvpa,'ntheta':mygrids.ntheta,'nx':myin['kt_grids_box_parameters']['nx'],'ny':myin['kt_grids_box_parameters']['ny'],
+                'nxmid':mygrids.nxmid,'islin':get_boolean(myin, 'nonlinear_terms_knobs', 'nonlinear_mode', 'off'),
+                'nspec':myout['nspec'],'spec_names':spec_names,
+                'naky':mygrids.ny,'nakx':mygrids.nx,'kx':mygrids.kx,'ky':mygrids.ky,'time':mytime.time,'time_steady':mytime.time_steady,'it_min':mytime.it_min,'it_max':mytime.it_max,
+                'phi2_avg':myfields.phi2_avg,'phi2_by_ky':get_dict_item('phi2_by_ky', myout),'has_flowshear':get_boolean(myin, 'dist_fn_knobs', 'g_exb', 0., negate = True),
+                'phi2_kxky_tavg':phi2_kxky_tavg,'phi2_kxky':phi2_kxky,
+                'tri':myin['theta_grid_parameters']['tri'],'kap':myin['theta_grid_parameters']['akappa']}
+
         with open(datfile_name,'wb') as datfile:
             pickle.dump(mydict,datfile)
 
         # Save time obj
-        datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.time.dat'
         with open(datfile_name,'wb') as datfile:
             pickle.dump(mytime,datfile)
 
         # Save grid obj
-        datfile_name = run.out_dir + run.fnames[ifile] + '.grids.dat'
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.grids.dat'
         with open(datfile_name,'wb') as datfile:
             pickle.dump(mygrids,datfile)
 
     # Read from dat files
     else:
-
-        datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
+        
+        
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.fluxes.dat'
         with open(datfile_name,'rb') as datfile:
             mydict = pickle.load(datfile)
 
-        datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.time.dat'
         with open(datfile_name,'rb') as datfile:
             mytime = pickle.load(datfile)
 
-        datfile_name = run.out_dir + run.fnames[ifile] + '.grids.dat'
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.grids.dat'
         with open(datfile_name,'rb') as datfile:
             mygrids = pickle.load(datfile)
     
     if not run.no_plot and not stitching: # plot fluxes for this single file
             
         plot_fluxes(ifile,run,mytime,mydict)
+
+# OB 140918 ~ Gets boolean properties and defaults if not in input file.
+# myin is the input file dictionary.
+# namelist is the namelist within the input file.
+# item is the item within the namelist.
+# if myin[namelist][item] == matches, return 
+# if negate, then == changes to !=
+# default is what is returned if the desired key could not be found
+def get_boolean(myin, namelist, item, matches, negate = False, default = False):
+    try:
+        return (myin[namelist][item] != matches and negate) or (myin[namelist][item] == matches and not negate) 
+    except:                                             
+        # Could not find key in list.
+        return default
+
+# OB 140918 ~ Clean up the long list of if "XYZ_present" above with this function
+# name is the key in myout that belongs to the data of interest.
+# For kx_ky and vpar_theta quantities, we use mytime and mygrids.
+# Note that if the key is not present, the passed arrays do not have the correct dims. 
+# This will likely lead to crashes if they are used later, so before use we should probably always check if _present.
+def get_dict_item(name, myout, mygrids=None, mytime=None):
+    if "by_mode" in name:
+        if myout[name+'_present']:
+            ndims = myout[name].ndim
+            lslice, rslice =  [slice(None)] * ndims, [slice(None)] * ndims
+            lslice[ndims-1] = slice(0,mygrids.nxmid)
+            rslice[ndims-1] = slice(mygrids.nxmid,mygrids.nx)
+            value_kxky = np.concatenate((myout[name][tuple(rslice)],myout[name][tuple(lslice)]),axis=ndims-1)
+            return (value_kxky,mytime.timeavg(value_kxky))
+        else:
+            return (((np.arange(1,dtype=float)),np.arange(1,dtype=float)))
+    elif "sym" in name:                                                 # TODO OB ~ N.B. not yet tested since I didn't have an out.nc file that contained "XYZ_sym" data 
+        if myout[name+'_present']:
+            return (myout[name],mytime.timeavg(myout[name]))
+        else:
+            return (((np.arange(1,dtype=float)),np.arange(1,dtype=float)))
+    else:
+        if myout[name+"_present"]:
+            value = myout[name]
+        else:
+            value = np.arange(1,dtype=float)
+    return value
+   
+# OB ~ function to plot a heatmap of heat flux vs triangularity and elongation.
+def trikap(run):
+    # Only execute if plotting
+    if run.no_plot:
+        return
+    print("Plotting scan of triangularity vs elongation...")
+    Nfile = len(run.fnames)
+    
+    # Init arrays of data used in scan.
+    full_fluxes = [dict() for ifile in range(Nfile)]
+    full_time = [dict() for ifile in range(Nfile)]
+    
+    # Initialize fluxes and grids from .dat files.
+    for ifile in range(Nfile):
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.fluxes.dat'
+        with open(datfile_name,'rb') as datfile:
+            full_fluxes[ifile] = pickle.load(datfile)
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.time.dat'
+        with open(datfile_name,'rb') as datfile:
+            full_time[ifile]  =  pickle.load(datfile)
+
+    # Uses nspec from first file. Will quit if not constant between files.
+    nspec = full_fluxes[0]['nspec']
+    print("Number of species " + str(nspec))
+    tri,kap = np.zeros(Nfile),np.zeros(Nfile)
+    for ifile in range(Nfile):
+        tri[ifile] = full_fluxes[ifile]['tri']
+        kap[ifile] = full_fluxes[ifile]['kap']
+        if full_fluxes[ifile]['nspec'] != nspec:
+            quit("Number of species varies between files - exiting")
+    tris = sorted(list(set(tri)))
+    kaps = sorted(list(set(kap)))
+    print("Triangularity values: " + str(tris))
+    print("Elongation values: " + str(kaps))
+    if len(tris) * len(kaps) != Nfile:
+        quit("Too few files added to populate the scan - exiting")
+     
+    qflx = np.zeros((len(tris), len(kaps), nspec))
+    for itri in range(len(tris)):
+        for ikap in range(len(kaps)):
+            for ifile in range(Nfile):
+                if tri[ifile] == tris[itri] and kap[ifile] == kaps[ikap]:
+                    for ispec in range(nspec):
+                        qflx[itri,ikap,ispec] = full_time[ifile].timeavg(full_fluxes[ifile]['qflx'][:,ispec])
+
+    spec_names = full_fluxes[0]['spec_names']
+    pdflist = [] 
+    tmp_pdf_id=0
+    for ispec in range(nspec):
+        print("Plotting for species: " + spec_names[ispec])
+        gplot.plot_2d(qflx[:,:,ispec],tris,kaps,np.min(qflx[:,:,ispec]),np.max(qflx[:,:,ispec]),cmp='Reds',xlab='$\delta$',ylab='$\kappa$',title='$Q_{GS2}$: ' + spec_names[ispec]) 
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id += 1
+
+    merged_pdfname = 'tri_kap_scan'
+    gplot.merge_pdfs(pdflist, merged_pdfname, run)
 
 def stitching_fluxes(run):
 
@@ -213,13 +206,14 @@ def stitching_fluxes(run):
     # Reading .dat file for each run
     # and calc how long the stitched array will be
     Nt_tot = 0
+    
     for ifile in range(Nfile):
-        datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.fluxes.dat'
         with open(datfile_name,'rb') as datfile:
             full_fluxes[ifile] = pickle.load(datfile)
-        datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.time.dat'
         with open(datfile_name,'rb') as datfile:
-            full_time[ifile] = pickle.load(datfile)
+            full_time[ifile]  =  pickle.load(datfile)
         Nt_tot += full_fluxes[ifile]['pflx'].shape[0]
         if ifile > 0:
             Nt_tot -= 1 # removing duplicate at restart point
@@ -233,9 +227,10 @@ def stitching_fluxes(run):
     nx = full_fluxes[0]['nx']
     ny = full_fluxes[0]['ny']
     naky = full_fluxes[0]['naky']
+    nakx = full_fluxes[0]['nakx']
     kx = full_fluxes[0]['kx']
     ky = full_fluxes[0]['ky']
-    datfile_name = run.out_dir + run.fnames[0] + '.grids.dat'
+    datfile_name = run.work_dir + run.dirs[0] + run.out_dir + run.files[0] + '.grids.dat'
     with open(datfile_name,'rb') as datfile:
         my_grids = pickle.load(datfile)
 
@@ -249,17 +244,17 @@ def stitching_fluxes(run):
     stitch_vflx = np.zeros((Nt_tot,nspec))
     stitch_pioq = np.zeros((Nt_tot,nspec))
     
-    stitch_pflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
-    stitch_qflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
-    stitch_vflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
-    stitch_pflx_kxky_tavg = np.zeros((nspec,ny,nx))
-    stitch_qflx_kxky_tavg = np.zeros((nspec,ny,nx))
-    stitch_vflx_kxky_tavg = np.zeros((nspec,ny,nx))
+    stitch_pflx_kxky = np.zeros((Nt_tot,nspec,naky,nakx))
+    stitch_qflx_kxky = np.zeros((Nt_tot,nspec,naky,nakx))
+    stitch_vflx_kxky = np.zeros((Nt_tot,nspec,naky,nakx))
+    stitch_pflx_kxky_tavg = np.zeros((nspec,naky,nakx))
+    stitch_qflx_kxky_tavg = np.zeros((nspec,naky,nakx))
+    stitch_vflx_kxky_tavg = np.zeros((nspec,naky,nakx))
 
     stitch_phi2_avg = np.zeros(Nt_tot)
     stitch_phi2_by_ky = np.zeros((Nt_tot,naky))
-    stitch_phi2_kxky = np.zeros((Nt_tot,ny,nx))
-    stitch_phi2_kxky_tavg = np.zeros((ny,nx))
+    stitch_phi2_kxky = np.zeros((Nt_tot,naky,nakx))
+    stitch_phi2_kxky_tavg = np.zeros((naky,nakx))
 
     it_tot = 0
     for ifile in range(Nfile):
@@ -275,14 +270,14 @@ def stitching_fluxes(run):
                 stitch_vflx[it_tot,ispec] = full_fluxes[ifile]['vflx'][it,ispec]
                 stitch_pioq[it_tot,ispec] = full_fluxes[ifile]['pioq'][it,ispec]
                 
-                for ikx in range(nx):
-                    for iky in range(ny):
+                for ikx in range(nakx):
+                    for iky in range(naky):
                         stitch_pflx_kxky[it_tot,ispec,iky,ikx] = full_fluxes[ifile]['pflx_kxky'][it,ispec,iky,ikx]
                         stitch_qflx_kxky[it_tot,ispec,iky,ikx] = full_fluxes[ifile]['qflx_kxky'][it,ispec,iky,ikx]
                         stitch_vflx_kxky[it_tot,ispec,iky,ikx] = full_fluxes[ifile]['vflx_kxky'][it,ispec,iky,ikx]
                 
-            for ikx in range(nx):
-                for iky in range(ny):
+            for ikx in range(nakx):
+                for iky in range(naky):
                     stitch_phi2_kxky[it_tot,iky,ikx] = full_fluxes[ifile]['phi2_kxky'][it,iky,ikx]
             
             stitch_phi2_avg[it_tot] = full_fluxes[ifile]['phi2_avg'][it]
@@ -294,20 +289,17 @@ def stitching_fluxes(run):
     stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
     stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
 
-    # Computing time averaged versions of stitched fluxes vs (kx,ky)
-    for ik in range(ny):
-        for it in range(nx):
-            stitch_phi2_kxky_tavg[ik,it] = stitch_my_time.timeavg(stitch_phi2_kxky[:,ik,it])
-            for ispec in range(nspec):
-                stitch_pflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_pflx_kxky[:,ispec,ik,it])
-                stitch_qflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_qflx_kxky[:,ispec,ik,it])
-                stitch_vflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_vflx_kxky[:,ispec,ik,it])
+    # Computing time averaged versions of stitched fluxes vs (kx,ky) OB 140918 ~ New timeavg doesn't need us to explicitly loop over.
+    stitch_phi2_kxky_tavg = stitch_my_time.timeavg(stitch_phi2_kxky)
+    stitch_pflx_kxky_tavg = stitch_my_time.timeavg(stitch_pflx_kxky)
+    stitch_qflx_kxky_tavg = stitch_my_time.timeavg(stitch_qflx_kxky)
+    stitch_vflx_kxky_tavg = stitch_my_time.timeavg(stitch_vflx_kxky)
 
     # Plotting the stitched fluxes
     ifile = None
     stitch_dict = {'pflx':stitch_pflx,'qflx':stitch_qflx,'vflx':stitch_vflx,'pioq':stitch_pioq,
             'nx':nx,'ny':ny,'islin':islin,'has_flowshear':has_flowshear,'nspec':nspec,'spec_names':spec_names,
-            'naky':naky,'kx':kx,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
+            'naky':naky,'nakx':nakx,'kx':kx,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
             'pflx_kxky_tavg':stitch_pflx_kxky_tavg,'qflx_kxky_tavg':stitch_qflx_kxky_tavg,
             'vflx_kxky_tavg':stitch_vflx_kxky_tavg,'phi2_kxky_tavg':stitch_phi2_kxky_tavg}
     plot_fluxes(ifile,run,stitch_my_time,stitch_dict)
@@ -327,6 +319,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     nx = mydict['nx']
     ny = mydict['ny']
     naky = mydict['naky']
+    nakx = mydict['nakx']
     kx = mydict['kx']
     ky = mydict['ky']
 
@@ -635,7 +628,7 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
     ylab = '$k_{y}\\rho_i$'
 
     cmap = 'Blues' # 'Reds','Blues'
-    z = np.abs(flx[ispec,:,:]) # take absolute value of contribution to fluxes
+    z = flx[ispec,:,:] # OB 140918 ~ Don't take absolute value of fluxes. 
     z_min, z_max = 0.0, z.max()
     
     title = 'Contributions to ' + title
@@ -643,7 +636,7 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
         title += ' (impurity ' + str(ispec-1) + ')'
     else:
         title += ' (' + spec_names[ispec] + 's)'
-    fig = plot_2d(z,kx,ky,z_min,z_max,xlab,ylab,title,cmap)
+    fig = plot_2d(np.transpose(z),kx,ky,z_min,z_max,xlab,ylab,title,cmap)
 
     return fig
 
@@ -663,9 +656,8 @@ def plot_phi2_vs_kxky(kx,ky,phi2,has_flowshear):
     cmap = 'RdBu'# 'RdBu_r','Blues'
     z = phi2[1:,:] # taking out zonal modes because they are much larger
     z_min, z_max = z.min(), z.max()
-
     use_logcolor = True
-    fig = plot_2d(z,kx,ky[1:],z_min,z_max,xlab,ylab,title,cmap,use_logcolor)
+    fig = plot_2d(np.transpose(z),kx,ky[1:],z_min,z_max,xlab,ylab,title,cmap,use_logcolor)
 
     return fig
 

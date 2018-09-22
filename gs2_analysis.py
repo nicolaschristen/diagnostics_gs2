@@ -33,8 +33,7 @@ mytxt = []
 # Loop over all files specified by user
 for ifile in range(len(run.fnames)):
 
-    # .txt file in which the user can print stuff out
-    txtname = run.out_dir + 'info_' + run.fnames[ifile] + '.txt'
+    txtname = run.work_dir + run.dirs[ifile] + run.out_dir + 'info_' + run.files[ifile] + '.txt'
     mytxt = open(txtname, 'w')
     
     if not run.only_plot:

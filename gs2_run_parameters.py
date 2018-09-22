@@ -4,6 +4,18 @@ import argparse
 # Get settings for quick-mode
 import gs2_quick_parameters as qpar
 
+# OB 200918 ~ Edited to allow use of directories in run.fnames.. splits fnames by '/' and returns the root and runName
+def splitRunPath(runfilepath):
+    lastSlash = runfilepath.rfind('/')
+    if lastSlash > 0:
+        runDir = runfilepath[:lastSlash+1]
+        runName = runfilepath[lastSlash+1:]
+    else:
+        runDir = ""
+        runName = runfilepath
+    return runDir,runName
+
+
 class runobj:
 
     def __init__(self, tasks_choices):
@@ -12,8 +24,10 @@ class runobj:
         self.tasks = ['fluxes']
         self.work_dir = './'
         self.fnames = []
+        self.dirs = []
+        self.files = []
         self.scan_name = ''
-        self.out_dir = './'
+        self.out_dir = ''
         self.twin = 0.5
         self.no_plot = False
         self.only_plot = False
@@ -35,7 +49,6 @@ class runobj:
             args.twin = qpar.twin
             args.no_plot = qpar.no_plot
             args.only_plot = qpar.only_plot
-            
         if args.tasks: self.tasks = args.tasks
         
         if args.work_dir: self.work_dir = args.work_dir
@@ -43,6 +56,13 @@ class runobj:
 
         if args.fnames:
             self.fnames = args.fnames
+            # Search for last '/' in each fname and split into a directory and a file
+            for fileName in args.fnames:
+                runDir, runName = splitRunPath(fileName)
+                self.dirs.append(runDir)
+                self.files.append(runName)
+            
+
         else:
             sys.exit("Please provide a filename or param in quick mode --quick (for help, use option -h).")
 
@@ -52,8 +72,12 @@ class runobj:
             else:
                 sys.exit("Please provide a scan name or use quick mode --quick (for help, use option -h).")
         
-        if args.out_dir: self.out_dir = args.out_dir
-        if (not self.out_dir[-1]=='/'): self.out_dir = self.out_dir + '/'
+        # OB 200918 ~ Check if out_dir was provided and not empty. Only add the / if we wanted text there.
+        if args.out_dir and len(args.out_dir) > 0:
+            self.out_dir = args.out_dir
+            if not self.out_dir[-1]=='/': self.out_dir = self.out_dir + '/'
+        else:
+            self.out_dir = ''
 
         if args.twin: self.twin = float(args.twin)
 

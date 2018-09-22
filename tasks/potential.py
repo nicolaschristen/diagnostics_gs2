@@ -145,7 +145,7 @@ def my_task_single(ifile, run, myin, myout, mygrids):
         # End of iplot loop
 
         # Save quantities to a dat-file
-        datfile_name = run.out_dir + run.fnames[ifile] + '.potential.dat'
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.potential.dat'
         mydict = {'g_exb':g_exb,
                 'kx_full':kx_full,'ky_full':ky_full,
                 't_plot_full':t_plot_full,'t_zero_full':t_zero_full,'t_outgrid_full':t_outgrid_full,
@@ -164,7 +164,7 @@ def my_task_single(ifile, run, myin, myout, mygrids):
         # If only plot, read quantities from dat-file
         if run.only_plot:
 
-            datfile_name = run.out_dir + run.fnames[ifile] + '.potential.dat'
+            datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.potential.dat'
             with open(datfile_name,'rb') as datfile:
                 mydict = pickle.load(datfile)
 
