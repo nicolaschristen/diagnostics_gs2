@@ -38,7 +38,9 @@ class timeobj:
 
 
     def timeavg(self,ft):
-
-        favg = simps(ft[self.it_min:self.it_max],x=self.time_steady) \
+        n = ft.ndim
+        sl = [slice(None)] * n
+        sl[0] = slice(self.it_min, self.it_max)
+        favg = simps(ft[tuple(sl)],x=self.time_steady, axis=0) \
             / (self.time[self.it_max-1]-self.time[self.it_min])
         return favg

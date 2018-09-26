@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.fft as fft
 import scipy.special as sp
-import matplotlib as mpl
+import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 

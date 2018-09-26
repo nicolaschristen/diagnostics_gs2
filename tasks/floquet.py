@@ -261,7 +261,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
     #TESTpickle
     #mat_file_name = run.out_dir + run.fnames[ifile] + '.floquet.mat'
     #scipy.io.savemat(mat_file_name, my_vars)
-    datfile_name = run.out_dir + run.fnames[ifile] + '.floquet.dat'
+    datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.fnames[ifile] + '.floquet.dat'
     with open(datfile_name, 'wb') as outfile: # 'wb' stands for write bytes
         pickle.dump(my_vars,outfile)
 
@@ -282,7 +282,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, my_iky):
 #    return my_vars
 def read_from_dat(ifile, run):
 
-    datfile_name = run.out_dir + run.fnames[ifile] + '.floquet.dat'
+    datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.fnames[ifile] + '.floquet.dat'
 
     with open(datfile_name, 'rb') as infile: # 'rb' stands for read bytes
         my_vars = pickle.load(infile)
