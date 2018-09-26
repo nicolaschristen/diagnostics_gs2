@@ -205,6 +205,8 @@ def my_task_single(ifile, run, myin, myout, mygrids):
             plt.ylabel(ylab)
             plt.title(title)
             plt.grid(True)
+            #ax = plt.gca() # NDCDEL
+            #ax.set_ylim([0.01, 1.5]) # NDCDEL
             
             # Draw vertical line where kxstar=0
             props = dict(boxstyle='square', facecolor='white',edgecolor='white')

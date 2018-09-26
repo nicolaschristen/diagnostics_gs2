@@ -3,6 +3,7 @@ import scipy.optimize as opt
 from matplotlib import pyplot as plt
 import gs2_plotting as gplot
 import pickle
+import gs2_plotting as gplot
 
 def my_task_single(ifile, run, myin, myout):
 
@@ -53,19 +54,37 @@ def my_task_single(ifile, run, myin, myout):
     # Plotting
     if not run.no_plot:
     
-        plt.figure(figsize=(12,8))
-        plt.xlabel('$k_y\\rho_i$')
-        plt.ylabel('$\\gamma \\ [v_{thr}/r_r]$')
-        plt.title('Linear growthrate')
-        plt.grid(True)
+        # If we ran for many kx ky, then plot colormap
+        if len(ikx_list) > 3 and ky.size > 3:
 
-        my_legend = []
-        for ikx in ikx_list:
-            plt.plot(ky,gamma[:,ikx])
-            my_legend.append('$\\rho_i k_x='+str(kx[ikx])+'$')
-        plt.legend(my_legend)
+            title = '$\\gamma \\ [v_{thr}/r_r]$'
+            
+            xlab = '$k_{x}\\rho_i$'
+            ylab = '$k_{y}\\rho_i$'
+
+            cmap = 'RdBu'# 'RdBu_r','Blues'
+            z = gamma[:,:] # taking out zonal modes because they are much larger
+            z_min, z_max = z.min(), z.max()
+
+            fig = gplot.plot_2d(z,kx,ky,z_min,z_max,xlab,ylab,title,cmap)
+
+        # Otherwise plot curves vs ky for each kx
+        else:
+            plt.figure(figsize=(12,8))
+            plt.xlabel('$k_y\\rho_i$')
+            plt.ylabel('$\\gamma \\ [v_{thr}/r_r]$')
+            plt.title('Linear growthrate')
+            plt.grid(True)
+
+            my_legend = []
+            for ikx in ikx_list:
+                plt.plot(ky,gamma[:,ikx])
+                my_legend.append('$\\rho_i k_x='+str(kx[ikx])+'$')
+            plt.legend(my_legend)
+
         pdfname = 'lingrowth'
         gplot.save_plot(pdfname, run, ifile)
+
         print('Maximum linear growthrate: '+str(np.nanmax(gamma)))
 
 def get_growthrate(t,phi2,it_start,ikx,iky):

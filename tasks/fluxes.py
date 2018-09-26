@@ -651,8 +651,8 @@ def plot_phi2_vs_kxky(kx,ky,phi2,has_flowshear):
 
     from gs2_plotting import plot_2d
 
-    title = '$\\langle\\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$'
-    title += ' $\\forall$ $k_y\\neq 0$'
+    title = '$\\langle\\vert\\hat{\\varphi}_k\\vert ^2\\rangle_{t,\\theta}$'
+    title += ' $\\forall$ $k_y > 0$'
     
     if has_flowshear:
         xlab = '$\\bar{k}_{x}\\rho_i$'
