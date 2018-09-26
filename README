@@ -80,7 +80,7 @@ Options:
                      Must be specified if not in quick mode (-q, --quick).
     -s --scan_name : Name of scan, without any extension. Must be specified if
                      multiple fnames are provided and quick mode is not enabled (-q, --quick).
-    -o --out_dir   : Path to directory where plots will be saved. Default is current directory.
+    -o --out_dir   : Path to directory where plots will be saved, relative to the deepest directory specified in fnames (or working directory if no directory specified in fnames)
     --twin         : Specify fraction of time over which the solution is nonlinearly
                      saturated (0.0 -> 1.0). Default is 0.5.
     -q --quick     : Quick mode, all parameters are set to values from
