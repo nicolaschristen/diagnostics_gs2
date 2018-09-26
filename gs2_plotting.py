@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib import rcParams
 from PyPDF2 import PdfFileMerger, PdfFileReader
 import os
 
-from basic_units import radians
+from gs2_utils import radians
 
 myred = [183./255, 53./255, 53./255]
 myblue = [53./255, 118./255, 183./255]
@@ -30,8 +31,7 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
     merger = PdfFileMerger()
     for pdfname in in_namelist:
         if ifile is not None:
-            runDir,runName = splitRunPath(run.fnames[ifile])
-            file_name = run.out_dir + runDir + pdfname + '_' + runName + '.pdf'
+            file_name = run.work_dir + run.dirs[ifile] + run.out_dir + pdfname + '_' + run.files[ifile] + '.pdf'
         else:
             file_name = run.work_dir + pdfname + '.pdf'
         with open(file_name, 'rb') as pdffile:
