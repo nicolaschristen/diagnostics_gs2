@@ -321,7 +321,7 @@ class BasicUnitConverter(units.ConversionInterface):
 
         if unit == radians:
             return units.AxisInfo(
-                majloc=ticker.MultipleLocator(base=np.pi/2),
+                majloc=ticker.MultipleLocator(base=2*np.pi),
                 majfmt=ticker.FuncFormatter(rad_fn),
                 label=unit.fullname,
             )
