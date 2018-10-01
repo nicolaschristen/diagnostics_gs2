@@ -47,7 +47,7 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
     # remove tmp pdfs
     for pdfname in in_namelist:
         if ifile is not None:
-            file_name = run.work_dir + run.dirs[ifile] + run.out_dir + out_name + '_' + run.files[ifile] + '.pdf'
+            file_name = run.work_dir + run.dirs[ifile] + run.out_dir + pdfname + '_' + run.files[ifile] + '.pdf'
         else:
             file_name = run.work_dir + pdfname + '.pdf'
         os.system('rm -f '+file_name)
@@ -66,10 +66,13 @@ def set_plot_defaults():
     rcParams.update({'legend.frameon': False})
 
 # OB 170918 ~ added an rads arg which, if true, divides the x axis by pi and relabels axis with pi, pi/2 etc.
-def plot_1d(x,y,xlab,title='',ylab=''):
-        
+def plot_1d(x,y,xlab,title='',ylab='',rads=False): 
     fig = plt.figure(figsize=(12,8))
-    plt.plot(x,y)
+    if rads:
+        xrads = [val*radians for val in x]
+        plt.plot(xrads,y,xunits=radians)
+    else:
+        plt.plot(x,y)
     plt.xlabel(xlab)
     if len(ylab) > 0:
         plt.ylabel(ylab)
