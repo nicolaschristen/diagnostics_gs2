@@ -54,8 +54,18 @@ out_varnames = [
         # gds21
         'gds21',
         # gds22
-        'gds22'
-        ]
+        'gds22',
+        # gbdrift
+        'gbdrift',
+        # gbdrift
+        'cvdrift',
+        # gbdrift
+        'gbdrift0',
+        # gbdrift
+        'cvdrift0',
+        # bmag
+        'bmag'    
+]
 
 def get_output(ifile, run):
 
