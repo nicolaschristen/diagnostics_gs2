@@ -49,21 +49,21 @@ out_varnames = [
         'tpar_igomega_by_mode',
         # complex perpendicular temperature fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
         'tperp_igomega_by_mode',
-        # gds2
+        # metric element for grady^2
         'gds2',
-        # gds21
+        # gds21 metric element for gradx.grady
         'gds21',
-        # gds22
+        # gds22 metric element for gradx^2
         'gds22',
-        # gbdrift
+        # gbdrift gradB drift in the gradalpha direction
         'gbdrift',
-        # gbdrift
+        # cvdrift curvature drift in the gradalpha direction
         'cvdrift',
-        # gbdrift
+        # gbdrift0 gradB drift in the gradpsi direction
         'gbdrift0',
-        # gbdrift
+        # cvdrift0 curvature drift in the gradpsi direction
         'cvdrift0',
-        # bmag
+        # bmag normalized magnetic field
         'bmag'    
 ]
 
