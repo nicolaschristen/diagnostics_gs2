@@ -97,9 +97,9 @@ def my_task_single(ifile, run, myin, myout):
         print('Maximum linear growthrate: '+str(np.nanmax(gamma)))
 
 def get_growthrate(t,phi2,it_start,it_end,ikx,iky):
-   
+    # OB 031018 ~ Growth rate is half of the gradient of log(phi2)  
     popt, pcov = opt.curve_fit(lin_func, t[it_start:it_end], np.log(phi2[it_start:it_end,iky,ikx]))
-    return popt[0]
+    return popt[0]/2
 
 def lin_func(x,a,b):
     return a*x+b
