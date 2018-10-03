@@ -66,7 +66,8 @@ def set_plot_defaults():
     rcParams.update({'legend.frameon': False})
 
 # OB 170918 ~ added an rads arg which, if true, divides the x axis by pi and relabels axis with pi, pi/2 etc.
-def plot_1d(x,y,xlab,title='',ylab='',rads=False): 
+# OB 031018 ~ Added grid option - can be "x","y", or "both".
+def plot_1d(x,y,xlab,title='',ylab='',rads=False, grid=""):
     fig = plt.figure(figsize=(12,8))
     if rads:
         xrads = [val*radians for val in x]
@@ -78,6 +79,8 @@ def plot_1d(x,y,xlab,title='',ylab='',rads=False):
         plt.ylabel(ylab)
     if len(title) > 0:
         plt.title(title)
+    if len(grid) > 0:
+        plt.grid(b=True, axis=grid)
     return fig
 
 # OB ~ Edited to take into account non-uniform grids.
