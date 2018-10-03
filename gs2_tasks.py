@@ -52,8 +52,8 @@ import along_tube
 
 def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfields, mytxt, task_space):
 
-    if (task == 'fluxes'):
-       
+    if (task in ['fluxes','tri_kap_nl']):
+        
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
 
     if (task == 'fluxes_stitch'):
@@ -83,7 +83,7 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 
         floquet.my_task_single(ifile, run, myin, myout, task_space)
 
-    if (task == 'lingrowth'):
+    if (task in ['lingrowth','tri_kap_lin']):
 
         lingrowth.my_task_single(ifile, run, myin, myout)
 
