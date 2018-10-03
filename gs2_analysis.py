@@ -33,6 +33,11 @@ mytxt = []
 # Loop over all files specified by user
 for ifile in range(len(run.fnames)):
 
+    # OB 031018 ~ If output directory does not already exist, then add it. Removes slash at end when searching in listdir.
+    if run.out_dir[:len(run.out_dir)-1] not in os.listdir(run.work_dir + run.dirs[ifile]):
+        print('Output directory not found, generating directory at ' + run.work_dir + run.dirs[ifile] + run.out_dir)
+        os.mkdir(run.work_dir + run.dirs[ifile] + run.out_dir)
+
     txtname = run.work_dir + run.dirs[ifile] + run.out_dir + 'info_' + run.files[ifile] + '.txt'
     mytxt = open(txtname, 'w')
     
