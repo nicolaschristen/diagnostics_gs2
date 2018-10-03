@@ -5,7 +5,7 @@ import gs2_time as gtime
 import gs2_fields as gfields
 import gs2_plotting as gplot
 import gs2_tasks as gtasks
-
+import os
 import copy
 
 # TODO: add 'your_task' to the array.
