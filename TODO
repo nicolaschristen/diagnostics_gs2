@@ -1,0 +1,17 @@
+Transform grids, fields (run?) back to original state, ie not objects -> went against concept of saving single for multi to access later
+
+Test gs2_storage thoroughly
+
+Adapt twin so that it applies only if t[0]==0.0 (otherwise other files in stitch will have wrong averages) -> change it into t_min ?
+
+Check itmax in gs2_time timeavg
+
+Test gs2_stitching thoroughly
+
+Remove full_space junk
+
+Remove info.txt
+
+Add printing progress in gs2_analysis
+
+Merge single_tasks and multi_tasks into one: a multi might imply single work first ...

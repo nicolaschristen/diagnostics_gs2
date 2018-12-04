@@ -59,7 +59,7 @@ out_varnames = [
 
 def get_output(ifile, run):
 
-    fname = run.work_dir + run.fnames[ifile] + '.out.nc'
+    fname = run.full_nc_fname(ifile)
     ncfile = Dataset(fname, 'r')
 
     myout = {}
@@ -94,7 +94,7 @@ def get_single_output(ncfile, varname, myout, newname=None):
 
 def get_input(ifile, run):
     
-    fname = run.work_dir + run.fnames[ifile] + '.in'
+    fname = run.full_in_fname(ifile)
     myin = f90nml.read(fname)
 
     return myin

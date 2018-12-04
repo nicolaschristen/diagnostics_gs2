@@ -6,7 +6,8 @@ from matplotlib import rcParams
 from PyPDF2 import PdfFileMerger, PdfFileReader
 import os
 
-from basic_units import radians
+# NDC: next line seems to have been intended for radian comment below. But there is no change except for the comment... Faulty merge ?
+#from basic_units import radians
 
 myred = [183./255, 53./255, 53./255]
 myblue = [53./255, 118./255, 183./255]
@@ -58,7 +59,9 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
 def set_plot_defaults():
     import os
     # setup some plot defaults OB 200918 ~ hacky solution to prevent latex drawing on archer (cray system).
-    plt.rc('text', usetex='cray' not in os.environ['MANPATH'])
+    # NDC: solution raises KeyError: MANPATH on Ubuntu -> revert to previous state
+    #plt.rc('text', usetex='cray' not in os.environ['MANPATH'])
+    plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
     plt.rc('font', size=30)
     rcParams.update({'figure.autolayout': True})

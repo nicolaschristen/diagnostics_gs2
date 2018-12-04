@@ -5,37 +5,21 @@ import gs2_time as gtime
 import gs2_fields as gfields
 import gs2_plotting as gplot
 import gs2_tasks as gtasks
-
 import copy
 
-# TODO: add 'your_task' to the array.
-tasks_choices = ['fluxes', 'zonal', 'tcorr', 'flowtest', 'floquet','lingrowth','fluxes_stitch','potential']
+# Set postprocessing parameters based on command-line arguments
+run = grunpar.runobj()
 
-# Fom command-line arguments, get info about this analysis run (filenames, tasks to complete ...)
-run = grunpar.runobj(tasks_choices)
-
-# Empty object in which the user can store variables computed from each single file,
-# for each separate task that is being executed.
-# Use: full_space[ifile]['name_of_my_task'].myvar = myval
-class task_storage: pass
-file_space = {task_name: task_storage() for task_name in run.tasks}
-full_space = [copy.deepcopy(file_space) for ifile in range(len(run.fnames))]
-
-gplot.set_plot_defaults()
-
-myin = []
-myout = []
-mygrids = []
-mytime = []
-myfields = []
-mytxt = []
+if not run.no_plot:
+    gplot.set_plot_defaults()
 
 # Loop over all files specified by user
-for ifile in range(len(run.fnames)):
+for ifile in range(len(run.single_files)):
 
-    txtname = run.work_dir + run.dirs[ifile] + run.out_dir + 'info_' + run.files[ifile] + '.txt'
+    txtname = run.full_single_fname(ifile, 'info.txt')
     mytxt = open(txtname, 'w')
     
+    # Generate basic dictionaries: input, output, grids, time, fields
     if not run.only_plot:
         # Get input parameters for this GS2 simulation from .in file
         myin = gdata.get_input(ifile, run)
@@ -43,27 +27,25 @@ for ifile in range(len(run.fnames)):
         myout = gdata.get_output(ifile, run)
 
         # Extract grids from output
-        mygrids = ggrids.gridobj(myout)
+        fname = run.full_single_fname(ifile, 'grids.dat')
+        mygrids = ggrids.init_and_save_mygrids(myout, fname)
         # Extract time from output
-        mytime = gtime.timeobj(myout, run.twin)
+        fname = run.full_single_fname(ifile, 'time.dat')
+        mytime = gtime.init_and_save_mytime(myout['t'], run.twin, fname)
         # Extract fields from output
-        myfields = gfields.fieldobj(myout, mygrids, mytime)
+        fname = run.full_single_fname(ifile, 'fields.dat')
+        myfields = gfields.init_and_save_myfields(myout, mygrids, mytime, fname)
 
-    # Loop over all tasks that have been requested by user
-    for itask in range(len(run.tasks)):
-        task_name = run.tasks[itask]
-        # Complete part of tasks that require a single output file.
-        # For tasks requiring a set of files (e.g. scans), the user can store
-        # variables from this specific simulation into task_space = full_space[ifile]['name_of_my_task'].
-        gtasks.complete_task_single(ifile, task_name, run, myin, myout, mygrids, mytime, myfields, mytxt,
-                full_space[ifile][task_name])
+    # Loop over all tasks that have been requested by user and analyse a single pair of .in/.out.nc files
+    for itask in range(len(run.single_tasks)):
+        gtasks.complete_task_single(ifile, itask, run, myin, myout, mygrids, mytime, myfields, mytxt)
 
     if not run.only_plot:
         mytxt.close()
 
 # Complete part of tasks that require a set of file,
 # using the variables stored into full_space
-if len(run.fnames) > 1:
-    for itask in range(len(run.tasks)):
-        task_name = run.tasks[itask]
-        gtasks.complete_task_scan(task_name, run, full_space)
+#if len(run.fnames) > 1:
+#    for itask in range(len(run.tasks)):
+#        task_name = run.tasks[itask]
+#        gtasks.complete_task_scan(task_name, run, full_space)
