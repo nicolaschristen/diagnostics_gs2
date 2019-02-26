@@ -37,7 +37,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = [10]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = True
+    make_movies = False
 
     #
     #
@@ -546,10 +546,13 @@ def plot_task_single(ifile, run, my_vars, my_it, my_iky, my_dmid, make_movies):
     plt.grid(True)
     my_colorlist = plt.cm.plasma(np.linspace(0,1,kx_bar.size))
     my_legend = []
+    kxs_to_plot=kx_bar
     for ikx in range(kx_bar.size):
-        plt.plot(t, np.log(phi2[:,1,ikx]), color=my_colorlist[ikx])
-        my_legend.append('$\\rho_i\\bar{k}_x = '+str(kx_bar[ikx])+'$')
+        if kx_bar[ikx] in kxs_to_plot:
+            plt.plot(t, np.log(phi2[:,1,ikx]), color=my_colorlist[ikx])
+            my_legend.append('$\\rho_i\\bar{k}_x = '+str(kx_bar[ikx])+'$')
     plt.legend(my_legend)
+    axes=plt.gca()
 
     pdfname = 'phi2_by_kx'
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
@@ -617,59 +620,39 @@ def task_scan(run, full_space):
 
             [a,dummy] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
             slope[ifile] = a
-        
-        idxsort = np.argsort(delt)
-        delt = delt[idxsort]
-        dkx = dkx[idxsort]
-        slope = slope[idxsort]
     
-        pdflist = []
         plt.figure(figsize=(12,8))
         
+        # Plot phi2 summed along chain
         plt.xlabel('$t$')
         plt.ylabel('$\\ln \\left(\\sum_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2\\right)$')
-        plt.title('Sum along a single ballooning mode')
+        #plt.title('Sum along a single ballooning mode')
         plt.grid(True)
         my_legend = []
-        my_colorlist = plt.cm.plasma(np.linspace(0,1,len(run.fnames)))
+        #my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(run.fnames))) # for new algo
+        my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(run.fnames))) # for old algo
         for ifile in range(len(run.fnames)):
             #my_legend.append('$\\Delta t =$'+str(full_space[ifile]['floquet'].delt))
-            my_legend.append('$\\Delta k_x =$'+str(full_space[ifile]['floquet'].dkx))
+            my_legend.append('$\\Delta k_x = {:.3f}$'.format(full_space[ifile]['floquet'].dkx))
             plt.plot(t[ifile], np.log(sum_phi2[ifile]), color=my_colorlist[ifile], linewidth=3.0)
         plt.legend(my_legend)
         axes = plt.gca()
         axes.set_ylim([-0.5, 13.75])
-        
-        pdfname = 'tmp_1'
-        gplots.save_plot(pdfname, run, ifile)
-        pdflist.append(pdfname)
-        
-        plt.clf()
-        plt.cla()
 
-        #plt.xlabel('$\\Delta t$')
-        plt.xlabel('$\\Delta k_x$')
-        plt.ylabel('$\\langle \\gamma \\rangle_t$')
-        plt.title('Time averaged growth-rate')
+        # Plot growthrates within phi2 plot
+        subaxes = plt.axes([0.65, 0.25, 0.3, 0.25])
+        subaxes.tick_params(labelsize=18)
+        plt.xlabel('$\\Delta k_x$',fontsize=20)
+        #plt.ylabel('$\\langle \\gamma \\rangle_t$',fontsize=20)
+        plt.title('Time averaged growth-rate',fontsize=20)
         plt.grid(True)
-        print('Slopes : ',end='')
-        print(slope)
-        #plt.plot(delt, slope, marker='o', \
-        #        markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
-        plt.plot(dkx, slope, marker='o', \
-                markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
-
+        plt.plot(dkx, slope, marker='o', color='black', \
+                markersize=10, markerfacecolor='none', markeredgecolor='black', linewidth=2.0)
         
-        pdfname = 'tmp_2'
-        gplots.save_plot(pdfname, run, ifile)
-        pdflist.append(pdfname)
+        gplots.save_plot(run.scan_name, run)
         
         plt.clf()
         plt.cla()
-
-        outname = run.scan_name
-        gplots.merge_pdfs(pdflist,outname,run,ifile)
-
         plt.close()
 
 def leastsq_lin(x, y):
