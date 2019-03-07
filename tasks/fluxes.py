@@ -372,7 +372,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
         tmp_pdf_id = tmp_pdf_id+1
     print("-- plotting particle flux")
     if pflx is not None:
-        title = '$\Gamma_{GS2}$'
+        title = '$\Gamma/\Gamma_{gB}$'
         plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
@@ -381,7 +381,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
         tmp_pdf_id = tmp_pdf_id+1
     print("-- plotting heat flux")
     if qflx is not None:
-        title = '$Q_{GS2}$'
+        title = '$Q/Q_{gB}$'
         plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
@@ -390,7 +390,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
         tmp_pdf_id = tmp_pdf_id+1
     print("-- plotting momentum flux")
     if vflx is not None:
-        title = '$\Pi_{GS2}$'
+        title = '$\Pi/\Pi_{gB}$'
         plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
@@ -588,39 +588,66 @@ def plot_fluxes(ifile,run,mytime,mydict):
 
     #print('complete')
 
-def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,title,):
+def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel):
 
     fig=plt.figure(figsize=(12,8))
-    dum = np.empty(mytime.ntime_steady)
     if islin:
-        title = '$\\ln($' + title + '$)$'
-    # generate a curve for each species
-    # on the same plot
+        ylabel = '$\\ln($' + ylabel + '$)$'
+
+    my_colorlist = plt.cm.YlOrBr(np.linspace(0.5,1,nspec)) # for new algo
+    #my_colorlist = plt.cm.YlGnBu(np.linspace(0.5,1,nspec)) # for old algo
+
+    my_curves = []
+    my_labels = ['$^2H$','$e^-$','$^{12}C$']
+    #my_linestyle_list = ['-', '--', ':']
+    my_linestyle_list = ['-', '-', '-']
+
+    # indicating area of saturation
+    plt.axvline(x=mytime.time_steady[0], color='grey', linestyle='-')
+    ax = plt.gca()
+    ax.axvspan(mytime.time_steady[0], mytime.time_steady[-1], alpha=0.1, color='grey')
     
     # plot time-traces for each species
     for idx in range(nspec):
         # get the time-averaged flux
         if islin:
-            plt.plot(mytime.time,np.log(flx[:,idx]),label=spec_names[idx])
+            crv, = plt.plot(mytime.time,np.log(flx[:,idx]),color=my_colorlist[idx],linewidth=3.0, \
+                    linestyle=my_linestyle_list[idx])
         else:
-            plt.plot(mytime.time,flx[:,idx],label=spec_names[idx])
+            crv, = plt.plot(mytime.time,flx[:,idx],color=my_colorlist[idx],linewidth=3.0, \
+                    linestyle=my_linestyle_list[idx])
+        my_curves.append(crv)
     
     # plot time-averages
     for idx in range(nspec):
-        if islin:
-            flxavg = mytime.timeavg(np.log(np.absolute(flx[:,idx])))
-            dum.fill(flxavg)
-        else:
+        
+        if not islin:
+            
             flxavg = mytime.timeavg(flx[:,idx])
-            dum.fill(flxavg)
-        plt.plot(mytime.time_steady,dum,'--')
-        print('flux avg for '+spec_names[idx]+': '+str(flxavg))
+            
+            note_str = 'avg = {:.2f}'.format(flxavg)
+            xpos = mytime.time[-1]*0.82
+            ypos = flx[round(len(mytime.time)*0.8),idx]-(np.amax(flx)-np.amin(flx))/12.
+            if ypos < 0.:
+                ypos = flx[round(len(mytime.time)*0.8),idx]+(np.amax(flx)-np.amin(flx))/18.
+            note_xy = (xpos, ypos)
+            note_coords = 'data'
 
-    plt.xlabel('$t (a/v_t)$')
+            plt.annotate(note_str, xy=note_xy, xycoords=note_coords, color=my_colorlist[idx], \
+                    fontsize=26, backgroundcolor='w', \
+                    bbox=dict(facecolor='w', edgecolor=my_colorlist[idx], alpha=1.0))
+
+            print('flux avg for '+spec_names[idx]+': '+str(flxavg))
+
+    plt.xlabel('$t [L/v_{th,i}]$')
+    plt.ylabel(ylabel)
     plt.xlim([mytime.time[0],mytime.time[-1]])
-    plt.title(title)
-    plt.legend()
     plt.grid(True)
+
+    my_legend = plt.legend(my_curves,my_labels,frameon=True,fancybox=False,framealpha=1.0,loc='upper left')
+    my_legend.get_frame().set_facecolor('w')
+    my_legend.get_frame().set_edgecolor('k')
+    my_legend.get_frame().set_linewidth(1.0)
 
     return fig
 
