@@ -373,7 +373,10 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting particle flux")
     if pflx is not None:
         title = '$\Gamma/\Gamma_{gB}$'
-        plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title)
+        ylims = [-0.6, 0.6]
+        #label_ypos = [-0.35,0.5,0.2] # for old algo
+        label_ypos = [-0.2,0.35,0.17] # for new algo
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title,ylims,label_ypos)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
@@ -382,7 +385,10 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting heat flux")
     if qflx is not None:
         title = '$Q/Q_{gB}$'
-        plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title)
+        ylims = [-0.1, 3.3]
+        #label_ypos = [3.1,1.2,2.1] # for old algo
+        label_ypos = [2.2,0.85,1.4] # for new algo
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title,ylims,label_ypos)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
@@ -391,7 +397,10 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting momentum flux")
     if vflx is not None:
         title = '$\Pi/\Pi_{gB}$'
-        plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,)
+        ylims = [-0.2, 5.2]
+        #label_ypos = [1.8,0.3,4.8] # for old algo
+        label_ypos = [1.25,0.25,3.0] # for old algo
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,ylims,label_ypos)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
@@ -588,14 +597,14 @@ def plot_fluxes(ifile,run,mytime,mydict):
 
     #print('complete')
 
-def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel):
+def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None):
 
     fig=plt.figure(figsize=(12,8))
     if islin:
         ylabel = '$\\ln($' + ylabel + '$)$'
 
-    my_colorlist = plt.cm.YlOrBr(np.linspace(0.5,1,nspec)) # for new algo
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.5,1,nspec)) # for old algo
+    my_colorlist = plt.cm.YlOrBr(np.linspace(0.5,1,nspec)) # for new algo
 
     my_curves = []
     my_labels = ['$^2H$','$e^-$','$^{12}C$']
@@ -625,23 +634,39 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel):
             
             flxavg = mytime.timeavg(flx[:,idx])
             
-            note_str = 'avg = {:.2f}'.format(flxavg)
-            xpos = mytime.time[-1]*0.82
-            ypos = flx[round(len(mytime.time)*0.8),idx]-(np.amax(flx)-np.amin(flx))/12.
-            if ypos < 0.:
-                ypos = flx[round(len(mytime.time)*0.8),idx]+(np.amax(flx)-np.amin(flx))/18.
-            note_xy = (xpos, ypos)
-            note_coords = 'data'
+            # Annotate
+            if my_label_ypos:
+                note_str = 'avg = {:.2f}'.format(flxavg)
 
-            plt.annotate(note_str, xy=note_xy, xycoords=note_coords, color=my_colorlist[idx], \
-                    fontsize=26, backgroundcolor='w', \
-                    bbox=dict(facecolor='w', edgecolor=my_colorlist[idx], alpha=1.0))
+                xpos = mytime.time[-1]*0.82
+                ypos = my_label_ypos[idx]
+                #if ylims:
+                #    #ypos = flx[round(len(mytime.time)*0.8),idx]+(ylims[1]-ylims[0])/15.
+                #    ypos = flxavg+(ylims[1]-ylims[0])/15.
+                #    if ypos > ylims[1]:
+                #        #ypos = flx[round(len(mytime.time)*0.8),idx]-(ylims[1]-ylims[0])/12.
+                #        ypos = flxavg-(ylims[1]-ylims[0])/12.
+                #else:
+                #    #ypos = flx[round(len(mytime.time)*0.8),idx]+(np.amax(flx)-np.amin(flx))/15.
+                #    ypos = flxavg+(np.amax(flx)-np.amin(flx))/15.
+                #    if ypos > np.amax(flx):
+                #        #ypos = flx[round(len(mytime.time)*0.8),idx]-(np.amax(flx)-np.amin(flx))/12.
+                #        ypos = flxavg-(np.amax(flx)-np.amin(flx))/12.
+
+                note_xy = (xpos, ypos)
+                note_coords = 'data'
+
+                plt.annotate(note_str, xy=note_xy, xycoords=note_coords, color=my_colorlist[idx], \
+                        fontsize=26, backgroundcolor='w', \
+                        bbox=dict(facecolor='w', edgecolor=my_colorlist[idx], alpha=1.0))
 
             print('flux avg for '+spec_names[idx]+': '+str(flxavg))
 
     plt.xlabel('$t [L/v_{th,i}]$')
     plt.ylabel(ylabel)
     plt.xlim([mytime.time[0],mytime.time[-1]])
+    if ylims:
+        plt.ylim(ylims)
     plt.grid(True)
 
     my_legend = plt.legend(my_curves,my_labels,frameon=True,fancybox=False,framealpha=1.0,loc='upper left')

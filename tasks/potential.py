@@ -4,7 +4,7 @@ import gs2_plotting as gplot
 import matplotlib.pyplot as plt
 import pickle
 
-def my_task_single(ifile, run, myin, myout, mygrids):
+def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
     if not run.only_plot:
     
@@ -13,9 +13,9 @@ def my_task_single(ifile, run, myin, myout, mygrids):
         #######################
         
         # Choose which Fourier components to plot
-        it_start_list = [0,0]
-        ikx_start_list = [3,4] # ikxmax=126 for nx=192
-        iky_list = [1,1]
+        it_start_list = [mytime.it_min]
+        ikx_start_list = [40] # kx=3 <=> ikx= 400 for old, 4 for new 
+        iky_list = [1]
 
         ###########################
         ### End user parameters ###
@@ -164,20 +164,27 @@ def my_task_single(ifile, run, myin, myout, mygrids):
         # If only plot, read quantities from dat-file
         if run.only_plot:
 
-            datfile_name = run.out_dir + run.fnames[ifile] + '.potential.dat'
+            datfile_name = run.out_dir + 'ollie_badshear_old_id_1.potential.dat'
             with open(datfile_name,'rb') as datfile:
                 mydict = pickle.load(datfile)
 
             g_exb = mydict['g_exb']
             kx_full = mydict['kx_full']
             ky_full = mydict['ky_full']
-            t_plot_full = mydict['t_plot_full']
-            t_zero_full = mydict['t_zero_full']
-            t_outgrid_full = mydict['t_outgrid_full']
-            it_drop_full = mydict['it_drop_full']
-            phi2_kxky_full = mydict['phi2_kxky_full']
-
             Nplot = len(kx_full)
+
+            t_plot_full_old = mydict['t_plot_full']
+            t_zero_full_old = mydict['t_zero_full']
+            t_outgrid_full_old = mydict['t_outgrid_full']
+            it_drop_full_old = mydict['it_drop_full']
+            phi2_kxky_full_old = mydict['phi2_kxky_full']
+
+            datfile_name = run.out_dir + 'ollie_badshear_fexp_id_1.potential.dat'
+            with open(datfile_name,'rb') as datfile:
+                mydict = pickle.load(datfile)
+
+            t_plot_full_new = mydict['t_plot_full']
+            phi2_kxky_full_new = mydict['phi2_kxky_full']
 
         # Start pdf list to merge at the end
         tmp_pdf_id = 1
@@ -188,42 +195,64 @@ def my_task_single(ifile, run, myin, myout, mygrids):
             # Pick iplot elements from the _full arrays
             kx = kx_full[iplot]
             ky = ky_full[iplot]
-            t_plot = t_plot_full[iplot]
-            t_zero = t_zero_full[iplot]
-            t_outgrid = t_outgrid_full[iplot]
-            it_drop = it_drop_full[iplot]
-            phi2_kxky = phi2_kxky_full[iplot]
+
+            t_plot_old = t_plot_full_old[iplot]
+            t_zero_old = t_zero_full_old[iplot]
+            t_outgrid_old = t_outgrid_full_old[iplot]
+            it_drop_old = it_drop_full_old[iplot]
+            phi2_kxky_old = phi2_kxky_full_old[iplot]
+
+            t_plot_new = t_plot_full_new[iplot]
+            phi2_kxky_new = phi2_kxky_full_new[iplot]
 
             fig = plt.figure(figsize=(12,8))
-
-            # Plot phi_kxky vs t
-            title = '$(k_x='+'{:4.2f}'.format(kx)+',k_y='+'{:4.2f}'.format(ky)+')$ from $t='+'{:4.2f}'.format(t_plot[0])+'$'
-            xlab = '$t (a/v_{t})$'
-            ylab = '$\\langle\\vert\\hat{\\varphi}_{k}\\vert ^2\\rangle_{\\theta}$'
-            plt.semilogy(t_plot,phi2_kxky,linewidth=2)
-            plt.xlabel(xlab)
-            plt.ylabel(ylab)
-            plt.title(title)
-            plt.grid(True)
             
             # Draw vertical line where kxstar=0
             props = dict(boxstyle='square', facecolor='white',edgecolor='white')
-            if t_zero >= min(t_plot) and t_zero <= max(t_plot):
-                plt.axvline(x=t_zero,color='k',linestyle='--',linewidth=2)
+            if t_zero_old >= min(t_plot_old) and t_zero_old <= max(t_plot_old):
+                plt.axvline(x=t_zero_old,color='grey',linestyle='-',linewidth=2)
+            
+            # Draw vertical line where kx is dropped from the sim
+            if it_drop_old > 0 :
+                plt.axvline(x=t_outgrid,color='k',linestyle='--',linewidth=2)
+
+            # Plot phi_kxky vs t
+            xlab = '$t [L/v_{th,i}]$'
+            ylab = '$\\langle\\vert\\hat{\\varphi}_{k}\\vert ^2\\rangle_{\\theta}$'
+            my_title = '$k_x='+'{:4.2f}'.format(kx)+',k_y='+'{:4.2f}'.format(ky)+'$'
+            
+            my_legend_old = 'nearest grid point'
+            my_color_old = 'b'
+            my_curve_old, = plt.semilogy(t_plot_old,phi2_kxky_old,linewidth=3.0, \
+                    color=my_color_old)
+            
+            my_legend_new = 'continuous'
+            my_color_new = 'r'
+            my_curve_new, = plt.semilogy(t_plot_new,phi2_kxky_new,linewidth=3.0, \
+                    color=my_color_new)
+
+            plt.xlabel(xlab)
+            plt.ylabel(ylab)
+            plt.grid(True)
+            plt.ylim([0.01,1])
+            plt.title(my_title,fontsize=24)
+
+            my_legend = plt.legend([my_curve_old,my_curve_new],[my_legend_old,my_legend_new],\
+                    frameon=True,fancybox=False,framealpha=1.0,loc='upper left')
+            my_legend.get_frame().set_facecolor('w')
+            my_legend.get_frame().set_edgecolor('k')
+            my_legend.get_frame().set_linewidth(1.0)
+
             # Add textbox
             ax = plt.gca()
             xmin, xmax = ax.get_xlim()
             txt_ypos = 0.05 # Place text boxes at bottom
-            txt_xpos = 0.5*(1.-(max(t_plot)-min(t_plot))/(xmax-xmin)) + (t_zero-min(t_plot))/(xmax-xmin)
+            txt_xpos = 0.5*(1.-(max(t_plot_old)-min(t_plot_old))/(xmax-xmin)) + (t_zero_old-min(t_plot_old))/(xmax-xmin)
             txt_str = '$k_x^*=0$'
-            ax.text(txt_xpos, txt_ypos, txt_str, transform=ax.transAxes, fontsize=20, bbox=props,
+            ax.text(txt_xpos, txt_ypos, txt_str, transform=ax.transAxes, fontsize=28, bbox=props,
                     horizontalalignment='center')
-            
-            # Draw vertical line where kx is dropped from the sim
-            if it_drop > 0 :
-                plt.axvline(x=t_outgrid,color='k',linestyle='--',linewidth=2)
             # Add textbox
-            txt_xpos = 0.5*(1.-(max(t_plot)-min(t_plot))/(xmax-xmin)) + (t_outgrid-min(t_plot))/(xmax-xmin)
+            txt_xpos = 0.5*(1.-(max(t_plot_old)-min(t_plot_old))/(xmax-xmin)) + (t_outgrid_old-min(t_plot_old))/(xmax-xmin)
             if g_exb > 0.:
                 txt_str = '$k_x^*=\\min(k_{x,GS2})$'
             if g_exb < 0.:

@@ -86,7 +86,7 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 
     if (task == 'potential'):
 
-        potential.my_task_single(ifile, run, myin, myout, mygrids)
+        potential.my_task_single(ifile, run, myin, myout, mygrids, mytime)
 
 # Complete part of tasks that require the collection of in/out pairs (e.g. plotting a parameter scan).
 
