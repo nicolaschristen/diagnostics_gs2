@@ -30,7 +30,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     #
     
     # select chains
-    iky_list = [2] # negative means all nonzero ky
+    iky_list = [1] # negative means all nonzero ky
     if iky_list==[-1]:
         iky_list = [i for i in range(1,myout['ky'].size)]
     my_dmid = 0 # we include kxbar=my_dmid*dkx in our chain
@@ -303,9 +303,9 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
         if phi_t_present:
             gamma_chain = np.zeros(Nf)
             kxstar_over_ky_chain = np.zeros(Nf)
-            nf_start = 2 # number of Floquet periods after which to start
+            nf_start = 0 # number of Floquet periods after which to start
             it_start = nf_start*Nf
-            nf_avg = 2 # number of Floquet iterations to average over
+            nf_avg = 1 # number of Floquet iterations to average over
             for it in range(Nf):
                 for ifloq in range(nf_avg):
                     it_prev = it+it_start+ifloq*Nf-1
@@ -550,7 +550,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 bloonang_min = 0.
                 bloonang_max = 0.
                 # NDCTEST: to shorten movie
-                for it in range(501):
+                for it in range(1001):
                 #for it in range(nt):
                     if np.min(bloonang[ichain][it]) < bloonang_min:
                         bloonang_min = np.min(bloonang[ichain][it])
@@ -559,7 +559,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                
                 print("\ncreating movie of phi vs ballooning angle ...")
                 # NDCTEST: to shorten movie
-                for it in range(501):
+                for it in range(1001):
                 #for it in range(nt):
                     
                     sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
@@ -675,11 +675,18 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 #cbarmin = np.nanmin(gammanew_fine)
                 cbarmin = -0.5
             # and plot
-            my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gammanew[ichain]))
-            my_xlabel = '$k_x^*$'
-            my_ylabel = '$k_y$'
-            gplots.plot_2d(gammanew_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
-                    xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
+            if len(iky_list)>1: # plot contour
+                my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gammanew[ichain]))
+                my_xlabel = '$k_x^*$'
+                my_ylabel = '$k_y$'
+                gplots.plot_2d(gammanew_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
+                        xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
+            else: # single ky, plot only vs kxstar
+                plt.plot(kx_grid_fine,gammanew_fine,kx_grid_fine,linewidth=3.0, \
+                        color=gplots.myblue)
+                plt.xlabel('$k_x^*$')
+                plt.ylabel('$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gammanew[ichain])))
+                plt.title('$k_y={:.2f}$'.format(ky[iky_list[0]]))
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplots.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
@@ -688,27 +695,33 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
         merged_pdfname = 'gamma_vs_kxky' + '_dmid_' + str(my_dmid)
         gplots.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-    # Plot sum of phi2 vs time for every ky
+    # Plot sum and max of phi2 vs time for every ky
     # Fit each curve and plot gamma_avg vs ky
 
     # Start comparing simulations at time-step it_start = N_start*Tfloquet/dt
     # ie after N_start Floquet oscillations
     # Normalise sum_phi2 by sum_phi2[it_start] for each run
-    N_start = 2
+    N_start = 0
     it_start = int(round((N_start*Tf/delt)/nwrite))
     t_collec = []
     sum_phi2_collec = []
-    slope = np.zeros(len(iky_list))
+    max_phi2_collec = []
+    slope_sum = np.zeros(len(iky_list))
+    slope_max = np.zeros(len(iky_list))
     
     for ichain in range(len(iky_list)):
 
         iky = iky_list[ichain]
 
         sum_phi2_tmp = np.zeros(len(sum_phi2bloon[ichain])-it_start)
+        max_phi2_tmp = np.zeros(len(sum_phi2bloon[ichain])-it_start)
         for it in range(sum_phi2_tmp.size):
             sum_phi2_tmp[it] = sum_phi2bloon[ichain][it_start+it]
+            max_phi2_tmp[it] = max_phi2bloon[ichain][it_start+it]
         sum_phi2_tmp = sum_phi2_tmp/sum_phi2_tmp[0]
         sum_phi2_collec.append(sum_phi2_tmp)
+        max_phi2_tmp = max_phi2_tmp/max_phi2_tmp[0]
+        max_phi2_collec.append(max_phi2_tmp)
         
         t_tmp = np.zeros(len(t)-it_start)
         for it in range(t_tmp.size):
@@ -716,7 +729,9 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
         t_collec.append(t_tmp)
 
         [a,dummy] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
-        slope[ichain] = a
+        slope_sum[ichain] = a
+        [a,dummy] = leastsq_lin(t_tmp,np.log(max_phi2_tmp))
+        slope_max[ichain] = a
     
     plt.figure(figsize=(12,8))
     plt.xlabel('$t$')
@@ -727,11 +742,27 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(iky_list))) # for newalgo
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(iky_list))) # for oldalgo
     for ichain in range(len(iky_list)):
-        #my_legend.append('$\\Delta t =$'+str(full_space[ifile]['floquet'].delt))
         my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[ichain]]))
         plt.plot(t_collec[ichain], np.log(sum_phi2_collec[ichain]), color=my_colorlist[ichain], linewidth=3.0)
     plt.legend(my_legend)
-    pdfname = 'floquet_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
+    pdfname = 'floquet_sum_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
+    pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
+    plt.savefig(pdfname)
+    plt.clf()
+    plt.cla()
+
+    plt.figure(figsize=(12,8))
+    plt.xlabel('$t$')
+    plt.ylabel('$max_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2$')
+    plt.grid(True)
+    my_legend = []
+    my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(iky_list))) # for newalgo
+    #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(iky_list))) # for oldalgo
+    for ichain in range(len(iky_list)):
+        my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[ichain]]))
+        plt.plot(t_collec[ichain], np.log(max_phi2_collec[ichain]), color=my_colorlist[ichain], linewidth=3.0)
+    plt.legend(my_legend)
+    pdfname = 'floquet_max_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
     plt.savefig(pdfname)
     plt.clf()
@@ -744,8 +775,22 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     ky_to_plot = np.zeros(len(iky_list))
     for i in range(len(iky_list)):
         ky_to_plot[i] = ky[iky_list[i]]
-    plt.plot(ky_to_plot, slope, color=gplots.myblue, linewidth=3.0)
-    pdfname = 'gamma_vs_ky' + '_dmid_' + str(my_dmid) 
+    plt.plot(ky_to_plot, slope_sum, color=gplots.myblue, linewidth=3.0)
+    pdfname = 'gamma_from_sum_vs_ky' + '_dmid_' + str(my_dmid) 
+    pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
+    plt.savefig(pdfname)
+    plt.clf()
+    plt.cla()
+    
+    plt.figure(figsize=(12,8))
+    plt.xlabel('$k_y$')
+    plt.ylabel('$\\langle\\gamma\\rangle_t$')
+    plt.grid(True)
+    ky_to_plot = np.zeros(len(iky_list))
+    for i in range(len(iky_list)):
+        ky_to_plot[i] = ky[iky_list[i]]
+    plt.plot(ky_to_plot, slope_max, color=gplots.myblue, linewidth=3.0)
+    pdfname = 'gamma_from_max_vs_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
     plt.savefig(pdfname)
     plt.clf()
