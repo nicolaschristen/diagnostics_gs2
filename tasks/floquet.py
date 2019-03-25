@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+import matplotlib.animation as anim
 import numpy as np
 from math import pi
 from math import ceil
@@ -30,7 +31,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     #
     
     # select chains
-    iky_list = [1] # negative means all nonzero ky
+    iky_list = [-1] # negative means all nonzero ky
     if iky_list==[-1]:
         iky_list = [i for i in range(1,myout['ky'].size)]
     my_dmid = 0 # we include kxbar=my_dmid*dkx in our chain
@@ -40,7 +41,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = [-1]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = True
+    make_movies = False
 
     #
     #
@@ -432,7 +433,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     Tf = Nf*delt
     nt = t.size
 
-    plt.figure(figsize=(12,8))
+    myfig = plt.figure(figsize=(12,8))
 
     for ichain in range(len(iky_list)):
     
@@ -499,10 +500,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             plt.ylabel('$\\ln \\left(\\sum_{K_x}\\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$')
             plt.title('Sum along ballooning mode, $k_y={:.2f}$'.format(ky[iky]))
             plt.grid(True)
-            # NDCTEST: shorten time trace
-            #plt.plot(t[0:600], np.log(sum_phi2_chain[0:600]), color=gplots.myblue, linewidth=3.0) 
-            plt.plot(t, np.log(sum_phi2bloon[ichain]), color=gplots.myblue, linewidth=3.0) 
-            # endNDCTEST
+            plt.semilogy(t, sum_phi2bloon[ichain], color=gplots.myblue, linewidth=3.0) 
             pdfname = 'floquet_vs_t'+ '_iky_' + str(iky) + '_dmid_' + str(my_dmid) 
             pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
             plt.savefig(pdfname)
@@ -512,13 +510,10 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
             # plot max of phi2 along chain vs time
             plt.xlabel('$t$')
-            plt.ylabel('max$\\left(\\ln \\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$')
+            plt.ylabel('$\\max\\left(\\ln \\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$')
             plt.title('Max along ballooning mode, $k_y={:.2f}$'.format(ky[iky]))
             plt.grid(True)
-            # NDCTEST: shorten time trace
-            #plt.plot(t[0:600], np.log(sum_phi2_chain[0:600]), color=gplots.myblue, linewidth=3.0) 
-            plt.plot(t, np.log(max_phi2bloon[ichain]), color=gplots.myblue, linewidth=3.0) 
-            # endNDCTEST
+            plt.semilogy(t, max_phi2bloon[ichain], color=gplots.myblue, linewidth=3.0) 
             pdfname = 'max_phi2_vs_t'+ '_iky_' + str(iky) + '_dmid_' + str(my_dmid) 
             pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
             plt.savefig(pdfname)
@@ -527,111 +522,80 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             plt.cla()
         
             # plot gamma vs kxstar/(pi*shat*ky)
-            plt.title('$k_y={:.2f}$'.format(ky[iky]))
-            plt.xlabel('$k_x^*/(\\pi\\hat{s}k_y)$')
-            plt.ylabel('$\\langle\\gamma\\rangle_\\theta$')
-            plt.grid(True)
-            plt.plot(kxstar_over_ky[ichain], gamma[ichain], color=gplots.myblue, linewidth=3.0, marker='o') 
-            pdfname = 'gamma_vs_kxstar_over_ky' + '_iky_' + str(iky) + '_dmid_' + str(my_dmid)
-            pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
-            plt.savefig(pdfname)
-            
-            plt.clf()
-            plt.cla()
+            #plt.title('$k_y={:.2f}$'.format(ky[iky]))
+            #plt.xlabel('$k_x^*/(\\pi\\hat{s}k_y)$')
+            #plt.ylabel('$\\langle\\gamma\\rangle_\\theta$')
+            #plt.grid(True)
+            #plt.plot(kxstar_over_ky[ichain], gamma[ichain], color=gplots.myblue, linewidth=3.0, marker='o') 
+            #pdfname = 'gamma_vs_kxstar_over_ky' + '_iky_' + str(iky) + '_dmid_' + str(my_dmid)
+            #pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
+            #plt.savefig(pdfname)
+            #
+            #plt.clf()
+            #plt.cla()
 
             # make movie of phi2 vs ballooning angle over time
             if (make_movies):
                 
                 moviename = 'phi_bloon' + '_iky_' + str(iky) + '_dmid_' + str(my_dmid)
                 moviename = run.out_dir + moviename + '_' + run.fnames[ifile] + '.mp4'
-                images = []
 
+                max_it_for_mov = nt
                 # find global min and max of ballooning angle
                 bloonang_min = 0.
                 bloonang_max = 0.
-                # NDCTEST: to shorten movie
-                for it in range(1001):
-                #for it in range(nt):
+                for it in range(max_it_for_mov):
                     if np.min(bloonang[ichain][it]) < bloonang_min:
                         bloonang_min = np.min(bloonang[ichain][it])
                     if np.max(bloonang[ichain][it]) > bloonang_max:
                         bloonang_max = np.max(bloonang[ichain][it])
                
                 print("\ncreating movie of phi vs ballooning angle ...")
-                # NDCTEST: to shorten movie
-                for it in range(1001):
-                #for it in range(nt):
-                    
+                xdata1, ydata1 = [], []
+                l1, = plt.plot([],[], marker='o', color=gplots.myblue, \
+                        markersize=12, markerfacecolor=gplots.myblue, markeredgecolor=gplots.myblue, linewidth=3.0)
+                xdata2, ydata2 = [], []
+                l2, = plt.plot([],[], linestyle='', \
+                        marker='o', markersize=8, markerfacecolor='r', markeredgecolor='r')
+                plt.xlabel('$\\theta -\\theta_0^*$') # NDCPARAM: check for plot_against_theta0_star
+                plt.ylabel('$\\vert \\phi \\vert ^2$')
+                plt.grid(True)
+                plt.gca().set_xlim(bloonang_min,bloonang_max)
+                plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
+                # Initialize lines
+                def init_mov():
+                    l1.set_data([], [])
+                    l2.set_data([], [])
+                    return l1,l2
+                # Update lines
+                def update_mov(it):
+                    # Update chain
                     sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
-               
-                    plt.xlabel('$\\theta -\\theta_0^*$') # NDCPARAM: check for plot_against_theta0_star
-                    plt.ylabel('$\\vert \\phi \\vert ^2$')
-                    plt.title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
-                    plt.grid(True)
-                    plt.gca().set_xlim(bloonang_min,bloonang_max)
-                    plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
-                    plt.plot(bloonang[ichain][it], phi2bloon[ichain][it], marker='o', \
-                            markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
-                    
-                    # Add vertical lines for 2pi segments
+                    xdata1 = bloonang[ichain][it]
+                    ydata1 = phi2bloon[ichain][it]
+                    l1.set_data(xdata1,ydata1)
+                    ymin = np.amin(phi2bloon[ichain][it])
+                    ymax = np.amax(phi2bloon[ichain][it])
+                    ax = plt.gca()
+                    ax.set_ylim(ymin,ymax)
+                    ax.set_title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
+                    # Update discontinuities at 2pi interfaces
                     bloonang_bndry = []
-                    x_sep = np.min(bloonang[ichain][it])
-                    plt.axvline(x=x_sep, linestyle='--',linewidth=2,color='r')
                     for imember in range(len(ikx_members[ichain][it])-1,0,-1):
                         x_sep = pi-kx_star[it,iky,ikx_members[ichain][it][imember]]/(shat*ky[iky])
                         bloonang_bndry.append(x_sep)
-                        plt.axvline(x=x_sep,linestyle='--',linewidth=2,color='r')
-                    x_sep = np.max(bloonang[ichain][it])
-                    plt.axvline(x=x_sep, linestyle='--',linewidth=2,color='r')
-                    
-                    # Plot discontinuities
-                    crv_discont, = plt.plot(bloonang_bndry, phi2bloon_discont[ichain][it], linestyle = None, color='r', \
-                            marker='o', markersize=8, markerfacecolor='r', markeredgecolor='r')
-                    plt.legend([crv_discont],['$\\Delta\\vert \\phi \\vert ^2$'],loc='upper right', \
-                            frameon=True,fancybox=False,framealpha=1.0)
+                    xdata2 = bloonang_bndry
+                    ydata2 = phi2bloon_discont[ichain][it]
+                    l2.set_data(xdata2,ydata2)
+                    return l1, l2
 
-                    pngname = run.out_dir + 'tmp_image.png'
-                    plt.savefig(pngname)
-                    
-                    images.append(imageio.imread(pngname))
-                    os.system('rm -rf ' + pngname)
-
-                    plt.clf()
-                    plt.cla()
-
-                    sys.stdout.flush()
-                
-                imageio.mimsave(moviename, images, format='FFMPEG')
+                mov = anim.FuncAnimation(myfig,update_mov,init_func=init_mov, \
+                        frames=range(max_it_for_mov),blit=False,interval=10)
+                writer = anim.writers['ffmpeg'](fps=30,bitrate=-1,codec='libx264')
+                mov.save(moviename,writer=writer,dpi=100)
+                plt.clf()
+                plt.cla()
                 print("\n... movie completed.")
-
-    ######
-   # xlab = '$k_x/(\\pi\\hat{s}k_y)$'
-   # ylab = '$k_{y}\\rho_i$'
-
-   # cmap = 'RdBu' # 'Reds','Blues'
-   # z = np.abs(flx[ispec,:,:]) # take absolute value of contribution to fluxes
-   # z_min, z_max = 0.0, z.max()
-   # 
-   # title = '$\\langle\\gamma\\rangle_\\theta$'
-   # if ispec > 1:
-   #     title += ' (impurity ' + str(ispec-1) + ')'
-   # else:
-   #     title += ' (' + spec_names[ispec] + 's)'
-
-   # fig = plt.figure(figsize=(12,8))
-   # x,y = np.meshgrid(xin,yin)
-
-   # plt.imshow(z, cmap=cmp, vmin=zmin, vmax=zmax,
-   #            extent=[x.min(),x.max(),y.min(),y.max()],
-   #            interpolation='nearest', origin='lower', aspect='auto',
-   #            norm=color_norm)
-   # plt.axis([x.min(), x.max(), y.min(), y.max()])
-   # plt.colorbar()
-   # plt.xlabel(xlab)
-   # plt.ylabel(ylab)
-   # plt.title(title)
-   # return fig
-    ######
 
     # plot gamma vs (kxstar,ky), for every Floquet oscillation in the simulation
     if phi_t_present:
@@ -667,7 +631,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                     gammanew_1d[ipoint] = gammanew[ichain][iTf][ikxstar]
                 istart = istart + len(kx_star_for_gamma[ichain][iTf])
             # then interpolate to nearest neighbour on fine, regular mesh
-            gammanew_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gammanew_1d,(kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
+            gammanew_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gammanew_1d, \
+                    (kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
             # Set the colorbar limits according to the last Floquet oscillation
             if iTf == iTfmax:
                 #cbarmax = np.nanmax(gammanew_fine)
@@ -675,18 +640,19 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 #cbarmin = np.nanmin(gammanew_fine)
                 cbarmin = -0.5
             # and plot
-            if len(iky_list)>1: # plot contour
+            if len(iky_list)>1: # many ky: plot contour
                 my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gammanew[ichain]))
                 my_xlabel = '$k_x^*$'
                 my_ylabel = '$k_y$'
                 gplots.plot_2d(gammanew_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
                         xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
-            else: # single ky, plot only vs kxstar
-                plt.plot(kx_grid_fine,gammanew_fine,kx_grid_fine,linewidth=3.0, \
-                        color=gplots.myblue)
+            else: # single ky: 1d plot vs kxstar
+                plt.plot(kx_grid_1d,gammanew_1d,linewidth=3.0,color=gplots.myblue)
                 plt.xlabel('$k_x^*$')
-                plt.ylabel('$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gammanew[ichain])))
-                plt.title('$k_y={:.2f}$'.format(ky[iky_list[0]]))
+                plt.ylabel('$d\\log(\\varphi)/dt$')
+                plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gammanew[ichain])))
+                ax = plt.gca()
+                ax.set_ylim(-0.5,0.5)
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplots.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
@@ -735,7 +701,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     
     plt.figure(figsize=(12,8))
     plt.xlabel('$t$')
-    plt.ylabel('$\\ln \\left(\\sum_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2\\right)$')
+    plt.ylabel('$\\sum_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2$')
     #plt.title('Sum along a single ballooning mode')
     plt.grid(True)
     my_legend = []
@@ -743,7 +709,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(iky_list))) # for oldalgo
     for ichain in range(len(iky_list)):
         my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[ichain]]))
-        plt.plot(t_collec[ichain], np.log(sum_phi2_collec[ichain]), color=my_colorlist[ichain], linewidth=3.0)
+        plt.semilogy(t_collec[ichain], sum_phi2_collec[ichain], color=my_colorlist[ichain], linewidth=3.0)
     plt.legend(my_legend)
     pdfname = 'floquet_sum_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
@@ -753,14 +719,14 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
     plt.figure(figsize=(12,8))
     plt.xlabel('$t$')
-    plt.ylabel('$max_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2$')
+    plt.ylabel('$\\max_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2$')
     plt.grid(True)
     my_legend = []
     my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(iky_list))) # for newalgo
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(iky_list))) # for oldalgo
     for ichain in range(len(iky_list)):
         my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[ichain]]))
-        plt.plot(t_collec[ichain], np.log(max_phi2_collec[ichain]), color=my_colorlist[ichain], linewidth=3.0)
+        plt.semilogy(t_collec[ichain], max_phi2_collec[ichain], color=my_colorlist[ichain], linewidth=3.0)
     plt.legend(my_legend)
     pdfname = 'floquet_max_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'

@@ -1,6 +1,5 @@
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
-import matplotlib.animation as anim
 import numpy as np
 from math import pi
 from math import ceil
@@ -433,7 +432,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     Tf = Nf*delt
     nt = t.size
 
-    myfig = plt.figure(figsize=(12,8))
+    plt.figure(figsize=(12,8))
 
     for ichain in range(len(iky_list)):
     
@@ -545,13 +544,13 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 
                 moviename = 'phi_bloon' + '_iky_' + str(iky) + '_dmid_' + str(my_dmid)
                 moviename = run.out_dir + moviename + '_' + run.fnames[ifile] + '.mp4'
+                images = []
 
-                # NDCTEST: to shorten movie, make this smaller
-                max_it_for_mov = nt
                 # find global min and max of ballooning angle
                 bloonang_min = 0.
                 bloonang_max = 0.
-                for it in range(max_it_for_mov):
+                # NDCTEST: to shorten movie
+                for it in range(1001):
                 #for it in range(nt):
                     if np.min(bloonang[ichain][it]) < bloonang_min:
                         bloonang_min = np.min(bloonang[ichain][it])
@@ -559,97 +558,50 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                         bloonang_max = np.max(bloonang[ichain][it])
                
                 print("\ncreating movie of phi vs ballooning angle ...")
-                ####################################################
-                xdata1, ydata1 = [], []
-                l1, = plt.plot([],[], marker='o', color=gplots.myblue, \
-                        markersize=12, markerfacecolor=gplots.myblue, markeredgecolor=gplots.myblue, linewidth=3.0)
-                xdata2, ydata2 = [], []
-                l2, = plt.plot([],[], linestyle='', \
-                        marker='o', markersize=8, markerfacecolor='r', markeredgecolor='r')
-                plt.xlabel('$\\theta -\\theta_0^*$') # NDCPARAM: check for plot_against_theta0_star
-                plt.ylabel('$\\vert \\phi \\vert ^2$')
-                plt.grid(True)
-                plt.gca().set_xlim(bloonang_min,bloonang_max)
-                plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
-                # Initialize lines
-                def init_mov():
-                    l1.set_data([], [])
-                    l2.set_data([], [])
-                    return l1,l2
-                # Update lines
-                def update_mov(it):
-                    # Update chain
+                # NDCTEST: to shorten movie
+                for it in range(1001):
+                #for it in range(nt):
+                    
                     sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
-                    xdata1 = bloonang[ichain][it]
-                    ydata1 = phi2bloon[ichain][it]
-                    l1.set_data(xdata1,ydata1)
-                    ymin = np.amin(phi2bloon[ichain][it])
-                    ymax = np.amax(phi2bloon[ichain][it])
-                    ax = plt.gca()
-                    ax.set_ylim(ymin,ymax)
-                    ax.set_title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
-                    # Update discontinuities at 2pi interfaces
+               
+                    plt.xlabel('$\\theta -\\theta_0^*$') # NDCPARAM: check for plot_against_theta0_star
+                    plt.ylabel('$\\vert \\phi \\vert ^2$')
+                    plt.title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
+                    plt.grid(True)
+                    plt.gca().set_xlim(bloonang_min,bloonang_max)
+                    plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
+                    plt.plot(bloonang[ichain][it], phi2bloon[ichain][it], marker='o', \
+                            markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
+                    
+                    # Add vertical lines for 2pi segments
                     bloonang_bndry = []
+                    x_sep = np.min(bloonang[ichain][it])
+                    plt.axvline(x=x_sep, linestyle='--',linewidth=2,color='r')
                     for imember in range(len(ikx_members[ichain][it])-1,0,-1):
                         x_sep = pi-kx_star[it,iky,ikx_members[ichain][it][imember]]/(shat*ky[iky])
                         bloonang_bndry.append(x_sep)
-                    xdata2 = bloonang_bndry
-                    ydata2 = phi2bloon_discont[ichain][it]
-                    l2.set_data(xdata2,ydata2)
-                    return l1, l2
+                        plt.axvline(x=x_sep,linestyle='--',linewidth=2,color='r')
+                    x_sep = np.max(bloonang[ichain][it])
+                    plt.axvline(x=x_sep, linestyle='--',linewidth=2,color='r')
+                    
+                    # Plot discontinuities
+                    crv_discont, = plt.plot(bloonang_bndry, phi2bloon_discont[ichain][it], linestyle = None, color='r', \
+                            marker='o', markersize=8, markerfacecolor='r', markeredgecolor='r')
+                    plt.legend([crv_discont],['$\\Delta\\vert \\phi \\vert ^2$'],loc='upper right', \
+                            frameon=True,fancybox=False,framealpha=1.0)
 
-                mov = anim.FuncAnimation(myfig,update_mov,init_func=init_mov,frames=range(max_it_for_mov),blit=False,interval=10)
-                writer = anim.writers['ffmpeg'](fps=30,bitrate=-1,codec='libx264')
-                mov.save(moviename,writer=writer,dpi=100)
-                plt.clf()
-                plt.cla()
-                #####################################################
+                    pngname = run.out_dir + 'tmp_image.png'
+                    plt.savefig(pngname)
+                    
+                    images.append(imageio.imread(pngname))
+                    os.system('rm -rf ' + pngname)
 
+                    plt.clf()
+                    plt.cla()
 
-                # NDCTEST: to shorten movie
-                #for it in range(1001):
-                ##for it in range(nt):
-                #    
-                #    sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
-               
-                #    plt.xlabel('$\\theta -\\theta_0^*$') # NDCPARAM: check for plot_against_theta0_star
-                #    plt.ylabel('$\\vert \\phi \\vert ^2$')
-                #    plt.title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
-                #    plt.grid(True)
-                #    plt.gca().set_xlim(bloonang_min,bloonang_max)
-                #    plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
-                #    plt.plot(bloonang[ichain][it], phi2bloon[ichain][it], marker='o', \
-                #            markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
-                #    
-                #    # Add vertical lines for 2pi segments
-                #    bloonang_bndry = []
-                #    x_sep = np.min(bloonang[ichain][it])
-                #    plt.axvline(x=x_sep, linestyle='--',linewidth=2,color='r')
-                #    for imember in range(len(ikx_members[ichain][it])-1,0,-1):
-                #        x_sep = pi-kx_star[it,iky,ikx_members[ichain][it][imember]]/(shat*ky[iky])
-                #        bloonang_bndry.append(x_sep)
-                #        plt.axvline(x=x_sep,linestyle='--',linewidth=2,color='r')
-                #    x_sep = np.max(bloonang[ichain][it])
-                #    plt.axvline(x=x_sep, linestyle='--',linewidth=2,color='r')
-                #    
-                #    # Plot discontinuities
-                #    crv_discont, = plt.plot(bloonang_bndry, phi2bloon_discont[ichain][it], linestyle = None, color='r', \
-                #            marker='o', markersize=8, markerfacecolor='r', markeredgecolor='r')
-                #    plt.legend([crv_discont],['$\\Delta\\vert \\phi \\vert ^2$'],loc='upper right', \
-                #            frameon=True,fancybox=False,framealpha=1.0)
-
-                #    pngname = run.out_dir + 'tmp_image.png'
-                #    plt.savefig(pngname)
-                #    
-                #    images.append(imageio.imread(pngname))
-                #    os.system('rm -rf ' + pngname)
-
-                #    plt.clf()
-                #    plt.cla()
-
-                #    sys.stdout.flush()
-                #
-                #imageio.mimsave(moviename, images, format='FFMPEG')
+                    sys.stdout.flush()
+                
+                imageio.mimsave(moviename, images, format='FFMPEG')
                 print("\n... movie completed.")
 
     ######
@@ -730,7 +682,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 gplots.plot_2d(gammanew_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
                         xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
             else: # single ky, plot only vs kxstar
-                plt.plot(kx_grid_fine,gammanew_fine[0,:],linewidth=3.0,color=gplots.myblue)
+                plt.plot(kx_grid_fine,gammanew_fine,kx_grid_fine,linewidth=3.0, \
+                        color=gplots.myblue)
                 plt.xlabel('$k_x^*$')
                 plt.ylabel('$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gammanew[ichain])))
                 plt.title('$k_y={:.2f}$'.format(ky[iky_list[0]]))

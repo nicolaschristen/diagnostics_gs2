@@ -5,11 +5,11 @@ no_plot = False
 only_plot = True
 
 # Name(s) of simulation(s), without extension of file(s).
-#fnames = ['1661_0.8_g120_mix_id_1']#'1661_0.8_m0_mix_id_1','1661_0.8_g065_mix_id_1','1661_0.8_g065_old_id_1','jtwist_8_old_id_3'
-fnames = ['dkx_100']
-#fnames = ['ollie_badshear_mix_id_1','ollie_badshear_mix_id_2','ollie_badshear_mix_id_3']
-#fnames = ['1661_0.8_g020_old_id_1']
-#fnames = ['cbc_y0_1.00','cbc_y0_1.50','cbc_y0_2.00','cbc_y0_2.50','cbc_y0_3.00','cbc_y0_3.50','cbc_y0_4.00']
+#fnames = ['mix_dkx_1','mix_dkx_25','mix_dkx_50','mix_dkx_100']
+#fnames = ['old_dkx_1','old_dkx_25','old_dkx_50','old_dkx_100']
+#fnames = ['mix_dikx_100_2ky']
+fnames = ['1661_0.8_g040_mix_id_1']
+#fnames = ['ollie_badshear_old_id_1']
 
 scan_name = 'dummy'
 
@@ -17,11 +17,11 @@ scan_name = 'dummy'
 work_dir = './'
 
 # Path to directory where plots will be saved. Default is current directory.
-out_dir = work_dir + 'postproc/'
+out_dir = work_dir #+ 'postproc_test3/'
 
 # Task(s) to complete. Default is 'fluxes'. Check gs2_analysis.py for all possibilities.
-tasks = ['potential']
+tasks = ['floquet']
 
 # Specify fraction of time over which the solution is nonlinearly saturated (0.0 -> 1.0).
 # Only used for averaging. Default is 0.5.
-twin = 0.5
+twin = 0.3
