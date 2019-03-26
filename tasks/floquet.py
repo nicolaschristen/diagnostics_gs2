@@ -32,7 +32,8 @@ def my_task_single(ifile, run, myin, myout, task_space):
     #
     
     # select chains
-    iky_list = [-1] # negative means all nonzero ky
+    naky = 7
+    iky_list = [i for i in range(1,naky)] # negative means all nonzero ky
     if iky_list==[-1]:
         iky_list = [i for i in range(1,myout['ky'].size)]
     my_dmid = 0 # we include kxbar=my_dmid*dkx in our chain
@@ -337,6 +338,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
     my_vars['delt'] = delt
     my_vars['nwrite'] = nwrite
     my_vars['shat'] = shat
+    my_vars['g_exb'] = g_exb
     my_vars['kx'] = kx
     my_vars['ky'] = ky
     my_vars['dkx'] = dkx
@@ -400,6 +402,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     delt = my_vars['delt']
     nwrite = my_vars['nwrite']
     shat = my_vars['shat']
+    g_exb = my_vars['g_exb']
     kx = my_vars['kx']
     ky = my_vars['ky']
     dkx = my_vars['dkx']
