@@ -531,6 +531,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 moviename = run.out_dir + moviename + '_' + run.fnames[ifile] + '.mp4'
 
                 max_it_for_mov = nt
+                it_step_for_mov = 3
                 # find global min and max of ballooning angle
                 bloonang_min = 0.
                 bloonang_max = 0.
@@ -580,7 +581,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                     return l1, l2
 
                 mov = anim.FuncAnimation(myfig,update_mov,init_func=init_mov, \
-                        frames=range(max_it_for_mov),blit=False,interval=10)
+                        frames=range(0,max_it_for_mov,it_step_for_mov),blit=False,interval=10)
                 writer = anim.writers['ffmpeg'](fps=30,bitrate=-1,codec='libx264')
                 mov.save(moviename,writer=writer,dpi=100)
                 plt.clf()
