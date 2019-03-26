@@ -42,7 +42,6 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
     merger.write(out_name)
 
     # remove tmp pdfs
-    print(in_namelist)
     for pdfname in in_namelist:
         if ifile is not None:
             file_name = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'

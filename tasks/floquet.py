@@ -12,6 +12,7 @@ import sys
 import pickle
 from PyPDF2 import PdfFileMerger, PdfFileReader
 import scipy.interpolate as scinterp
+import scipy.optimize as opt
 
 import gs2_plotting as gplots
 
@@ -90,11 +91,17 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
     jtwist = int(myin['kt_grids_box_parameters']['jtwist'])
     
     # Floquet period
-    Tf = abs(2*pi*shat/g_exb)
+    if g_exb != 0.0:
+        Tf = abs(2*pi*shat/g_exb)
+    else:
+        Tf = np.nan
     print('Floquet period : ' + str(Tf))
     # number of t-steps in Floquet period
-    Nf = int(round(Tf/delt))
-    print('Number of t-steps in Floquet period : ' + str(Nf))
+    if g_exb != 0.0:
+        Nf = int(round(Tf/delt))
+        print('Number of t-steps in Floquet period : ' + str(Nf))
+    else:
+        Nf = np.nan
 
     kx_gs2 = myout['kx']
     ky = myout['ky']
@@ -106,8 +113,11 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
     ikx_min = ikx_max+1
     
     # number of t-steps before ExB re-map
-    N = max(1, abs(int(round(dkx/(g_exb*delt*dky)))))
-    print('Number of t-steps before ExB re-map : ' + str(N))
+    if g_exb != 0.0:
+        N = max(1, abs(int(round(dkx/(g_exb*delt*dky)))))
+        print('Number of t-steps before ExB re-map : ' + str(N))
+    else:
+        N = np.nan
 
     phi2_gs2 = myout['phi2_by_mode'][:,:,:]
 
@@ -155,9 +165,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
     phi2bloon_discont = []
     sum_phi2bloon = []
     max_phi2bloon = []
-    kxstar_over_ky = []
     gamma = []
-    gammanew = []
     kx_star_for_gamma = []
 
     for iky in iky_list:
@@ -169,7 +177,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
         phi2bloon_discont_chain = []
         sum_phi2bloon_chain = []
         max_phi2bloon_chain = []
-        gammanew_chain = []
+        gamma_chain = []
         kx_star_for_gamma_chain = []
 
         iTf = 0
@@ -263,7 +271,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
                     phi2bloon_discont_now.append(discont)
 
                 # Computing 'growthrate' for every kxstar present in the chain
-                if it>0:
+                if it>0 and g_exb != 0.0:
                     # index of the Floquet oscillation we are in
                     iTf_new = int(round(delt*(it*nwrite-0.5)/Tf))
                     # If we enter the next Floquet oscillation,
@@ -275,7 +283,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
                         kx_star_for_gamma_floq = [kx_star_for_gamma_floq[i] for i in idx_sort]
                         gamma_floq = [gamma_floq[i] for i in idx_sort]
                         # and append
-                        gammanew_chain.append(gamma_floq)
+                        gamma_chain.append(gamma_floq)
                         kx_star_for_gamma_chain.append(kx_star_for_gamma_floq)
                         gamma_floq = []
                         kx_star_for_gamma_floq = []
@@ -298,30 +306,6 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
             phi2bloon_discont_chain.append(phi2bloon_discont_now)
             sum_phi2bloon_chain.append(sum_phi2bloon_now)
             max_phi2bloon_chain.append(max(phi2bloon_now))
-
-        # Compute growthrate as a function of kx for chosen ky
-        # by estimating slopes on sum(phi2) vs t plot.
-        if phi_t_present:
-            gamma_chain = np.zeros(Nf)
-            kxstar_over_ky_chain = np.zeros(Nf)
-            nf_start = 0 # number of Floquet periods after which to start
-            it_start = nf_start*Nf
-            nf_avg = 1 # number of Floquet iterations to average over
-            for it in range(Nf):
-                for ifloq in range(nf_avg):
-                    it_prev = it+it_start+ifloq*Nf-1
-                    it_next = it+it_start+ifloq*Nf+1
-                    gamma_chain[it] += 1./(4.*delt) \
-                            * (np.log(sum_phi2bloon_chain[it_next])-np.log(sum_phi2bloon_chain[it_prev]))
-                gamma_chain[it] = gamma_chain[it]/nf_avg
-                kxstar_over_ky_chain[it] = (my_dmid*dkx - g_exb*ky[iky]*delt*max([0.0,nwrite*it-0.5]))/(pi*shat*ky[iky])
-                # make kxstar/ky cycle within [-pi*shat, pi*shat]
-                remainder = np.mod(kxstar_over_ky_chain[it]+1.,2.)
-                kxstar_over_ky_chain[it] = remainder-1.
-            # Sort to get monotonic kxstar/ky
-            idx_sort = np.unravel_index(np.argsort(kxstar_over_ky_chain), kxstar_over_ky_chain.shape)
-            gamma_chain = gamma_chain[idx_sort]
-            kxstar_over_ky_chain = kxstar_over_ky_chain[idx_sort]
     
         # Adding the chain to the full collection
         ikx_members.append(ikx_members_chain)
@@ -331,10 +315,20 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
         phi2bloon_discont.append(phi2bloon_discont_chain)
         sum_phi2bloon.append(sum_phi2bloon_chain)
         max_phi2bloon.append(max_phi2bloon_chain)
-        kxstar_over_ky.append(kxstar_over_ky_chain)
-        gamma.append(gamma_chain)
-        kx_star_for_gamma.append(kx_star_for_gamma_chain)
-        gammanew.append(gammanew_chain)
+        if g_exb != 0.0:
+            kx_star_for_gamma.append(kx_star_for_gamma_chain)
+            gamma.append(gamma_chain)
+
+    if g_exb==0.0:
+        it_start = round(0.3*nt)
+        gamma = np.zeros((nakx,len(iky_list)))
+        tofit_sq = np.amax(phi2_bytheta,axis=3) # take the max in theta for each 2pi segment
+        for ikx in range(nakx):
+            for ichain in range(len(iky_list)):
+                iky = iky_list[ichain]
+                gam = get_growthrate(t,tofit_sq[:,iky,ikx],it_start)
+                gam = gam/2. # because we fitted the square
+                gamma[ikx,ichain] = gam
 
     # Saving variables to mat-file
     my_vars = {}
@@ -360,9 +354,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
     my_vars['phi2bloon_discont'] = phi2bloon_discont
     my_vars['sum_phi2bloon'] = sum_phi2bloon
     my_vars['max_phi2bloon'] = max_phi2bloon
-    my_vars['kxstar_over_ky'] = kxstar_over_ky
     my_vars['gamma'] = gamma
-    my_vars['gammanew'] = gammanew
     my_vars['kx_star_for_gamma'] = kx_star_for_gamma
 
     #TESTpickle
@@ -425,10 +417,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     phi2bloon_discont = my_vars['phi2bloon_discont']
     sum_phi2bloon = my_vars['sum_phi2bloon']
     max_phi2bloon = my_vars['max_phi2bloon']
-    kxstar_over_ky = my_vars['kxstar_over_ky']
-    gamma = my_vars['gamma']
     kx_star_for_gamma = my_vars['kx_star_for_gamma']
-    gammanew = my_vars['gammanew']
+    gamma = my_vars['gamma']
     
     Tf = Nf*delt
     nt = t.size
@@ -599,67 +589,97 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
     # plot gamma vs (kxstar,ky), for every Floquet oscillation in the simulation
     if phi_t_present:
-        tmp_pdf_id = 1
-        pdflist = []
-        # Finer and regular kx, ky mesh for contour plot of gamma
-        nakx_fine = (kx_bar.size-1)*1e4+1
-        kx_grid_fine = np.linspace(np.amin(kx_bar)-dkx/2.,np.amax(kx_bar)+dkx/2.,nakx_fine)
-        ky_grid_fine = np.zeros(len(iky_list))
-        for ichain in range(len(iky_list)):
-            iky = iky_list[ichain]
-            ky_grid_fine[ichain] = ky[iky]
 
         cbarmax = 0.5
         cbarmin = -0.5
-        iTfmax = len(gammanew[0])-1
 
-        for iTf in range(iTfmax,-1,-1):
-            # First arrange kx,ky,gamma similarly to fine meshes above
-            npoints = 0
-            for ichain in range(len(iky_list)):
-                npoints = npoints + len(kx_star_for_gamma[ichain][iTf])
-            kx_grid_1d = np.zeros(npoints)
-            ky_grid_1d = np.zeros(npoints)
-            gammanew_1d = np.zeros(npoints)
-            istart = 0
+        if g_exb != 0.0:
+
+            tmp_pdf_id = 1
+            pdflist = []
+            # Finer and regular kx, ky mesh for contour plot of gamma
+            nakx_fine = (kx_bar.size-1)*1e4+1
+            kx_grid_fine = np.linspace(np.amin(kx_bar)-dkx/2.,np.amax(kx_bar)+dkx/2.,nakx_fine)
+            ky_grid_fine = np.zeros(len(iky_list))
             for ichain in range(len(iky_list)):
                 iky = iky_list[ichain]
-                for ikxstar in range(len(kx_star_for_gamma[ichain][iTf])):
-                    ipoint = istart + ikxstar
-                    kx_grid_1d[ipoint] = kx_star_for_gamma[ichain][iTf][ikxstar]
-                    ky_grid_1d[ipoint] = ky[iky]
-                    gammanew_1d[ipoint] = gammanew[ichain][iTf][ikxstar]
-                istart = istart + len(kx_star_for_gamma[ichain][iTf])
-            # then interpolate to nearest neighbour on fine, regular mesh
-            gammanew_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gammanew_1d, \
-                    (kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
-            # Set the colorbar limits according to the last Floquet oscillation
-            if iTf == iTfmax:
-                #cbarmax = np.nanmax(gammanew_fine)
-                cbarmax = 0.5
-                #cbarmin = np.nanmin(gammanew_fine)
-                cbarmin = -0.5
-            # and plot
+                ky_grid_fine[ichain] = ky[iky]
+
+            iTfmax = len(gamma[0])-1
+
+            for iTf in range(iTfmax,-1,-1):
+                # First arrange kx,ky,gamma similarly to fine meshes above
+                npoints = 0
+                for ichain in range(len(iky_list)):
+                    npoints = npoints + len(kx_star_for_gamma[ichain][iTf])
+                kx_grid_1d = np.zeros(npoints)
+                ky_grid_1d = np.zeros(npoints)
+                gamma_1d = np.zeros(npoints)
+                istart = 0
+                for ichain in range(len(iky_list)):
+                    iky = iky_list[ichain]
+                    for ikxstar in range(len(kx_star_for_gamma[ichain][iTf])):
+                        ipoint = istart + ikxstar
+                        kx_grid_1d[ipoint] = kx_star_for_gamma[ichain][iTf][ikxstar]
+                        ky_grid_1d[ipoint] = ky[iky]
+                        gamma_1d[ipoint] = gamma[ichain][iTf][ikxstar]
+                    istart = istart + len(kx_star_for_gamma[ichain][iTf])
+                # then interpolate to nearest neighbour on fine, regular mesh
+                gamma_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gamma_1d, \
+                        (kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
+                # Set the colorbar limits according to the last Floquet oscillation
+                if iTf == iTfmax:
+                    #cbarmax = np.nanmax(gamma_fine)
+                    cbarmax = 0.5
+                    #cbarmin = np.nanmin(gamma_fine)
+                    cbarmin = -0.5
+                # and plot
+                if len(iky_list)>1: # many ky: plot contour
+                    my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gamma[ichain]))
+                    my_xlabel = '$k_x^*$'
+                    my_ylabel = '$k_y$'
+                    gplots.plot_2d(gamma_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
+                            xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
+                else: # single ky: 1d plot vs kxstar
+                    plt.plot(kx_grid_1d,gamma_1d,linewidth=3.0,color=gplots.myblue)
+                    plt.xlabel('$k_x^*$')
+                    plt.ylabel('$d\\log(\\varphi)/dt$')
+                    plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gamma[ichain])))
+                    ax = plt.gca()
+                    ax.set_ylim(cbarmin,cbarmax)
+                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                gplots.save_plot(tmp_pdfname, run, ifile)
+                pdflist.append(tmp_pdfname)
+                tmp_pdf_id = tmp_pdf_id+1
+            pdflist = pdflist[::-1] # re-order since we iterated from last oscillation
+            merged_pdfname = 'gamma_vs_kxky' + '_dmid_' + str(my_dmid)
+            gplots.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+        else: # g_exb = 0.0
+
             if len(iky_list)>1: # many ky: plot contour
-                my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gammanew[ichain]))
+                ky_to_plot = np.zeros(len(iky_list))
+                for ichain in len(iky_list):
+                    ky_to_plot[ichain] = ky[iky_list[ichain]]
+                my_title = '$d\\log(\\varphi)/dt$'
                 my_xlabel = '$k_x^*$'
                 my_ylabel = '$k_y$'
-                gplots.plot_2d(gammanew_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
+                gplots.plot_2d(gamma,kx_bar,ky_to_plot,cbarmin,cbarmax,
                         xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
             else: # single ky: 1d plot vs kxstar
-                plt.plot(kx_grid_1d,gammanew_1d,linewidth=3.0,color=gplots.myblue)
+                plt.plot(kx_bar,gamma[:,-1],linewidth=3.0,color=gplots.myblue)
                 plt.xlabel('$k_x^*$')
                 plt.ylabel('$d\\log(\\varphi)/dt$')
-                plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gammanew[ichain])))
+                plt.title('$k_y={:.2f}'.format(ky[iky_list[0]]))
                 ax = plt.gca()
-                ax.set_ylim(-0.5,0.5)
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplots.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
-        pdflist = pdflist[::-1] # re-order since we iterated from last oscillation
-        merged_pdfname = 'gamma_vs_kxky' + '_dmid_' + str(my_dmid)
-        gplots.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+                ax.set_ylim(cbarmin,cbarmax)
+
+            pdfname = 'gamma_vs_kxky' + '_dmid_' + str(my_dmid)
+            pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
+            plt.savefig(pdfname)
+            
+            plt.clf()
+            plt.cla()
 
     # Plot sum and max of phi2 vs time for every ky
     # Fit each curve and plot gamma_avg vs ky
@@ -667,8 +687,12 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     # Start comparing simulations at time-step it_start = N_start*Tfloquet/dt
     # ie after N_start Floquet oscillations
     # Normalise sum_phi2 by sum_phi2[it_start] for each run
-    N_start = 0
-    it_start = int(round((N_start*Tf/delt)/nwrite))
+    if g_exb != 0.0:
+        N_start = 0
+        it_start = int(round((N_start*Tf/delt)/nwrite))
+    else:
+        it_start = round(0.3*nt)
+
     t_collec = []
     sum_phi2_collec = []
     max_phi2_collec = []
@@ -694,10 +718,14 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             t_tmp[it] = t[it_start+it]
         t_collec.append(t_tmp)
 
-        [a,dummy] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
-        slope_sum[ichain] = a
-        [a,dummy] = leastsq_lin(t_tmp,np.log(max_phi2_tmp))
-        slope_max[ichain] = a
+        [gam,dummy] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
+        slope_sum[ichain] = gam/2. # divide by 2 because fitted square
+        [gam,dummy] = leastsq_lin(t_tmp,np.log(max_phi2_tmp))
+        slope_max[ichain] = gam/2. # divide by 2 because fitted square
+        #gam = get_growthrate(t,sum_phi2bloon[ichain],it_start)
+        #slope_sum[ichain] = gam/2. # divide by 2 because fitted square
+        #gam = get_growthrate(t,max_phi2bloon[ichain],it_start)
+        #slope_max[ichain] = gam/2. # divide by 2 because fitted square
     
     plt.figure(figsize=(12,8))
     plt.xlabel('$t$')
@@ -878,3 +906,11 @@ def leastsq_lin(x, y):
     b = 1./(N_x*np.sum(np.power(x,2)) - np.sum(x)**2) * (-1.*np.sum(x)*np.sum(np.multiply(x,y)) + np.sum(np.power(x,2))*np.sum(y))
 
     return [a, b]
+
+def get_growthrate(t,tofit,it_start):
+   
+    popt, pcov = opt.curve_fit(lin_func, t[it_start:], np.log(tofit[it_start:]))
+    return popt[0]
+
+def lin_func(x,a,b):
+    return a*x+b
