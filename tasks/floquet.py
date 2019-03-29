@@ -34,7 +34,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     # select chains
     naky = 7
     iky_list = [i for i in range(1,naky)] # [-1] means all nonzero ky
-    #iky_list = [1] # NDCTEST
+    iky_list = [1] # NDCTEST
     if iky_list==[-1]:
         iky_list = [i for i in range(1,myout['ky'].size)]
     my_dmid = 0 # we include kxbar=my_dmid*dkx in our chain
@@ -843,7 +843,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 plt.plot(kx_bar,gamma[:,-1],linewidth=3.0,color=gplots.myblue)
                 plt.xlabel('$k_x^*$')
                 plt.ylabel('$d\\log(\\varphi)/dt$')
-                plt.title('$k_y={:.2f}'.format(ky[iky_list[0]]))
+                plt.title('$k_y={:.2f}$'.format(ky[iky_list[0]]))
                 ax = plt.gca()
                 ax.set_ylim(cbarmin,cbarmax)
 
