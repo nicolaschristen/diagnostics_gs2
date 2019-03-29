@@ -114,7 +114,7 @@ def complete_task_scan(task, run, full_space):
 
         flowtest.plot(run, full_space)
 
-    if (task == 'floquet'):
+    if (task == 'floquet_scan'):
 
         floquet.task_scan(run, full_space)
 
