@@ -44,7 +44,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = [-1]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = True
+    make_movies = False
 
     #
     #
@@ -95,9 +95,9 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
     # Floquet period
     if g_exb != 0.0:
         Tf = abs(2*pi*shat/g_exb)
+        print('Floquet period : ' + str(Tf))
     else:
         Tf = np.nan
-    print('Floquet period : ' + str(Tf))
     # number of t-steps in Floquet period
     if g_exb != 0.0:
         Nf = int(round(Tf/delt))
@@ -254,20 +254,15 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
                 ikx = ikx+jtwist*iky
                 ikxprev = ikxprev+jtwist*iky
 
-            # sort ikx of chain members in ascending order for time it
+            # sort ikx of chain members at time it in left-to-right order (shat>0: descending, shat<0: ascending)
             # sort time it-1 accordingly
-            idx_sort = sorted(range(len(ikx_members_now)), key=lambda k: ikx_members_now[k])
+            idx_sort = sorted(range(len(ikx_members_now)), key=lambda k: ikx_members_now[k],reverse=(shat>0.))
             ikx_members_now = [ikx_members_now[idx] for idx in idx_sort]
             ikx_prevmembers_now = [ikx_prevmembers_now[idx] for idx in idx_sort]
 
             if phi_t_present:
 
-                # Depending on sign of shat, choose correct way to iterate over kx's
-                # such that we move from left to right in the ballooning chain.
-                if shat>0.:
-                    member_range = range(len(ikx_members_now)-1,-1,-1)
-                else:
-                    member_range = range(len(ikx_members_now))
+                member_range = range(len(ikx_members_now))
                 
                 # compute ballooning angle and construct associated phi2
                 for imember in member_range:
@@ -280,15 +275,10 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
                         phi2bloon_now.append(phi2_bytheta[it,iky,ikx_members_now[imember],itheta])
 
                 # Saving discontinuities and bloonang at link position to plot later
-                if shat>0.:
-                    member_range = range(len(ikx_members_now)-1,0,-1)
-                    step = -1
-                else:
-                    member_range = range(len(ikx_members_now)-1)
-                    step = 1
+                member_range = range(len(ikx_members_now)-1)
                 for imember in member_range:
                     phi2_l = phi2_bytheta[it,iky,ikx_members_now[imember],-1]
-                    phi2_r = phi2_bytheta[it,iky,ikx_members_now[imember+step],0]
+                    phi2_r = phi2_bytheta[it,iky,ikx_members_now[imember+1],0]
                     discont = abs(phi2_r-phi2_l)
                     phi2bloon_discont_now.append(discont)
                     jump = abs((phi2_r-phi2_l)/max(phi2_l,phi2_r))
@@ -563,7 +553,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             if (make_movies):
 
                 # set time stepping for movies
-                max_it_for_mov = nt
+                max_it_for_mov = nt//10
                 it_step_for_mov = 1
 
                 # find global min and max of ballooning angle

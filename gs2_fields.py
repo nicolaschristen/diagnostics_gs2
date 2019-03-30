@@ -60,12 +60,18 @@ class fieldobj:
         print()
         print('calculating Ex and Ey power spectrum...',end='')
         
-        Ex_power_spectrum = np.arange(mytime.ntime_steady,dtype=float)
-        Ex_power_spectrum = np.fft.fftshift( np.sum(
-            np.abs(np.fft.fft(Ex_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
-        Ey_power_spectrum = np.arange(mytime.ntime_steady,dtype=float)
-        Ey_power_spectrum = np.fft.fftshift( np.sum(
-            np.abs(np.fft.fft(Ey_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
+        if (mygrids.nx > 2) and (mygrids.ny > 2):
+            Ex_power_spectrum = np.arange(mytime.ntime_steady,dtype=float)
+            Ex_power_spectrum = np.fft.fftshift( np.sum(
+                np.abs(np.fft.fft(Ex_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
+            Ey_power_spectrum = np.arange(mytime.ntime_steady,dtype=float)
+            Ey_power_spectrum = np.fft.fftshift( np.sum(
+                np.abs(np.fft.fft(Ey_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
+        else:
+            Ex_power_spectrum = 0
+            Ex_power_spectrum = 0
+            Ey_power_spectrum = 0
+            Ey_power_spectrum = 0
 
         print('complete')
 
