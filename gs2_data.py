@@ -5,6 +5,7 @@ import f90nml
 out_varnames = [
         't', 'kx', 'ky',
         'theta', 'theta0',
+        'phi',
         # modulus squared, avged over theta, kx and ky [t]
         'phi2',
         # modulus squared, avged over theta [t,ky,kx]
@@ -48,7 +49,17 @@ out_varnames = [
         # complex parallel temperature fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
         'tpar_igomega_by_mode',
         # complex perpendicular temperature fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
-        'tperp_igomega_by_mode' ]
+        'tperp_igomega_by_mode',
+        'gds2',
+        'gds21',
+        'gds22',
+        'gbdrift',
+        'cvdrift',
+        'gbdrift0',
+        'cvdrift0',
+        'bmag',
+        'apar'
+        ]
 
 def get_output(ifile, run):
 

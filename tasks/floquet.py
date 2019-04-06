@@ -34,7 +34,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     # select chains
     naky = 7
     iky_list = [i for i in range(1,naky)] # [-1] means all nonzero ky
-    iky_list = [1] # NDCTEST
+    #iky_list = [1] # NDCTEST
     if iky_list==[-1]:
         iky_list = [i for i in range(1,myout['ky'].size)]
     my_dmid = 0 # we include kxbar=my_dmid*dkx in our chain
@@ -44,7 +44,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = [-1]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = False
+    make_movies = True
 
     #
     #
@@ -129,6 +129,7 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
    
     # sorting kx_gs2 to get monotonic kx_bar
     kx_bar = np.concatenate((kx_gs2[ikx_min:],kx_gs2[:ikx_min]))
+    #print(kx_bar) # NDCTEST
     phi2 = np.concatenate((phi2_gs2[:,:,ikx_min:], phi2_gs2[:,:,:ikx_min]), axis=2)
     if phi_t_present:
         phi2_bytheta = np.concatenate((phi2_bytheta_gs2[:,:,ikx_min:,:], phi2_bytheta_gs2[:,:,:ikx_min,:]), axis=2)
@@ -191,6 +192,24 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
         kx_star_for_gamma_floq = []
 
         for it in range(nt):
+            #NDCTEST
+            # To test if initial condition satisfies parallel BC. Apparently does not when shat<0.
+            #if iky==1 and it<10:
+            #    print('---------------------')
+            #    print('FOR TEST')
+            #    print('phi2(-pi) = ')
+            #    print(phi2_bytheta[it,iky,:,0])
+            #    print('phi2(+pi) = ')
+            #    print(phi2_bytheta[it,iky,:,-1])
+            #    if shat>0.:
+            #        print('phi_l = '+str(phi2_bytheta[it,iky,-1,-1])) # phi_l
+            #        print('phi_r = '+str(phi2_bytheta[it,iky,-2,0])) # phi_r
+            #    else:
+            #        # correct
+            #        print('phi_l = '+str(phi2_bytheta[it,iky,-1,0])) # phi_l
+            #        print('phi_r = '+str(phi2_bytheta[it,iky,-2,-1])) # phi_r
+            #    print('---------------------')
+            #endNDCTEST
 
             ikx_members_now = []
             ikx_prevmembers_now = []
@@ -553,7 +572,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             if (make_movies):
 
                 # set time stepping for movies
-                max_it_for_mov = nt//10
+                max_it_for_mov = nt
                 it_step_for_mov = 1
 
                 # find global min and max of ballooning angle
