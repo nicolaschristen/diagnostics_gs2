@@ -36,7 +36,7 @@ def my_task_single(ifile, run, myin, myout):
         gamma[0,:]=float('nan') # skip zonal mode
         for iky in range(1,naky):
             for ikx in ikx_list:
-                gamma[iky,ikx] = get_growthrate(t,phi2,it_start,ikx,iky)
+                gamma[iky,ikx] = 0.5*get_growthrate(t,phi2,it_start,ikx,iky)
         
         # Save to .dat file
         datfile_name = run.out_dir + run.fnames[ifile] + '.lingrowth.dat'
@@ -67,6 +67,21 @@ def my_task_single(ifile, run, myin, myout):
         pdfname = 'lingrowth'
         gplot.save_plot(pdfname, run, ifile)
         print('Maximum linear growthrate: '+str(np.nanmax(gamma)))
+
+        plt.figure(figsize=(12,8))
+        plt.xlabel('$t\\ [L/v_{th}]$')
+        plt.ylabel('$\\vert\\varphi\\vert^2$')
+        plt.title('Potential')
+        plt.grid(True)
+
+        my_legend = []
+        for iky in range(naky):
+            for ikx in ikx_list:
+                plt.semilogy(t,phi2[:,iky,ikx])
+                my_legend.append('$(k_x,k_y)=('+str(kx[ikx])+','+str(ky[iky])+')$')
+        plt.legend(my_legend)
+        pdfname = 'linpotential'
+        gplot.save_plot(pdfname, run, ifile)
 
 def get_growthrate(t,phi2,it_start,ikx,iky):
    
