@@ -32,7 +32,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     #
     
     # select chains
-    naky = 7
+    naky = 2
     iky_list = [i for i in range(1,naky)] # [-1] means all nonzero ky
     #iky_list = [1] # NDCTEST
     if iky_list==[-1]:
@@ -44,7 +44,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = [-1]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = True
+    make_movies = False
 
     #
     #
@@ -529,32 +529,6 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             #plt.clf()
             #plt.cla()
             # endNDCTEST
-
-            # plot sum of phi2 along chain vs time
-            plt.xlabel('$t$')
-            plt.ylabel('$\\ln \\left(\\sum_{K_x}\\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$')
-            plt.title('Sum along ballooning mode, $k_y={:.2f}$'.format(ky[iky]))
-            plt.grid(True)
-            plt.semilogy(t, sum_phi2bloon[ichain], color=gplots.myblue, linewidth=3.0) 
-            pdfname = 'floquet_vs_t'+ '_iky_' + str(iky) + '_dmid_' + str(my_dmid) 
-            pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
-            plt.savefig(pdfname)
-            
-            plt.clf()
-            plt.cla()
-
-            # plot max of phi2 along chain vs time
-            plt.xlabel('$t$')
-            plt.ylabel('$\\max\\left(\\ln \\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$')
-            plt.title('Max along ballooning mode, $k_y={:.2f}$'.format(ky[iky]))
-            plt.grid(True)
-            plt.semilogy(t, max_phi2bloon[ichain], color=gplots.myblue, linewidth=3.0) 
-            pdfname = 'max_phi2_vs_t'+ '_iky_' + str(iky) + '_dmid_' + str(my_dmid) 
-            pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
-            plt.savefig(pdfname)
-            
-            plt.clf()
-            plt.cla()
         
             # plot gamma vs kxstar/(pi*shat*ky)
             #plt.title('$k_y={:.2f}$'.format(ky[iky]))
@@ -573,7 +547,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
                 # set time stepping for movies
                 max_it_for_mov = nt
-                it_step_for_mov = 1
+                it_step_for_mov = nt//10
 
                 # find global min and max of ballooning angle
                 bloonang_min = 0.
@@ -608,7 +582,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 # Update lines
                 def update_mov(it):
                     # Update chain
-                    sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
+                    #sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1))) # comment out on HPC
                     xdata1 = bloonang[ichain][it]
                     ydata1 = phi2bloon[ichain][it]
                     l1.set_data(xdata1,ydata1)
@@ -649,7 +623,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                     return l1
                 # Update lines
                 def update_mov_jump(it):
-                    sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1)))
+                    #sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1))) # comment out for HPC
                     # Update discontinuities at 2pi interfaces
                     xdata1 = bloonang_bndry[ichain][it]
                     ydata1 = phi2bloon_jump[ichain][it]
@@ -673,10 +647,11 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     # ie after N_start Floquet oscillations
     # Normalise sum_phi2 by sum_phi2[it_start] for each run
     if g_exb != 0.0:
-        N_start = 0
+        N_start = 0 # adapt this
         it_start = int(round((N_start*Tf/delt)/nwrite))
     else:
-        it_start = round(0.5*nt)
+        fac = 0.0 # adapt this
+        it_start = round(fac*nt) # adapt this
 
     t_collec = []
     sum_phi2_collec = []
@@ -693,9 +668,10 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
         for it in range(sum_phi2_tmp.size):
             sum_phi2_tmp[it] = sum_phi2bloon[ichain][it_start+it]
             max_phi2_tmp[it] = max_phi2bloon[ichain][it_start+it]
-        sum_phi2_tmp = sum_phi2_tmp/sum_phi2_tmp[0]
+        if it_start > 0:
+            sum_phi2_tmp = sum_phi2_tmp/sum_phi2_tmp[0]
+            max_phi2_tmp = max_phi2_tmp/max_phi2_tmp[0]
         sum_phi2_collec.append(sum_phi2_tmp)
-        max_phi2_tmp = max_phi2_tmp/max_phi2_tmp[0]
         max_phi2_collec.append(max_phi2_tmp)
         
         t_tmp = np.zeros(len(t)-it_start)

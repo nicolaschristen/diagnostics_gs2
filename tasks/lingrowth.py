@@ -75,11 +75,13 @@ def my_task_single(ifile, run, myin, myout):
         plt.grid(True)
 
         my_legend = []
+        cmap = plt.get_cmap('nipy_spectral')
+        my_colors = [cmap(i) for i in np.linspace(0,1,naky*len(ikx_list))]
         for iky in range(naky):
             for ikx in ikx_list:
-                plt.semilogy(t,phi2[:,iky,ikx])
-                my_legend.append('$(k_x,k_y)=('+str(kx[ikx])+','+str(ky[iky])+')$')
-        plt.legend(my_legend)
+                plt.semilogy(t,phi2[:,iky,ikx],color=my_colors[ikx*naky+iky])
+                my_legend.append('$(k_x,k_y)=({:.1f},{:.1f})$'.format(kx[ikx],ky[iky]))
+        plt.legend(my_legend, ncol=1, prop={'size': 10},loc='upper left')
         pdfname = 'linpotential'
         gplot.save_plot(pdfname, run, ifile)
 

@@ -76,6 +76,30 @@ def get_output(ifile, run):
     # Name of phi_igomega_by_mode used to be phi0, so check for that varname too
     if (not myout['phi_igomega_by_mode_present']):
         get_single_output(ncfile, 'phi0', myout, 'phi_igomega_by_mode')
+    
+    marconi_crashed = False
+    indices_to_delete = [myout['t'].size-2, myout['t'].size-1] # for ollie_badshear_old_id_3
+    if(marconi_crashed):
+        myout['t'] = np.delete(myout['t'],indices_to_delete)
+        myout['phi2'] = np.delete(myout['phi2'],indices_to_delete)
+        myout['phi2_by_mode'] = np.delete(myout['phi2_by_mode'],indices_to_delete,axis=0)
+        myout['phi_igomega_by_mode'] = np.delete(myout['phi_igomega_by_mode'],indices_to_delete,axis=0)
+        myout['ntot_igomega_by_mode'] = np.delete(myout['ntot_igomega_by_mode'],indices_to_delete,axis=0)
+        myout['upar_igomega_by_mode'] = np.delete(myout['upar_igomega_by_mode'],indices_to_delete,axis=0)
+        myout['tpar_igomega_by_mode'] = np.delete(myout['tpar_igomega_by_mode'],indices_to_delete,axis=0)
+        myout['phi2_by_ky'] = np.delete(myout['phi2_by_ky'],indices_to_delete,axis=0)
+        myout['omega'] = np.delete(myout['omega'],indices_to_delete,axis=0)
+        myout['omega_average'] = np.delete(myout['omega_average'],indices_to_delete,axis=0)
+        myout['es_part_flux'] = np.delete(myout['es_part_flux'],indices_to_delete,axis=0)
+        myout['es_heat_flux'] = np.delete(myout['es_heat_flux'],indices_to_delete,axis=0)
+        myout['es_mom_flux'] = np.delete(myout['es_mom_flux'],indices_to_delete,axis=0)
+        myout['es_energy_exchange'] = np.delete(myout['es_energy_exchange'],indices_to_delete,axis=0)
+        myout['es_part_flux_by_mode'] = np.delete(myout['es_part_flux_by_mode'],indices_to_delete,axis=0)
+        myout['es_heat_flux_by_mode'] = np.delete(myout['es_heat_flux_by_mode'],indices_to_delete,axis=0)
+        myout['es_mom_flux_by_mode'] = np.delete(myout['es_mom_flux_by_mode'],indices_to_delete,axis=0)
+        myout['es_part_sym'] = np.delete(myout['es_part_sym'],indices_to_delete,axis=0)
+        myout['es_heat_sym'] = np.delete(myout['es_heat_sym'],indices_to_delete,axis=0)
+        myout['es_mom_sym'] = np.delete(myout['es_mom_sym'],indices_to_delete,axis=0)
 
     return myout
 

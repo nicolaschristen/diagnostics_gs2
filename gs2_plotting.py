@@ -61,6 +61,7 @@ def set_plot_defaults():
     rcParams.update({'figure.autolayout': True})
     rcParams.update({'legend.fontsize': 20, 'legend.handlelength': 4})
     rcParams.update({'legend.frameon': False})
+    #rcParams.update({'animation.ffmpeg_path':'/marconi/home/userexternal/nchriste/codes/ffmpeg'}) # for HPC use only
 
 def plot_1d(x,y,xlab,title='',ylab=''):
 

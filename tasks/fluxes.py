@@ -248,6 +248,11 @@ def stitching_fluxes(run):
     stitch_qflx = np.zeros((Nt_tot,nspec))
     stitch_vflx = np.zeros((Nt_tot,nspec))
     stitch_pioq = np.zeros((Nt_tot,nspec))
+
+    stitch_pflx_tavg = np.zeros(nspec)
+    stitch_qflx_tavg = np.zeros(nspec)
+    stitch_vflx_tavg = np.zeros(nspec)
+    stitch_pioq_tavg = np.zeros(nspec)
     
     stitch_pflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
     stitch_qflx_kxky = np.zeros((Nt_tot,nspec,ny,nx))
@@ -294,6 +299,11 @@ def stitching_fluxes(run):
     stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
     stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
 
+    # Computing time averaged versions of stitched fluxes vs t
+    for ispec in range(nspec):
+        stitch_pflx_tavg[ispec] = stitch_my_time.timeavg(stitch_pflx[:,ispec])
+        stitch_qflx_tavg[ispec] = stitch_my_time.timeavg(stitch_qflx[:,ispec])
+        stitch_vflx_tavg[ispec] = stitch_my_time.timeavg(stitch_vflx[:,ispec])
     # Computing time averaged versions of stitched fluxes vs (kx,ky)
     for ik in range(ny):
         for it in range(nx):
@@ -303,14 +313,26 @@ def stitching_fluxes(run):
                 stitch_qflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_qflx_kxky[:,ispec,ik,it])
                 stitch_vflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_vflx_kxky[:,ispec,ik,it])
 
-    # Plotting the stitched fluxes
-    ifile = None
-    stitch_dict = {'pflx':stitch_pflx,'qflx':stitch_qflx,'vflx':stitch_vflx,'pioq':stitch_pioq,
+    # Save computed quantities
+    stitch_flux_dict = {'pflx':stitch_pflx,'qflx':stitch_qflx,'vflx':stitch_vflx,'pioq':stitch_pioq,
             'nx':nx,'ny':ny,'islin':islin,'has_flowshear':has_flowshear,'nspec':nspec,'spec_names':spec_names,
             'naky':naky,'kx':kx,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
             'pflx_kxky_tavg':stitch_pflx_kxky_tavg,'qflx_kxky_tavg':stitch_qflx_kxky_tavg,
-            'vflx_kxky_tavg':stitch_vflx_kxky_tavg,'phi2_kxky_tavg':stitch_phi2_kxky_tavg}
-    plot_fluxes(ifile,run,stitch_my_time,stitch_dict)
+            'vflx_kxky_tavg':stitch_vflx_kxky_tavg,'phi2_kxky_tavg':stitch_phi2_kxky_tavg,
+            'pflx_tavg':stitch_pflx_tavg,'qflx_tavg':stitch_qflx_tavg,
+            'vflx_tavg':stitch_vflx_tavg}
+    datfile_name = run.out_dir + run.scan_name + '.fluxes.dat'
+    with open(datfile_name,'wb') as datfile:
+        pickle.dump(stitch_flux_dict,datfile)
+
+    # Save time obj
+    datfile_name = run.out_dir + run.scan_name + '.time.dat'
+    with open(datfile_name,'wb') as datfile:
+        pickle.dump(stitch_my_time,datfile)
+
+    # Plotting the stitched fluxes
+    ifile = None
+    plot_fluxes(ifile,run,stitch_my_time,stitch_flux_dict)
 
 def plot_fluxes(ifile,run,mytime,mydict):
 
@@ -373,7 +395,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting particle flux")
     if pflx is not None:
         title = '$\Gamma/\Gamma_{gB}$'
-        ylims = [-0.6, 0.6]
+        ylims = [-0.75, 0.75]
         #label_ypos = [-0.35,0.5,0.2] # for old algo
         label_ypos = [-0.2,0.35,0.17] # for new algo
         plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title,ylims,label_ypos)
@@ -385,7 +407,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting heat flux")
     if qflx is not None:
         title = '$Q/Q_{gB}$'
-        ylims = [-0.1, 3.3]
+        ylims = [-0.1, 4.0]
         #label_ypos = [3.1,1.2,2.1] # for old algo
         label_ypos = [2.2,0.85,1.4] # for new algo
         plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title,ylims,label_ypos)
@@ -397,7 +419,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting momentum flux")
     if vflx is not None:
         title = '$\Pi/\Pi_{gB}$'
-        ylims = [-0.2, 5.2]
+        ylims = [-0.2, 6.0]
         #label_ypos = [1.8,0.3,4.8] # for old algo
         label_ypos = [1.25,0.25,3.0] # for old algo
         plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,ylims,label_ypos)
