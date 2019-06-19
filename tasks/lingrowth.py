@@ -37,22 +37,30 @@ def my_task_single(ifile, run, myin, myout):
         for iky in range(1,naky):
             for ikx in ikx_list:
                 gamma[iky,ikx] = 0.5*get_growthrate(t,phi2,it_start,ikx,iky)
+
+        # Read real frequency
+        omega = np.zeros([naky,len(ikx_list)])
+        omega[0,:] = float('nan') # skip zonal mode
+        for iky in range(1,naky):
+            for ikx in ikx_list:
+                omega[iky,ikx] = myout['omega_average'][-1,iky,ikx,0] # last index is for real part
         
         # Save to .dat file
         datfile_name = run.out_dir + run.fnames[ifile] + '.lingrowth.dat'
         with open(datfile_name, 'wb') as datfile:
-            pickle.dump([ikx_list,kx,ky,gamma],datfile)
+            pickle.dump([ikx_list,kx,ky,gamma,omega],datfile)
    
     # or read from .dat file
     else:
         
         datfile_name = run.out_dir + run.fnames[ifile] + '.lingrowth.dat'
         with open(datfile_name, 'rb') as datfile:
-            [ikx_list,kx,ky,gamma] = pickle.load(datfile)
+            [ikx_list,kx,ky,gamma,omega] = pickle.load(datfile)
 
     # Plotting
     if not run.no_plot:
     
+        # Plot growthrate
         plt.figure(figsize=(12,8))
         plt.xlabel('$k_y\\rho_i$')
         plt.ylabel('$\\gamma \\ [v_{thr}/r_r]$')
@@ -67,7 +75,23 @@ def my_task_single(ifile, run, myin, myout):
         pdfname = 'lingrowth'
         gplot.save_plot(pdfname, run, ifile)
         print('Maximum linear growthrate: '+str(np.nanmax(gamma)))
+    
+        # Plot real frequency
+        plt.figure(figsize=(12,8))
+        plt.xlabel('$k_y\\rho_i$')
+        plt.ylabel('$\\omega \\ [v_{thr}/r_r]$')
+        plt.title('Real freq. at last time-step')
+        plt.grid(True)
 
+        my_legend = []
+        for ikx in ikx_list:
+            plt.plot(ky,omega[:,ikx])
+            my_legend.append('$\\rho_i k_x='+str(kx[ikx])+'$')
+        plt.legend(my_legend)
+        pdfname = 'realfreq'
+        gplot.save_plot(pdfname, run, ifile)
+
+        # Plot potential
         plt.figure(figsize=(12,8))
         plt.xlabel('$t\\ [L/v_{th}]$')
         plt.ylabel('$\\vert\\varphi\\vert^2$')

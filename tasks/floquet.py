@@ -32,7 +32,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     #
     
     # select chains
-    naky = 2
+    naky = (myin['kt_grids_box_parameters']['ny']-1)//3 + 1
     iky_list = [i for i in range(1,naky)] # [-1] means all nonzero ky
     #iky_list = [1] # NDCTEST
     if iky_list==[-1]:
@@ -44,7 +44,7 @@ def my_task_single(ifile, run, myin, myout, task_space):
     my_it = [-1]
 
     # make movies of phi and growthrate along ballooning angle ?
-    make_movies = False
+    make_movies = True
 
     #
     #
@@ -363,11 +363,11 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
         gamma = np.zeros((nakx,len(iky_list)))
         tofit_sq = np.amax(phi2_bytheta,axis=3) # take the max in theta for each 2pi segment
         for ikx in range(nakx):
-            for ichain in range(len(iky_list)):
-                iky = iky_list[ichain]
+            for iiky in range(len(iky_list)):
+                iky = iky_list[iiky]
                 gam = get_growthrate(t,tofit_sq[:,iky,ikx],it_start)
                 gam = gam/2. # because we fitted the square
-                gamma[ikx,ichain] = gam
+                gamma[ikx,iiky] = gam
 
     # Saving variables to mat-file
     my_vars = {}
@@ -470,9 +470,9 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
     myfig = plt.figure(figsize=(12,8))
 
-    for ichain in range(len(iky_list)):
+    for iiky in range(len(iky_list)):
     
-        iky = iky_list[ichain]
+        iky = iky_list[iiky]
 
         # plot phi2 vs t for each kx
         plt.title('$k_y={:.2f}$'.format(ky[iky]))
@@ -485,9 +485,9 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
         kxs_to_plot=kx_bar
         for ikx in range(kx_bar.size):
             if kx_bar[ikx] in kxs_to_plot:
-                plt.plot(t, np.log(phi2[:,1,ikx]), color=my_colorlist[ikx])
-                my_legend.append('$\\rho_i\\bar{k}_x = '+str(kx_bar[ikx])+'$')
-        plt.legend(my_legend)
+                plt.plot(t, np.log(phi2[:,iky,ikx]), color=my_colorlist[ikx])
+                #my_legend.append('$\\rho_i\\bar{k}_x = '+str(kx_bar[ikx])+'$')
+        #plt.legend(my_legend)
         axes=plt.gca()
 
         pdfname = 'phi2_by_kx_iky_{:d}'.format(iky)
@@ -505,9 +505,9 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 plt.ylabel('$\\vert \\phi \\vert ^2$')
                 plt.title('$t=$ '+str(t[it])+', $k_y={:.2f}$'.format(ky[iky]))
                 plt.grid(True)
-                plt.gca().set_xlim(np.min(bloonang[ichain][it]),np.max(bloonang[ichain][it]))
+                plt.gca().set_xlim(np.min(bloonang[iiky][it]),np.max(bloonang[iiky][it]))
                 plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.1E'))
-                plt.plot(bloonang[ichain][it], phi2bloon[ichain][it], marker='o', \
+                plt.plot(bloonang[iiky][it], phi2bloon[iiky][it], marker='o', \
                         markersize=12, markerfacecolor='none', markeredgecolor=gplots.myblue, linewidth=3.0)
 
                 pdfname = 'balloon_it_' + str(it) + '_iky_' + str(iky) + '_dmid_' + str(my_dmid)
@@ -535,7 +535,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             #plt.xlabel('$k_x^*/(\\pi\\hat{s}k_y)$')
             #plt.ylabel('$\\langle\\gamma\\rangle_\\theta$')
             #plt.grid(True)
-            #plt.plot(kxstar_over_ky[ichain], gamma[ichain], color=gplots.myblue, linewidth=3.0, marker='o') 
+            #plt.plot(kxstar_over_ky[iiky], gamma[iiky], color=gplots.myblue, linewidth=3.0, marker='o') 
             #pdfname = 'gamma_vs_kxstar_over_ky' + '_iky_' + str(iky) + '_dmid_' + str(my_dmid)
             #pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
             #plt.savefig(pdfname)
@@ -546,17 +546,17 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             if (make_movies):
 
                 # set time stepping for movies
-                max_it_for_mov = nt
-                it_step_for_mov = nt//10
+                max_it_for_mov = nt//5
+                it_step_for_mov = 10
 
                 # find global min and max of ballooning angle
                 bloonang_min = 0.
                 bloonang_max = 0.
                 for it in range(max_it_for_mov):
-                    if np.min(bloonang[ichain][it]) < bloonang_min:
-                        bloonang_min = np.min(bloonang[ichain][it])
-                    if np.max(bloonang[ichain][it]) > bloonang_max:
-                        bloonang_max = np.max(bloonang[ichain][it])
+                    if np.min(bloonang[iiky][it]) < bloonang_min:
+                        bloonang_min = np.min(bloonang[iiky][it])
+                    if np.max(bloonang[iiky][it]) > bloonang_max:
+                        bloonang_max = np.max(bloonang[iiky][it])
                 
                 ## movie of phi2 vs ballooning angle over time
                 moviename = 'phi_bloon' + '_iky_' + str(iky) + '_dmid_' + str(my_dmid)
@@ -583,17 +583,17 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 def update_mov(it):
                     # Update chain
                     #sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1))) # comment out on HPC
-                    xdata1 = bloonang[ichain][it]
-                    ydata1 = phi2bloon[ichain][it]
+                    xdata1 = bloonang[iiky][it]
+                    ydata1 = phi2bloon[iiky][it]
                     l1.set_data(xdata1,ydata1)
-                    ymin = np.amin(phi2bloon[ichain][it])
-                    ymax = np.amax(phi2bloon[ichain][it])
+                    ymin = np.amin(phi2bloon[iiky][it])
+                    ymax = np.amax(phi2bloon[iiky][it])
                     ax = plt.gca()
                     ax.set_ylim(ymin,ymax)
                     ax.set_title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
                     # Update discontinuities at 2pi interfaces
-                    xdata2 = bloonang_bndry[ichain][it]
-                    ydata2 = phi2bloon_discont[ichain][it]
+                    xdata2 = bloonang_bndry[iiky][it]
+                    ydata2 = phi2bloon_discont[iiky][it]
                     l2.set_data(xdata2,ydata2)
                     return l1, l2
 
@@ -625,8 +625,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                 def update_mov_jump(it):
                     #sys.stdout.write("\r{0}".format("\tFrame : "+str(it)+"/"+str(nt-1))) # comment out for HPC
                     # Update discontinuities at 2pi interfaces
-                    xdata1 = bloonang_bndry[ichain][it]
-                    ydata1 = phi2bloon_jump[ichain][it]
+                    xdata1 = bloonang_bndry[iiky][it]
+                    ydata1 = phi2bloon_jump[iiky][it]
                     plt.gca().set_title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
                     l1.set_data(xdata1,ydata1)
                     return l1
@@ -659,15 +659,15 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     slope_sum = np.zeros(len(iky_list))
     slope_max = np.zeros(len(iky_list))
     
-    for ichain in range(len(iky_list)):
+    for iiky in range(len(iky_list)):
 
-        iky = iky_list[ichain]
+        iky = iky_list[iiky]
 
-        sum_phi2_tmp = np.zeros(len(sum_phi2bloon[ichain])-it_start)
-        max_phi2_tmp = np.zeros(len(sum_phi2bloon[ichain])-it_start)
+        sum_phi2_tmp = np.zeros(len(sum_phi2bloon[iiky])-it_start)
+        max_phi2_tmp = np.zeros(len(sum_phi2bloon[iiky])-it_start)
         for it in range(sum_phi2_tmp.size):
-            sum_phi2_tmp[it] = sum_phi2bloon[ichain][it_start+it]
-            max_phi2_tmp[it] = max_phi2bloon[ichain][it_start+it]
+            sum_phi2_tmp[it] = sum_phi2bloon[iiky][it_start+it]
+            max_phi2_tmp[it] = max_phi2bloon[iiky][it_start+it]
         if it_start > 0:
             sum_phi2_tmp = sum_phi2_tmp/sum_phi2_tmp[0]
             max_phi2_tmp = max_phi2_tmp/max_phi2_tmp[0]
@@ -680,25 +680,26 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
         t_collec.append(t_tmp)
 
         [gam,dummy] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
-        slope_sum[ichain] = gam/2. # divide by 2 because fitted square
+        slope_sum[iiky] = gam/2. # divide by 2 because fitted square
         [gam,dummy] = leastsq_lin(t_tmp,np.log(max_phi2_tmp))
-        slope_max[ichain] = gam/2. # divide by 2 because fitted square
-        #gam = get_growthrate(t,sum_phi2bloon[ichain],it_start)
-        #slope_sum[ichain] = gam/2. # divide by 2 because fitted square
-        #gam = get_growthrate(t,max_phi2bloon[ichain],it_start)
-        #slope_max[ichain] = gam/2. # divide by 2 because fitted square
+        slope_max[iiky] = gam/2. # divide by 2 because fitted square
+        #gam = get_growthrate(t,sum_phi2bloon[iiky],it_start)
+        #slope_sum[iiky] = gam/2. # divide by 2 because fitted square
+        #gam = get_growthrate(t,max_phi2bloon[iiky],it_start)
+        #slope_max[iiky] = gam/2. # divide by 2 because fitted square
     
     plt.figure(figsize=(12,8))
     plt.xlabel('$t$')
-    plt.ylabel('$\\sum_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2$')
+    plt.ylabel('$\\log\\sum_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2$')
     #plt.title('Sum along a single ballooning mode')
     plt.grid(True)
     my_legend = []
     my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(iky_list))) # for newalgo
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(iky_list))) # for oldalgo
-    for ichain in range(len(iky_list)):
-        my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[ichain]]))
-        plt.semilogy(t_collec[ichain], sum_phi2_collec[ichain], color=my_colorlist[ichain], linewidth=3.0)
+    for iiky in range(len(iky_list)):
+        my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[iiky]]))
+        #plt.semilogy(t_collec[iiky], sum_phi2_collec[iiky], color=my_colorlist[iiky], linewidth=3.0)
+        plt.plot(t_collec[iiky], np.log(sum_phi2_collec[iiky]), color=my_colorlist[iiky], linewidth=3.0)
     plt.legend(my_legend)
     pdfname = 'floquet_sum_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
@@ -713,9 +714,9 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     my_legend = []
     my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(iky_list))) # for newalgo
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(iky_list))) # for oldalgo
-    for ichain in range(len(iky_list)):
-        my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[ichain]]))
-        plt.semilogy(t_collec[ichain], max_phi2_collec[ichain], color=my_colorlist[ichain], linewidth=3.0)
+    for iiky in range(len(iky_list)):
+        my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[iiky]]))
+        plt.semilogy(t_collec[iiky], max_phi2_collec[iiky], color=my_colorlist[iiky], linewidth=3.0)
     plt.legend(my_legend)
     pdfname = 'floquet_max_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
@@ -730,7 +731,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     ky_to_plot = np.zeros(len(iky_list))
     for i in range(len(iky_list)):
         ky_to_plot[i] = ky[iky_list[i]]
-    plt.plot(ky_to_plot, slope_sum, color=gplots.myblue, linewidth=3.0)
+    plt.plot(ky_to_plot, slope_sum, color=gplots.myblue, linewidth=3.0, marker='o')
     pdfname = 'gamma_from_sum_vs_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
     plt.savefig(pdfname)
@@ -744,7 +745,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     ky_to_plot = np.zeros(len(iky_list))
     for i in range(len(iky_list)):
         ky_to_plot[i] = ky[iky_list[i]]
-    plt.plot(ky_to_plot, slope_max, color=gplots.myblue, linewidth=3.0)
+    plt.plot(ky_to_plot, slope_max, color=gplots.myblue, linewidth=3.0, marker='o')
     pdfname = 'gamma_from_max_vs_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
     plt.savefig(pdfname)
@@ -765,35 +766,35 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             nakx_fine = (kx_bar.size-1)*1e4+1
             kx_grid_fine = np.linspace(np.amin(kx_bar)-dkx/2.,np.amax(kx_bar)+dkx/2.,nakx_fine)
             ky_grid_fine = np.zeros(len(iky_list))
-            for ichain in range(len(iky_list)):
-                iky = iky_list[ichain]
-                ky_grid_fine[ichain] = ky[iky]
+            for iiky in range(len(iky_list)):
+                iky = iky_list[iiky]
+                ky_grid_fine[iiky] = ky[iky]
 
             iTfmax = len(gamma[0])-1
 
             for iTf in range(iTfmax,-1,-1):
                 # First arrange kx,ky,gamma similarly to fine meshes above
                 npoints = 0
-                for ichain in range(len(iky_list)):
-                    npoints = npoints + len(kx_star_for_gamma[ichain][iTf])
+                for iiky in range(len(iky_list)):
+                    npoints = npoints + len(kx_star_for_gamma[iiky][iTf])
                 kx_grid_1d = np.zeros(npoints)
                 ky_grid_1d = np.zeros(npoints)
                 gamma_1d = np.zeros(npoints)
                 istart = 0
-                for ichain in range(len(iky_list)):
-                    iky = iky_list[ichain]
-                    for ikxstar in range(len(kx_star_for_gamma[ichain][iTf])):
+                for iiky in range(len(iky_list)):
+                    iky = iky_list[iiky]
+                    for ikxstar in range(len(kx_star_for_gamma[iiky][iTf])):
                         ipoint = istart + ikxstar
-                        kx_grid_1d[ipoint] = kx_star_for_gamma[ichain][iTf][ikxstar]
+                        kx_grid_1d[ipoint] = kx_star_for_gamma[iiky][iTf][ikxstar]
                         ky_grid_1d[ipoint] = ky[iky]
-                        gamma_1d[ipoint] = gamma[ichain][iTf][ikxstar]
-                    istart = istart + len(kx_star_for_gamma[ichain][iTf])
+                        gamma_1d[ipoint] = gamma[iiky][iTf][ikxstar]
+                    istart = istart + len(kx_star_for_gamma[iiky][iTf])
                 # then interpolate to nearest neighbour on fine, regular mesh
                 gamma_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gamma_1d, \
                         (kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
                 # and plot
                 if len(iky_list)>1: # many ky: plot contour
-                    my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gamma[ichain]))
+                    my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gamma[iiky]))
                     my_xlabel = '$k_x^*$'
                     my_ylabel = '$k_y$'
                     gplots.plot_2d(gamma_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
@@ -802,7 +803,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                     plt.plot(kx_grid_1d,gamma_1d,linewidth=3.0,color=gplots.myblue)
                     plt.xlabel('$k_x^*$')
                     plt.ylabel('$d\\log(\\varphi)/dt$')
-                    plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gamma[ichain])))
+                    plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gamma[iiky])))
                     ax = plt.gca()
                     ax.set_ylim(cbarmin,cbarmax)
                 tmp_pdfname = 'tmp'+str(tmp_pdf_id)
@@ -817,8 +818,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
             if len(iky_list)>1: # many ky: plot contour
                 ky_to_plot = np.zeros(len(iky_list))
-                for ichain in range(len(iky_list)):
-                    ky_to_plot[ichain] = ky[iky_list[ichain]]
+                for iiky in range(len(iky_list)):
+                    ky_to_plot[iiky] = ky[iky_list[iiky]]
                 my_title = '$d\\log(\\varphi)/dt$'
                 my_xlabel = '$k_x^*$'
                 my_ylabel = '$k_y$'
@@ -851,6 +852,7 @@ def store_for_task_scan(my_vars, task_space):
     task_space.t = my_vars['t']
     task_space.delt = my_vars['delt']
     task_space.iky_list = my_vars['iky_list']
+    task_space.ky = my_vars['ky']
     task_space.nwrite = my_vars['nwrite']
     task_space.dkx = my_vars['dkx']
     task_space.Tf = my_vars['Nf']*my_vars['delt']
@@ -868,6 +870,9 @@ def task_scan(run, full_space):
     # Normalise sum_phi2 by sum_phi2[it_start] for each run
     
     N_start = 2
+    # Here, assume that all files have the same iky_list & ky
+    iky_list = full_space[0]['floquet'].iky_list
+    ky = full_space[0]['floquet'].ky
     
     sum_phi2 = []
     t = []
@@ -877,9 +882,10 @@ def task_scan(run, full_space):
     
     if not run.no_plot:
 
-        for ichain in range(len(full_space[ifile]['floquet'].iky_list)):
+        ifile_dummy=0
+        for iiky in range(len(iky_list)):
 
-            iky = iky_list[ichain]
+            iky = iky_list[iiky]
 
             for ifile in range(len(run.fnames)):
                 
@@ -890,9 +896,9 @@ def task_scan(run, full_space):
 
                 it_start = int(round((N_start*Tf/delt[ifile])/nwrite))
 
-                sum_phi2_tmp = np.zeros(len(full_space[ifile]['floquet'].sum_phi2bloon[ichain])-it_start)
+                sum_phi2_tmp = np.zeros(len(full_space[ifile]['floquet'].sum_phi2bloon[iiky])-it_start)
                 for it in range(sum_phi2_tmp.size):
-                    sum_phi2_tmp[it] = full_space[ifile]['floquet'].sum_phi2bloon[ichain][it_start+it]
+                    sum_phi2_tmp[it] = full_space[ifile]['floquet'].sum_phi2bloon[iiky][it_start+it]
                 sum_phi2_tmp = sum_phi2_tmp/sum_phi2_tmp[0]
                 sum_phi2.append(sum_phi2_tmp)
                 
@@ -904,21 +910,22 @@ def task_scan(run, full_space):
                 [a,dummy] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
                 slope[ifile] = a
     
-            print('Slopes:')
+            print('Slopes for ky={:.3f}:'.format(ky[iky]))
             print(slope)
             plt.figure(figsize=(12,8))
             
             # Plot phi2 summed along chain
-            plt.xlabel('$t$')
-            plt.ylabel('$\\ln \\left(\\sum_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2\\right)$')
-            #plt.title('Sum along a single ballooning mode')
+            plt.xlabel('$t [a/v_{thi,i}]$')
+            plt.ylabel('$\\ln \\left(\\sum_{k_x}\\vert \\langle\\hat{\\varphi}\\rangle_\\theta \\vert ^2\\right)$')
+            if len(iky_list)>1:
+                plt.title('$\\rho k_y = {:.3f}$'.format(ky[iky]))
             plt.grid(True)
             my_legend = []
-            my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(run.fnames))) # for newalgo
-            #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(run.fnames))) # for oldalgo
+            #my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(run.fnames))) # for newalgo
+            my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(run.fnames))) # for oldalgo
             for ifile in range(len(run.fnames)):
                 #my_legend.append('$\\Delta t =$'+str(full_space[ifile]['floquet'].delt))
-                my_legend.append('$\\Delta k_x = {:.3f}$'.format(full_space[ifile]['floquet'].dkx))
+                my_legend.append('$\\rho(\\Delta k_x) = {:.3f}$'.format(full_space[ifile]['floquet'].dkx))
                 plt.plot(t[ifile], np.log(sum_phi2[ifile]), color=my_colorlist[ifile], linewidth=3.0)
             plt.legend(my_legend)
             axes = plt.gca()
@@ -927,16 +934,19 @@ def task_scan(run, full_space):
             # Plot growthrates within phi2 plot
             subaxes = plt.axes([0.65, 0.25, 0.3, 0.25])
             subaxes.tick_params(labelsize=18)
-            plt.xlabel('$\\Delta k_x$',fontsize=20)
+            plt.xlabel('$\\rho(\\Delta k_x)$',fontsize=20)
             #plt.ylabel('$\\langle \\gamma \\rangle_t$',fontsize=20)
             plt.title('Time averaged growth-rate',fontsize=20)
             plt.grid(True)
             plt.plot(dkx, slope, marker='o', color='black', \
                     markersize=10, markerfacecolor='none', markeredgecolor='black', linewidth=2.0)
             gamma_converged = 0.06418364
-            #plt.axhline(y=gamma_converged, color='grey', linestyle='--', linewidth=2.0) # for oldalgo
+            plt.axhline(y=gamma_converged, color='grey', linestyle='--', linewidth=2.0) # for oldalgo
             subaxes.set_ylim([0.06, 0.13])
             
+            plot_name = run.scan_name
+            if len(iky_list)>1:
+                plot_name = plot_name + '_ky_{:.3f}'.format(ky[iky])
             gplots.save_plot(run.scan_name, run)
             
             plt.clf()
