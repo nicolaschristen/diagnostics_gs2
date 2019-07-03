@@ -560,7 +560,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     pdflist.append(tmp_pdfname)
     tmp_pdf_id += 1
     # Then zonal mode
-    plt.plot(kx,phi2_kxky_tavg[0,:], marker='o', color=gplot.myblue, \
+    plt.semilogy(kx,phi2_kxky_tavg[0,:], marker='o', color=gplot.myblue, \
             markersize=8, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=2.0)
     plt.grid(True)
     plt.xlabel('$\\bar{k}_{x}\\rho_i$')
