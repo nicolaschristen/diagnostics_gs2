@@ -340,9 +340,9 @@ def plot_fluxes(ifile,run,mytime,mydict):
     ollie_case = False
 
     if ollie_case:
-        avg_in_title = True
-    else:
         avg_in_title = False
+    else:
+        avg_in_title = True
         ylims = None
         label_ypos = None
 
