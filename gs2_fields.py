@@ -12,16 +12,15 @@ class fieldobj:
     def __init__(self, myout, mygrids, mytime):
         
         ( self.phi2_avg, self.phi_gs2, self.dens_gs2, self.upar_gs2, self.tpar_gs2, self.tperp_gs2,
-                self.phi, self.phi2, self.gphi_gs2, self.Ex_gs2, self.Ey_gs2, self.zonal_E,
-                self.Ex_power_spectrum, self.Ey_power_spectrum, self.phi_xyt, self.Ex_xyt, self.Ey_xyt,
-                self.Ex, self.Ey, self.Ex2, self.Ey2 ) = self.get_attr(myout, mygrids, mytime)
+                self.phi, self.phi2, self.gphi_gs2, self.Ex_gs2, self.Ey_gs2, 
+                self.zonal_E ) = self.get_attr(myout, mygrids, mytime)
 
     def get_attr(self, myout, mygrids, mytime):
 
         phi2_avg = myout['phi2']
 
         print()
-        print('computing Ex and Ey in Fourier space...',end='')
+        print('arranging fields in Fourier space ...',end='')
 
         # combine real and imaginary parts into single complex variables
         mydim = (mytime.ntime, mygrids.ny, mygrids.nx)
@@ -57,16 +56,28 @@ class fieldobj:
         
         print('complete')
 
+        return ( phi2_avg, phi_gs2, dens_gs2, upar_gs2, tpar_gs2, tperp_gs2,
+                phi, phi2, gphi_gs2, Ex_gs2, Ey_gs2, zonal_E )
+
+class field_ffted_obj:
+
+    def __init__(self, myout, mygrids, mytime, myfields):
+        
+        ( self.Ex_power_spectrum, self.Ey_power_spectrum, self.phi_xyt, self.Ex_xyt, self.Ey_xyt,
+                self.Ex, self.Ey, self.Ex2, self.Ey2 ) = self.get_attr(myout, mygrids, mytime, myfields)
+
+    def get_attr(self, myout, mygrids, mytime, myfields):
+
         print()
         print('calculating Ex and Ey power spectrum...',end='')
         
         if (mygrids.nx > 2) and (mygrids.ny > 2):
             Ex_power_spectrum = np.arange(mytime.ntime_steady,dtype=float)
             Ex_power_spectrum = np.fft.fftshift( np.sum(
-                np.abs(np.fft.fft(Ex_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
+                np.abs(np.fft.fft(myfields.Ex_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
             Ey_power_spectrum = np.arange(mytime.ntime_steady,dtype=float)
             Ey_power_spectrum = np.fft.fftshift( np.sum(
-                np.abs(np.fft.fft(Ey_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
+                np.abs(np.fft.fft(myfields.Ey_gs2[mytime.it_min:mytime.it_max,:,:],axis=0))**2,axis=(1,2) ) )
         else:
             Ex_power_spectrum = 0
             Ex_power_spectrum = 0
@@ -74,12 +85,6 @@ class fieldobj:
             Ey_power_spectrum = 0
 
         print('complete')
-
-        #print('TMP FOR TESTING IN GS2_FIELDS')
-        #Ey_gs2.fill(0)
-        #for i in range(nx):
-        #    for j in range(ny):
-        #        Ey_gs2[ntime-1,j,i] = np.exp(-kx_gs2[i]**2*200)*np.exp(-ky[j]**2*200)
 
         phi_xyt=[]
         Ex_xyt=[]
@@ -97,7 +102,7 @@ class fieldobj:
             mydim = (mytime.ntime, 2*mygrids.ny-1, mygrids.nx)
             phi_xyt = np.zeros(mydim, dtype=float)
             for i in range (mytime.ntime):
-                phi_xyt[i,:,:] = np.fft.fftshift(gs2fft(phi_gs2[i,:,:]*(2*mygrids.ny-1)*mygrids.nx, mygrids)[0])
+                phi_xyt[i,:,:] = np.fft.fftshift(gs2fft(myfields.phi_gs2[i,:,:]*(2*mygrids.ny-1)*mygrids.nx, mygrids)[0])
             
             print('complete')
 
@@ -108,8 +113,8 @@ class fieldobj:
             Ex_xyt = np.zeros(mydim, dtype=float)
             Ey_xyt = np.zeros(mydim, dtype=float)
             for i in range (mytime.ntime):
-                Ex_xyt[i,:,:] = np.fft.fftshift(gs2fft(Ex_gs2[i,:,:]*(2*mygrids.ny-1)*mygrids.nx, mygrids)[0])
-                Ey_xyt[i,:,:] = np.fft.fftshift(gs2fft(Ey_gs2[i,:,:]*(2*mygrids.ny-1)*mygrids.nx, mygrids)[0])
+                Ex_xyt[i,:,:] = np.fft.fftshift(gs2fft(myfields.Ex_gs2[i,:,:]*(2*mygrids.ny-1)*mygrids.nx, mygrids)[0])
+                Ey_xyt[i,:,:] = np.fft.fftshift(gs2fft(myfields.Ey_gs2[i,:,:]*(2*mygrids.ny-1)*mygrids.nx, mygrids)[0])
 
             # now that we've obtained Ex and Ey in real-space,
             # shift kx indices so kx is monotonic
@@ -128,9 +133,7 @@ class fieldobj:
 
             print('complete')
 
-        return ( phi2_avg, phi_gs2, dens_gs2, upar_gs2, tpar_gs2, tperp_gs2,
-                phi, phi2, gphi_gs2, Ex_gs2, Ey_gs2, zonal_E,
-                Ex_power_spectrum, Ey_power_spectrum, phi_xyt, Ex_xyt, Ey_xyt,
+        return ( Ex_power_spectrum, Ey_power_spectrum, phi_xyt, Ex_xyt, Ey_xyt,
                 Ex, Ey, Ex2, Ey2 )
             
 def form_complex(varname, myout, outdim):

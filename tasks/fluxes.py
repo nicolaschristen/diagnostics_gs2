@@ -336,6 +336,16 @@ def stitching_fluxes(run):
 
 def plot_fluxes(ifile,run,mytime,mydict):
 
+    ## SELECT PLOTTING CASE
+    ollie_case = False
+
+    if ollie_case:
+        avg_in_title = True
+    else:
+        avg_in_title = False
+        ylims = None
+        label_ypos = None
+
     islin = mydict['islin']
     has_flowshear = mydict['has_flowshear']
     
@@ -395,10 +405,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting particle flux")
     if pflx is not None:
         title = '$\Gamma/\Gamma_{gB}$'
-        ylims = [-0.75, 0.75]
-        #label_ypos = [-0.35,0.5,0.2] # for old algo
-        label_ypos = [-0.2,0.35,0.17] # for new algo
-        plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title,ylims,label_ypos)
+        if ollie_case:
+            ylims = [-0.75, 0.75]
+            #label_ypos = [-0.35,0.5,0.2] # for old algo
+            label_ypos = [-0.2,0.35,0.17] # for new algo
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title,ylims,label_ypos,avg_in_title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
@@ -407,10 +418,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting heat flux")
     if qflx is not None:
         title = '$Q/Q_{gB}$'
-        ylims = [-0.1, 4.0]
-        #label_ypos = [3.1,1.2,2.1] # for old algo
-        label_ypos = [2.2,0.85,1.4] # for new algo
-        plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title,ylims,label_ypos)
+        if ollie_case:
+            ylims = [-0.1, 4.0]
+            #label_ypos = [3.1,1.2,2.1] # for old algo
+            label_ypos = [2.2,0.85,1.4] # for new algo
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title,ylims,label_ypos,avg_in_title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
@@ -419,10 +431,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print("-- plotting momentum flux")
     if vflx is not None:
         title = '$\Pi/\Pi_{gB}$'
-        ylims = [-0.2, 6.0]
-        #label_ypos = [1.8,0.3,4.8] # for old algo
-        label_ypos = [1.25,0.25,3.0] # for old algo
-        plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,ylims,label_ypos)
+        if ollie_case:
+            ylims = [-0.2, 6.0]
+            #label_ypos = [1.8,0.3,4.8] # for old algo
+            label_ypos = [1.25,0.25,3.0] # for old algo
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,ylims,label_ypos,avg_in_title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
@@ -539,8 +552,20 @@ def plot_fluxes(ifile,run,mytime,mydict):
     tmp_pdf_id = 1
     pdflist = []
 
-    # Plot phi2 averaged over t and theta, vs (kx,ky)
+    ## Plot phi2 averaged over t and theta, vs (kx,ky)
+    # First, non-zonal modes
     plot_phi2_vs_kxky(kx,ky,phi2_kxky_tavg,has_flowshear)
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id += 1
+    # Then zonal mode
+    plt.plot(kx,phi2_kxky_tavg[0,:], marker='o', color=gplot.myblue, \
+            markersize=8, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=2.0)
+    plt.grid(True)
+    plt.xlabel('$\\bar{k}_{x}\\rho_i$')
+    plt.ylabel('$\\langle\\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
+    plt.title('$k_y\\rho_i = 0$')
     tmp_pdfname = 'tmp'+str(tmp_pdf_id)
     gplot.save_plot(tmp_pdfname, run, ifile)
     pdflist.append(tmp_pdfname)
@@ -619,7 +644,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
 
     #print('complete')
 
-def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None):
+def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None,avg_in_title=None):
 
     fig=plt.figure(figsize=(12,8))
     if islin:
@@ -681,6 +706,10 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_
                 plt.annotate(note_str, xy=note_xy, xycoords=note_coords, color=my_colorlist[idx], \
                         fontsize=26, backgroundcolor='w', \
                         bbox=dict(facecolor='w', edgecolor=my_colorlist[idx], alpha=1.0))
+
+            elif avg_in_title:
+
+                plt.title('avg = {:.2f}'.format(flxavg))
 
             print('flux avg for '+spec_names[idx]+': '+str(flxavg))
 

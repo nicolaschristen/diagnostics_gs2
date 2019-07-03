@@ -546,8 +546,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             if (make_movies):
 
                 # set time stepping for movies
-                max_it_for_mov = nt//5
-                it_step_for_mov = 10
+                max_it_for_mov = nt
+                it_step_for_mov = 1
 
                 # find global min and max of ballooning angle
                 bloonang_min = 0.
@@ -789,27 +789,29 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
                         ky_grid_1d[ipoint] = ky[iky]
                         gamma_1d[ipoint] = gamma[iiky][iTf][ikxstar]
                     istart = istart + len(kx_star_for_gamma[iiky][iTf])
-                # then interpolate to nearest neighbour on fine, regular mesh
-                gamma_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gamma_1d, \
-                        (kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
-                # and plot
-                if len(iky_list)>1: # many ky: plot contour
-                    my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gamma[iiky]))
-                    my_xlabel = '$k_x^*$'
-                    my_ylabel = '$k_y$'
-                    gplots.plot_2d(gamma_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
-                            xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
-                else: # single ky: 1d plot vs kxstar
-                    plt.plot(kx_grid_1d,gamma_1d,linewidth=3.0,color=gplots.myblue)
-                    plt.xlabel('$k_x^*$')
-                    plt.ylabel('$d\\log(\\varphi)/dt$')
-                    plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gamma[iiky])))
-                    ax = plt.gca()
-                    ax.set_ylim(cbarmin,cbarmax)
-                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-                gplots.save_plot(tmp_pdfname, run, ifile)
-                pdflist.append(tmp_pdfname)
-                tmp_pdf_id = tmp_pdf_id+1
+                # If GS2 indeed wrote out data during this Floquet oscillation, then
+                if gamma_1d.size > 0 :
+                    # interpolate to nearest neighbour on fine, regular mesh ...
+                    gamma_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gamma_1d, \
+                            (kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
+                    # ... and plot.
+                    if len(iky_list)>1: # many ky: plot contour
+                        my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gamma[iiky]))
+                        my_xlabel = '$k_x^*$'
+                        my_ylabel = '$k_y$'
+                        gplots.plot_2d(gamma_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
+                                xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
+                    else: # single ky: 1d plot vs kxstar
+                        plt.plot(kx_grid_1d,gamma_1d,linewidth=3.0,color=gplots.myblue)
+                        plt.xlabel('$k_x^*$')
+                        plt.ylabel('$d\\log(\\varphi)/dt$')
+                        plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gamma[iiky])))
+                        ax = plt.gca()
+                        ax.set_ylim(cbarmin,cbarmax)
+                    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                    gplots.save_plot(tmp_pdfname, run, ifile)
+                    pdflist.append(tmp_pdfname)
+                    tmp_pdf_id = tmp_pdf_id+1
             pdflist = pdflist[::-1] # re-order since we iterated from last oscillation
             merged_pdfname = 'gamma_vs_kxky' + '_dmid_' + str(my_dmid)
             gplots.merge_pdfs(pdflist, merged_pdfname, run, ifile)
