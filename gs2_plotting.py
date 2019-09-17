@@ -1,7 +1,9 @@
-import numpy as np
+import matplotlib
+matplotlib.use('PDF')
+from matplotlib import rcParams
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-from matplotlib import rcParams
+import numpy as np
 from PyPDF2 import PdfFileMerger, PdfFileReader
 import os
 
