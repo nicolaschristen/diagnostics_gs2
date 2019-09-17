@@ -3,12 +3,18 @@ import scipy.optimize as opt
 from matplotlib import pyplot as plt
 import gs2_plotting as gplot
 import pickle
+import math
 
 def my_task_single(ifile, run, myin, myout):
 
     # User parameters
     dump_at_start = 0.3 # fraction of initial time to dump when fitting
     ikx_list = [-1] # choose which kx to plot, negative means plot all
+    skip_first_ky = False
+
+    iky_first = 0
+    if skip_first_ky:
+        iky_first = 1
 
     # Compute and save growthrate
     if not run.only_plot:
@@ -24,6 +30,18 @@ def my_task_single(ifile, run, myin, myout):
         naky = ky.size
         phi2 = myout['phi2_by_mode'] # modulus squared, avged over theta (indices: [t,ky,kx])
 
+        # Store index of first NaN or +/- inf in it_stop
+        it = 0
+        it_stop = nt
+        no_nan_inf = True
+        while it < nt and no_nan_inf:
+            for ikx in range(nakx):
+                for iky in range(1,naky):
+                    if not is_number(phi2[it,iky,ikx]):
+                        no_nan_inf = False
+                        it_stop = it
+            it = it + 1
+
         if grid_option=='range':
             # In range, plot the only kx
             ikx_list = [0]
@@ -34,14 +52,14 @@ def my_task_single(ifile, run, myin, myout):
         # Fit phi to get growthrates
         gamma = np.zeros([naky,len(ikx_list)])
         gamma[0,:]=float('nan') # skip zonal mode
-        for iky in range(1,naky):
+        for iky in range(iky_first,naky):
             for ikx in ikx_list:
-                gamma[iky,ikx] = 0.5*get_growthrate(t,phi2,it_start,ikx,iky)
+                gamma[iky,ikx] = 0.5*get_growthrate(t,phi2,it_start,it_stop,ikx,iky)
 
         # Read real frequency
         omega = np.zeros([naky,len(ikx_list)])
         omega[0,:] = float('nan') # skip zonal mode
-        for iky in range(1,naky):
+        for iky in range(iky_first,naky):
             for ikx in ikx_list:
                 omega[iky,ikx] = myout['omega_average'][-1,iky,ikx,0] # last index is for real part
         
@@ -103,16 +121,29 @@ def my_task_single(ifile, run, myin, myout):
         my_colors = [cmap(i) for i in np.linspace(0,1,naky*len(ikx_list))]
         for iky in range(naky):
             for ikx in ikx_list:
-                plt.semilogy(t,phi2[:,iky,ikx],color=my_colors[ikx*naky+iky])
+                plt.semilogy(t[0:it_stop],phi2[0:it_stop,iky,ikx],color=my_colors[ikx*naky+iky])
                 my_legend.append('$(k_x,k_y)=({:.1f},{:.1f})$'.format(kx[ikx],ky[iky]))
         plt.legend(my_legend, ncol=1, prop={'size': 10},loc='upper left')
+        plt.ylim([np.amin(phi2[0:it_stop,:,:]), np.amax(phi2[0:it_stop,:,:])])
         pdfname = 'linpotential'
         gplot.save_plot(pdfname, run, ifile)
 
-def get_growthrate(t,phi2,it_start,ikx,iky):
+def get_growthrate(t,phi2,it_start,it_stop,ikx,iky):
    
-    popt, pcov = opt.curve_fit(lin_func, t[it_start:], np.log(phi2[it_start:,iky,ikx]))
+    popt, pcov = opt.curve_fit(lin_func, t[it_start:it_stop], np.log(phi2[it_start:it_stop,iky,ikx]))
     return popt[0]
 
 def lin_func(x,a,b):
     return a*x+b
+
+def is_number(x):
+    try:
+        x_str = str(float(x))
+        if x_str=='nan' or x_str=='inf' or x_str=='-inf':
+            return False
+    except ValueError:
+        try:
+            complex(x_str)
+        except ValueError:
+            return False
+    return True

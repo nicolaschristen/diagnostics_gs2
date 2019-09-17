@@ -1,9 +1,9 @@
+import gs2_plotting as gplot
 import gs2_run_parameters as grunpar
 import gs2_data as gdata
 import gs2_grids as ggrids
 import gs2_time as gtime
 import gs2_fields as gfields
-import gs2_plotting as gplot
 import gs2_tasks as gtasks
 
 import copy
