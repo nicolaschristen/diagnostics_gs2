@@ -737,16 +737,18 @@ def plot_flux_vs_kxky(ispec,spec_names,kx,ky,flx,title,has_flowshear):
         xlab = '$k_{x}\\rho_i$'
     ylab = '$k_{y}\\rho_i$'
 
-    cmap = 'Blues' # 'Reds','Blues'
-    z = np.abs(flx[ispec,:,:]) # take absolute value of contribution to fluxes
-    z_min, z_max = 0.0, z.max()
+    cmap = 'RdBu_r' # 'Reds','Blues'
+    z = np.abs(flx[ispec,1:,:]) # absolute val and exclude zonal mode which is zero
+    z_min, z_max = z.min(), z.max()
     
     title = 'Contributions to ' + title
     if ispec > 1:
         title += ' (impurity ' + str(ispec-1) + ')'
     else:
         title += ' (' + spec_names[ispec] + 's)'
-    fig = plot_2d(z,kx,ky,z_min,z_max,xlab,ylab,title,cmap)
+
+    use_logcolor = True
+    fig = plot_2d(z,kx,ky[1:],z_min,z_max,xlab,ylab,title,cmap,use_logcolor)
 
     return fig
 
@@ -763,7 +765,7 @@ def plot_phi2_vs_kxky(kx,ky,phi2,has_flowshear):
         xlab = '$k_{x}\\rho_i$'
     ylab = '$k_{y}\\rho_i$'
 
-    cmap = 'RdBu'# 'RdBu_r','Blues'
+    cmap = 'RdBu_r'# 'RdBu_r','Blues'
     z = phi2[1:,:] # taking out zonal modes because they are much larger
     z_min, z_max = z.min(), z.max()
 

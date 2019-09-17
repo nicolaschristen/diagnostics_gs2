@@ -688,7 +688,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
         # plot phi2 vs t for each kx
         plt.title('$k_y={:.2f}$'.format(ky[iky]))
-        plt.xlabel('$$t\\ [r_r/v_{thr}]$$')
+        plt.xlabel('$t\\ [r_r/v_{thr}]$')
         my_ylabel = '$\\ln \\left(\\vert \\langle \\phi \\rangle_\\theta \\vert ^2\\right)$'
         plt.ylabel(my_ylabel)
         plt.grid(True)
