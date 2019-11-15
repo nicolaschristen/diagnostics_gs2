@@ -11,6 +11,9 @@ def my_task_single(ifile, run, myin, myout):
     dump_at_start = 0.3 # fraction of initial time to dump when fitting
     ikx_list = [-1] # choose which kx to plot, negative means plot all
     skip_first_ky = False
+    kymax = 1.5 # max of gamma is taken over range [0, kymax]
+    fix_ylim = True
+    yl = [0.00, 0.40]
 
     iky_first = 0
     if skip_first_ky:
@@ -29,6 +32,8 @@ def my_task_single(ifile, run, myin, myout):
         ky = myout['ky']
         naky = ky.size
         phi2 = myout['phi2_by_mode'] # modulus squared, avged over theta (indices: [t,ky,kx])
+        shat = myin['theta_grid_parameters']['shat']
+        g_exb = 0.052557 ### USER ###
 
         # Store index of first NaN or +/- inf in it_stop
         it = 0
@@ -77,22 +82,53 @@ def my_task_single(ifile, run, myin, myout):
 
     # Plotting
     if not run.no_plot:
-    
+
         # Plot growthrate
         plt.figure(figsize=(12,8))
+        my_legend = []
+        plt.grid(True)
         plt.xlabel('$k_y\\rho_i$')
         plt.ylabel('$\\gamma \\ [v_{thr}/r_r]$')
-        plt.title('Linear growthrate')
-        plt.grid(True)
-
-        my_legend = []
+        # Find maximum gamma, within range [0, kymax]
+        ikymax = 0
+        gamma_max = -1000
         for ikx in ikx_list:
+            iky = 0
+            while ky[iky] <= 1.5 and iky < naky:
+                if not math.isnan(gamma[iky,ikx]) and gamma_max < gamma[iky,ikx]:
+                    gamma_max = gamma[iky,ikx]
+                    ikymax = iky
+                iky = iky + 1
             plt.plot(ky,gamma[:,ikx])
             my_legend.append('$\\rho_i k_x='+str(kx[ikx])+'$')
         plt.legend(my_legend)
+        my_title = '$\\max(\\gamma)=' + str(round(gamma_max,3)) + '$'
+        my_title = my_title + ' at $k_y = ' + str(round(ky[ikymax],2)) + '$'
+        plt.title(my_title)
+        if fix_ylim:
+            plt.ylim(yl)
         pdfname = 'lingrowth'
         gplot.save_plot(pdfname, run, ifile)
-        print('Maximum linear growthrate: '+str(np.nanmax(gamma)))
+        print('Maximum linear growthrate: '+str(gamma_max))
+    
+        # Plot Floquet vs growthrate
+        if g_exb != 0.0:
+
+            Tf = 2*math.pi*shat/g_exb
+
+            plt.figure(figsize=(12,8))
+            my_legend = []
+            plt.grid(True)
+            plt.xlabel('$k_y\\rho_i$')
+            plt.ylabel('$T_f\\gamma$')
+            for ikx in ikx_list:
+                plt.plot(ky,Tf*gamma[:,ikx])
+                my_legend.append('$\\rho_i k_x='+str(kx[ikx])+'$')
+            plt.legend(my_legend)
+            my_title = '$T_F=' + str(round(Tf,3)) + '\ [r_r/v_{thr}]$'
+            plt.title(my_title)
+            pdfname = 'floq_vs_growth'
+            gplot.save_plot(pdfname, run, ifile)
     
         # Plot real frequency
         plt.figure(figsize=(12,8))
