@@ -433,10 +433,10 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     # Normalise sum_phi2 by sum_phi2[it_start] for each run
     skip_init = False # Start plotting at it=it_start, instead of it=0
     if g_exb != 0.0:
-        N_start = 0 #30 # adapt this
+        N_start = 2 #30 # adapt this
         it_start = int(round((N_start*Tf/delt)/nwrite))
     else:
-        fac = 0.0 # adapt this
+        fac = 0.5 # adapt this
         it_start = round(fac*nt) # adapt this
 
     t_collec = []
@@ -473,31 +473,32 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     # fit_avg(t) ~ phi2(tstart) * exp[2*gam*t + offset]
 
     # Compute gamma_max from ln(phi2_max)
-    it_gamma_max = np.zeros(len(iky_list))
-    gamma_max = np.zeros(len(iky_list))
-    for iiky in range(len(iky_list)):
-        # Start looking for derivatives one Floquet period before last time-step
-        it_start_last_floq = int(len(max_phi2bloon[iiky]) - Tf//(delt*nwrite) - 1)
-        it_end_last_floq = int(len(max_phi2bloon[iiky]) - 1)
-        for it in range(it_start_last_floq, it_end_last_floq):
-            # Factor of 0.5 because we fit phi^2
-            gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
-                    ( np.log(max_phi2bloon[iiky][it+1]) - np.log(max_phi2bloon[iiky][it-1]) )
-            if (gamma_max_tmp > gamma_max[iiky]):
-                it_gamma_max[iiky] = it
-                gamma_max[iiky] = gamma_max_tmp
-    it_gamma_max = it_gamma_max.astype(int)
-    # At this point:
-    # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
+    if g_exb != 0.0:
+        it_gamma_max = np.zeros(len(iky_list))
+        gamma_max = np.zeros(len(iky_list))
+        for iiky in range(len(iky_list)):
+            # Start looking for derivatives one Floquet period before last time-step
+            it_start_last_floq = max(int(len(max_phi2bloon[iiky]) - Tf//(delt*nwrite) - 1),0)
+            it_end_last_floq = int(len(max_phi2bloon[iiky]) - 1)
+            for it in range(it_start_last_floq, it_end_last_floq):
+                # Factor of 0.5 because we fit phi^2
+                gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
+                        ( np.log(max_phi2bloon[iiky][it+1]) - np.log(max_phi2bloon[iiky][it-1]) )
+                if (gamma_max_tmp > gamma_max[iiky]):
+                    it_gamma_max[iiky] = it
+                    gamma_max[iiky] = gamma_max_tmp
+        it_gamma_max = it_gamma_max.astype(int)
+        # At this point:
+        # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
 
-    # Save growthrates to dat-file
-    my_vars = {}
-    my_vars['ky'] = ky[1:]
-    my_vars['gamma_avg'] = slope_max
-    my_vars['gamma_max'] = gamma_max
-    datfile_name = run.out_dir + run.fnames[ifile] + '.flowshear_lingrowth.dat'
-    with open(datfile_name, 'wb') as outfile: # 'wb' stands for write bytes
-        pickle.dump(my_vars,outfile)
+        # Save growthrates to dat-file
+        my_vars = {}
+        my_vars['ky'] = ky[1:]
+        my_vars['gamma_avg'] = slope_max
+        my_vars['gamma_max'] = gamma_max
+        datfile_name = run.out_dir + run.fnames[ifile] + '.flowshear_lingrowth.dat'
+        with open(datfile_name, 'wb') as outfile: # 'wb' stands for write bytes
+            pickle.dump(my_vars,outfile)
     
     plt.figure(figsize=(12,8))
     plt.xlabel('$t$')
@@ -538,27 +539,35 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
         for iiky in range(len(iky_list)):
             plt.semilogy(t_collec[iiky], max_phi2_collec[iiky], color=my_colorlist[iiky], linewidth=3.0)
             my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[iiky]]))
+            # Add fits for average and maximum growthrates
             plt.semilogy(t_collec[iiky], np.exp(2.0*slope_max[iiky]*t_collec[iiky]+offset_max[iiky]),\
                     color=my_colorlist[iiky], linewidth=3.0, linestyle='--')
-            my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
-            bot, top = plt.ylim()
-            plt.semilogy(t_collec[iiky], max_phi2bloon[iiky][it_gamma_max[iiky]]/max_phi2bloon[iiky][it_start] * \
-                    np.exp(2.0*gamma_max[iiky]*(t_collec[iiky]-t[it_gamma_max[iiky]])),\
-                    color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
-            my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
-            plt.ylim(bot,top)
+            if g_exb != 0.0:
+                my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
+                bot, top = plt.ylim()
+                plt.semilogy(t_collec[iiky], max_phi2bloon[iiky][it_gamma_max[iiky]]/max_phi2bloon[iiky][it_start] * \
+                        np.exp(2.0*gamma_max[iiky]*(t_collec[iiky]-t[it_gamma_max[iiky]])),\
+                        color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
+                my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
+                plt.ylim(bot,top)
+            else:
+                my_legend.append('$\\gamma = {:.3f}$'.format(slope_max[iiky]))
     else:
         for iiky in range(len(iky_list)):
             plt.semilogy(t, max_phi2bloon[iiky], color=my_colorlist[iiky], linewidth=3.0)
             my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[iiky]]))
+            # Add fits for average and maximum growthrates
             plt.semilogy(t, max_phi2bloon[iiky][it_start]*np.exp(2.0*slope_max[iiky]*t+offset_max[iiky]),\
                     color=my_colorlist[iiky], linewidth=3.0, linestyle='--')
-            my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
-            bot, top = plt.ylim()
-            plt.semilogy(t, max_phi2bloon[iiky][it_gamma_max[iiky]]*np.exp(2.0*gamma_max[iiky]*(t-t[it_gamma_max[iiky]])),\
-                    color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
-            my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
-            plt.ylim(bot,top)
+            if g_exb != 0.0:
+                my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
+                bot, top = plt.ylim()
+                plt.semilogy(t, max_phi2bloon[iiky][it_gamma_max[iiky]]*np.exp(2.0*gamma_max[iiky]*(t-t[it_gamma_max[iiky]])),\
+                        color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
+                my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
+                plt.ylim(bot,top)
+            else:
+                my_legend.append('$\\gamma = {:.3f}$'.format(slope_max[iiky]))
     plt.legend(my_legend)
     pdfname = 'floquet_max_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
@@ -610,7 +619,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             plt.ylabel('$\\omega$'+' '+'$[v_{thr}/r_r]$')
             plt.grid(True)
             ax = plt.gca()
-            ax.set_title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
+            ax.set_title('$k_y={:.2f}$'.format(ky[iky]) + ', $t={:.2f}$'.format(t[it]))
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplots.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
