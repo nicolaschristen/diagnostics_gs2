@@ -197,6 +197,24 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
         kx_star_for_gamma_floq = []
 
         for it in range(nt):
+            #NDCTEST
+            # To test if initial condition satisfies parallel BC. Apparently does not when shat<0.
+            #if iky==1 and it<10:
+            #    print('---------------------')
+            #    print('FOR TEST')
+            #    print('phi2(-pi) = ')
+            #    print(phi2_bytheta[it,iky,:,0])
+            #    print('phi2(+pi) = ')
+            #    print(phi2_bytheta[it,iky,:,-1])
+            #    if shat>0.:
+            #        print('phi_l = '+str(phi2_bytheta[it,iky,-1,-1])) # phi_l
+            #        print('phi_r = '+str(phi2_bytheta[it,iky,-2,0])) # phi_r
+            #    else:
+            #        # correct
+            #        print('phi_l = '+str(phi2_bytheta[it,iky,-1,0])) # phi_l
+            #        print('phi_r = '+str(phi2_bytheta[it,iky,-2,-1])) # phi_r
+            #    print('---------------------')
+            #endNDCTEST
 
             ikx_members_now = []
             ikx_prevmembers_now = []
@@ -222,6 +240,10 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
                 ikx_shift = int(round(g_exb*ky[iky]*delt*(nwrite*it-0.5)/dkx))
                 ikx_shift_old = int(round(g_exb*ky[iky]*delt*(nwrite*(it-1)-0.5)/dkx))
 
+            print('t =',delt*(nwrite*it-0.5)) # NDCTEST
+            print('kx_shift =',-1.*g_exb*ky[iky]*delt*(nwrite*it-0.5)+dkx*ikx_shift) # NDCTEST
+            print('ikx_shift =',ikx_shift) # NDCTEST
+    
             # Build collection of ikx's that are included
             # in the chain at time step it (ikx_members_now)
             # and at time step it-1 (ikx_prevmembers_now).
@@ -299,6 +321,35 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
                     b_ang_bndry = pi-kx_star[it,iky,ikx_members_now[imember]]/(shat*ky[iky])
                     bloonang_bndry_now.append(b_ang_bndry)
 
+                # Computing 'growthrate' for every kxstar present in the chain
+                if it>0 and g_exb != 0.0:
+                    # index of the Floquet oscillation we are in
+                    iTf_new = int(round(delt*(it*nwrite-0.5)/Tf))
+                    # If we enter the next Floquet oscillation,
+                    # append gamma to gamma_chain
+                    # and start working with new oscillation.
+                    if iTf_new > iTf:
+                        # Oh dare ! -- J. Bercow, 2019
+                        idx_sort = [i[0] for i in sorted(enumerate(kx_star_for_gamma_floq), key=lambda x:x[1])]
+                        kx_star_for_gamma_floq = [kx_star_for_gamma_floq[i] for i in idx_sort]
+                        gamma_floq = [gamma_floq[i] for i in idx_sort]
+                        # and append
+                        gamma_chain.append(gamma_floq)
+                        kx_star_for_gamma_chain.append(kx_star_for_gamma_floq)
+                        gamma_floq = []
+                        kx_star_for_gamma_floq = []
+                        iTf = iTf_new
+                    for imember in range(len(ikx_members_now)):
+                        ikx = ikx_members_now[imember]
+                        ikxprev = ikx_prevmembers_now[imember]
+                        kx_star_for_gamma_floq.append(kx_star[it,iky,ikx])
+                        if not np.isnan(ikxprev):
+                            gam = 1./(2.*nwrite*delt) * np.log( \
+                                    np.amax(phi2_bytheta[it,iky,ikx,:]) / np.amax(phi2_bytheta[it-1,iky,ikxprev,:]) )
+                            gamma_floq.append(gam)
+                        else:
+                            gamma_floq.append(np.nan)
+
             ikx_members_chain.append(ikx_members_now)
             ikx_prevmembers_chain.append(ikx_prevmembers_now)
             bloonang_chain.append(bloonang_now)
@@ -323,6 +374,20 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
         max_phi2bloon.append(max_phi2bloon_chain)
         omegabloon.append(omegabloon_chain)
         kxbarbloon.append(kxbarbloon_chain)
+        if g_exb != 0.0:
+            kx_star_for_gamma.append(kx_star_for_gamma_chain)
+            gamma.append(gamma_chain)
+
+    if g_exb==0.0:
+        it_start = round(0.5*nt)
+        gamma = np.zeros((nakx,len(iky_list)))
+        tofit_sq = np.amax(phi2_bytheta,axis=3) # take the max in theta for each 2pi segment
+        for ikx in range(nakx):
+            for iiky in range(len(iky_list)):
+                iky = iky_list[iiky]
+                gam = get_growthrate(t,tofit_sq[:,iky,ikx],it_start)
+                gam = gam/2. # because we fitted the square
+                gamma[ikx,iiky] = gam
 
     # Saving variables to mat-file
     my_vars = {}
@@ -353,6 +418,8 @@ def process_and_save_to_dat(ifile, run, myin, myout, my_dmid, iky_list):
     my_vars['max_phi2bloon'] = max_phi2bloon
     my_vars['omegabloon'] = omegabloon
     my_vars['kxbarbloon'] = kxbarbloon
+    my_vars['gamma'] = gamma
+    my_vars['kx_star_for_gamma'] = kx_star_for_gamma
 
     #TESTpickle
     #mat_file_name = run.out_dir + run.fnames[ifile] + '.floquet.mat'
@@ -419,6 +486,8 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     max_phi2bloon = my_vars['max_phi2bloon']
     omegabloon = my_vars['omegabloon']
     kxbarbloon = my_vars['kxbarbloon']
+    kx_star_for_gamma = my_vars['kx_star_for_gamma']
+    gamma = my_vars['gamma']
     
     Tf = Nf*delt
     nt = t.size
@@ -433,10 +502,10 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     # Normalise sum_phi2 by sum_phi2[it_start] for each run
     skip_init = False # Start plotting at it=it_start, instead of it=0
     if g_exb != 0.0:
-        N_start = 2 #30 # adapt this
+        N_start = 0 #30 # adapt this
         it_start = int(round((N_start*Tf/delt)/nwrite))
     else:
-        fac = 0.5 # adapt this
+        fac = 0.0 # adapt this
         it_start = round(fac*nt) # adapt this
 
     t_collec = []
@@ -473,32 +542,31 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     # fit_avg(t) ~ phi2(tstart) * exp[2*gam*t + offset]
 
     # Compute gamma_max from ln(phi2_max)
-    if g_exb != 0.0:
-        it_gamma_max = np.zeros(len(iky_list))
-        gamma_max = np.zeros(len(iky_list))
-        for iiky in range(len(iky_list)):
-            # Start looking for derivatives one Floquet period before last time-step
-            it_start_last_floq = max(int(len(max_phi2bloon[iiky]) - Tf//(delt*nwrite) - 1),0)
-            it_end_last_floq = int(len(max_phi2bloon[iiky]) - 1)
-            for it in range(it_start_last_floq, it_end_last_floq):
-                # Factor of 0.5 because we fit phi^2
-                gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
-                        ( np.log(max_phi2bloon[iiky][it+1]) - np.log(max_phi2bloon[iiky][it-1]) )
-                if (gamma_max_tmp > gamma_max[iiky]):
-                    it_gamma_max[iiky] = it
-                    gamma_max[iiky] = gamma_max_tmp
-        it_gamma_max = it_gamma_max.astype(int)
-        # At this point:
-        # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
+    it_gamma_max = np.zeros(len(iky_list))
+    gamma_max = np.zeros(len(iky_list))
+    for iiky in range(len(iky_list)):
+        # Start looking for derivatives one Floquet period before last time-step
+        it_start_last_floq = int(len(max_phi2bloon[iiky]) - Tf//(delt*nwrite) - 1)
+        it_end_last_floq = int(len(max_phi2bloon[iiky]) - 1)
+        for it in range(it_start_last_floq, it_end_last_floq):
+            # Factor of 0.5 because we fit phi^2
+            gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
+                    ( np.log(max_phi2bloon[iiky][it+1]) - np.log(max_phi2bloon[iiky][it-1]) )
+            if (gamma_max_tmp > gamma_max[iiky]):
+                it_gamma_max[iiky] = it
+                gamma_max[iiky] = gamma_max_tmp
+    it_gamma_max = it_gamma_max.astype(int)
+    # At this point:
+    # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
 
-        # Save growthrates to dat-file
-        my_vars = {}
-        my_vars['ky'] = ky[1:]
-        my_vars['gamma_avg'] = slope_max
-        my_vars['gamma_max'] = gamma_max
-        datfile_name = run.out_dir + run.fnames[ifile] + '.flowshear_lingrowth.dat'
-        with open(datfile_name, 'wb') as outfile: # 'wb' stands for write bytes
-            pickle.dump(my_vars,outfile)
+    # Save growthrates to dat-file
+    my_vars = {}
+    my_vars['ky'] = ky[1:]
+    my_vars['gamma_avg'] = slope_max
+    my_vars['gamma_max'] = gamma_max
+    datfile_name = run.out_dir + run.fnames[ifile] + '.flowshear_lingrowth.dat'
+    with open(datfile_name, 'wb') as outfile: # 'wb' stands for write bytes
+        pickle.dump(my_vars,outfile)
     
     plt.figure(figsize=(12,8))
     plt.xlabel('$t$')
@@ -529,51 +597,130 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
     plt.ylabel('$\\max_{K_x}\\vert \\langle\\phi\\rangle_\\theta \\vert ^2$')
     plt.grid(True)
     my_legend = []
-    my_colorlist = []
-    # only use blue
-    for iiky in range(len(iky_list)):
-        my_colorlist.append(gplots.myblue)
-    #my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(iky_list))) # for newalgo
+    my_colorlist = plt.cm.YlOrBr(np.linspace(0.2,1,len(iky_list))) # for newalgo
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.2,1,len(iky_list))) # for oldalgo
     if skip_init:
         for iiky in range(len(iky_list)):
             plt.semilogy(t_collec[iiky], max_phi2_collec[iiky], color=my_colorlist[iiky], linewidth=3.0)
             my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[iiky]]))
-            # Add fits for average and maximum growthrates
             plt.semilogy(t_collec[iiky], np.exp(2.0*slope_max[iiky]*t_collec[iiky]+offset_max[iiky]),\
                     color=my_colorlist[iiky], linewidth=3.0, linestyle='--')
-            if g_exb != 0.0:
-                my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
-                bot, top = plt.ylim()
-                plt.semilogy(t_collec[iiky], max_phi2bloon[iiky][it_gamma_max[iiky]]/max_phi2bloon[iiky][it_start] * \
-                        np.exp(2.0*gamma_max[iiky]*(t_collec[iiky]-t[it_gamma_max[iiky]])),\
-                        color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
-                my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
-                plt.ylim(bot,top)
-            else:
-                my_legend.append('$\\gamma = {:.3f}$'.format(slope_max[iiky]))
+            my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
+            bot, top = plt.ylim()
+            plt.semilogy(t_collec[iiky], max_phi2bloon[iiky][it_gamma_max[iiky]]/max_phi2bloon[iiky][it_start] * \
+                    np.exp(2.0*gamma_max[iiky]*(t_collec[iiky]-t[it_gamma_max[iiky]])),\
+                    color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
+            my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
+            plt.ylim(bot,top)
     else:
         for iiky in range(len(iky_list)):
             plt.semilogy(t, max_phi2bloon[iiky], color=my_colorlist[iiky], linewidth=3.0)
             my_legend.append('$k_y = {:.3f}$'.format(ky[iky_list[iiky]]))
-            # Add fits for average and maximum growthrates
             plt.semilogy(t, max_phi2bloon[iiky][it_start]*np.exp(2.0*slope_max[iiky]*t+offset_max[iiky]),\
                     color=my_colorlist[iiky], linewidth=3.0, linestyle='--')
-            if g_exb != 0.0:
-                my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
-                bot, top = plt.ylim()
-                plt.semilogy(t, max_phi2bloon[iiky][it_gamma_max[iiky]]*np.exp(2.0*gamma_max[iiky]*(t-t[it_gamma_max[iiky]])),\
-                        color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
-                my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
-                plt.ylim(bot,top)
-            else:
-                my_legend.append('$\\gamma = {:.3f}$'.format(slope_max[iiky]))
+            my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(slope_max[iiky]))
+            bot, top = plt.ylim()
+            plt.semilogy(t, max_phi2bloon[iiky][it_gamma_max[iiky]]*np.exp(2.0*gamma_max[iiky]*(t-t[it_gamma_max[iiky]])),\
+                    color=my_colorlist[iiky], linewidth=3.0, linestyle=':')
+            my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[iiky]))
+            plt.ylim(bot,top)
     plt.legend(my_legend)
     pdfname = 'floquet_max_vs_t_all_ky' + '_dmid_' + str(my_dmid) 
     pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
     plt.savefig(pdfname)
     plt.clf()
     plt.cla()
+
+    # plot gamma vs (kxstar,ky), for every Floquet oscillation in the simulation
+    if phi_t_present:
+
+        cbarmax = np.amax(slope_max)
+        cbarmin = -1.0*cbarmax
+
+        if g_exb != 0.0:
+
+            tmp_pdf_id = 1
+            pdflist = []
+            # Finer and regular kx, ky mesh for contour plot of gamma
+            nakx_fine = (kx_bar.size-1)*1e4+1
+            kx_grid_fine = np.linspace(np.amin(kx_bar)-dkx/2.,np.amax(kx_bar)+dkx/2.,nakx_fine)
+            ky_grid_fine = np.zeros(len(iky_list))
+            for iiky in range(len(iky_list)):
+                iky = iky_list[iiky]
+                ky_grid_fine[iiky] = ky[iky]
+
+            iTfmax = len(gamma[0])-1
+
+            for iTf in range(iTfmax,-1,-1):
+                # First arrange kx,ky,gamma similarly to fine meshes above
+                npoints = 0
+                for iiky in range(len(iky_list)):
+                    npoints = npoints + len(kx_star_for_gamma[iiky][iTf])
+                kx_grid_1d = np.zeros(npoints)
+                ky_grid_1d = np.zeros(npoints)
+                gamma_1d = np.zeros(npoints)
+                istart = 0
+                for iiky in range(len(iky_list)):
+                    iky = iky_list[iiky]
+                    for ikxstar in range(len(kx_star_for_gamma[iiky][iTf])):
+                        ipoint = istart + ikxstar
+                        kx_grid_1d[ipoint] = kx_star_for_gamma[iiky][iTf][ikxstar]
+                        ky_grid_1d[ipoint] = ky[iky]
+                        gamma_1d[ipoint] = gamma[iiky][iTf][ikxstar]
+                    istart = istart + len(kx_star_for_gamma[iiky][iTf])
+                # If GS2 indeed wrote out data during this Floquet oscillation, then
+                if gamma_1d.size > 0 :
+                    # interpolate to nearest neighbour on fine, regular mesh ...
+                    gamma_fine = scinterp.griddata((kx_grid_1d,ky_grid_1d),gamma_1d, \
+                            (kx_grid_fine[None,:],ky_grid_fine[:,None]),method='nearest')
+                    # ... and plot.
+                    if len(iky_list)>1: # many ky: plot contour
+                        my_title = '$d\\log(\\varphi)/dt, N_F={:d}/{:d}$'.format(iTf+1,len(gamma[iiky]))
+                        my_xlabel = '$k_x^*$'
+                        my_ylabel = '$k_y$'
+                        gplots.plot_2d(gamma_fine,kx_grid_fine,ky_grid_fine,cbarmin,cbarmax,
+                                xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
+                    else: # single ky: 1d plot vs kxstar
+                        plt.plot(kx_grid_1d,gamma_1d,linewidth=3.0,color=gplots.myblue)
+                        plt.xlabel('$k_x^*$')
+                        plt.ylabel('$d\\log(\\varphi)/dt$')
+                        plt.title('$k_y={:.2f}, N_F={:d}/{:d}$'.format(ky[iky_list[0]],iTf+1,len(gamma[iiky])))
+                        ax = plt.gca()
+                        ax.set_ylim(cbarmin,cbarmax)
+                    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                    gplots.save_plot(tmp_pdfname, run, ifile)
+                    pdflist.append(tmp_pdfname)
+                    tmp_pdf_id = tmp_pdf_id+1
+            pdflist = pdflist[::-1] # re-order since we iterated from last oscillation
+            merged_pdfname = 'gamma_vs_kxky' + '_dmid_' + str(my_dmid)
+            gplots.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+        else: # g_exb = 0.0
+
+            if len(iky_list)>1: # many ky: plot contour
+                ky_to_plot = np.zeros(len(iky_list))
+                for iiky in range(len(iky_list)):
+                    ky_to_plot[iiky] = ky[iky_list[iiky]]
+                my_title = '$d\\log(\\varphi)/dt$'
+                my_xlabel = '$k_x^*$'
+                my_ylabel = '$k_y$'
+                gplots.plot_2d(np.transpose(gamma),kx_bar,ky_to_plot,cbarmin,cbarmax,
+                        xlab=my_xlabel,ylab=my_ylabel,title=my_title,cmp='RdBu_r')
+            else: # single ky: 1d plot vs kxstar
+                plt.plot(kx_bar,gamma[:,-1],linewidth=3.0,color=gplots.myblue)
+                plt.xlabel('$k_x^*$')
+                plt.ylabel('$d\\log(\\varphi)/dt$')
+                plt.title('$k_y={:.2f}$'.format(ky[iky_list[0]]))
+                ax = plt.gca()
+                ax.set_ylim(cbarmin,cbarmax)
+
+            pdfname = 'gamma_vs_kxky' + '_dmid_' + str(my_dmid)
+            pdfname = run.out_dir + pdfname + '_' + run.fnames[ifile] + '.pdf'
+            plt.savefig(pdfname)
+            
+            plt.clf()
+            plt.cla()
+
 
     for iiky in range(len(iky_list)):
     
@@ -604,7 +751,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
 
         ## set up time stepping for snapshots and movies
         max_it_for_snap = nt
-        it_step_for_snap = 10 # Adapt this
+        it_step_for_snap = 1 # Adapt this
         max_it_for_mov = nt
         it_step_for_mov = 10
 
@@ -619,7 +766,7 @@ def plot_task_single(ifile, run, my_vars, my_it, my_dmid, make_movies):
             plt.ylabel('$\\omega$'+' '+'$[v_{thr}/r_r]$')
             plt.grid(True)
             ax = plt.gca()
-            ax.set_title('$k_y={:.2f}$'.format(ky[iky]) + ', $t={:.2f}$'.format(t[it]))
+            ax.set_title('$k_y={:.2f}, t={:.2f}$'.format(ky[iky],t[it]))
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             gplots.save_plot(tmp_pdfname, run, ifile)
             pdflist.append(tmp_pdfname)
