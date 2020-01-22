@@ -6,12 +6,48 @@ import matplotlib.colors as mcolors
 import numpy as np
 from PyPDF2 import PdfFileMerger, PdfFileReader
 import os
+import scipy.interpolate as scinterp
+from math import pi
 
 myred = [183./255, 53./255, 53./255]
 myblue = [53./255, 118./255, 183./255]
 oxblue = [0.,33./255,71./255]
 oxbluel = [68./255,104./255,125./255]
 oxbluell = [72./255,145./255,220./255]
+midLoRed = [255./255,178./255,172./255]
+midHiRed = [179./255,26./255,0./255]
+darkRed = [102./255,26./255,0./255]
+midLoBlue = [179./255,217./255,255./255]
+midHiBlue = [0./255,115./255,153./255]
+darkBlue = [0./255,0./255,77./255]
+
+def RdBu_centered(minVal, maxVal):
+
+    if minVal<0 and maxVal>0:
+        bluePart = abs(minVal)/(maxVal-minVal)
+    elif minVal>0:
+        bluePart = 0.0
+    elif maxVal<0:
+        bluePart = 1.0
+    c = mcolors.ColorConverter().to_rgb
+    seq = [darkBlue, midHiBlue, bluePart/3.0, \
+            midHiBlue, midLoBlue, 2.0*bluePart/3.0, \
+            midLoBlue, c('white'), bluePart, \
+            c('white'), midLoRed, (1.0-bluePart)/3.0+bluePart, \
+            midLoRed, midHiRed, 2.0*(1.0-bluePart)/3.0+bluePart, \
+            midHiRed, darkRed]
+    #print(bluePart)
+    #seq = [c('blue'), c('white'), bluePart, c('white'), c('red')]
+    seq = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
+    cdict = {'red': [], 'green': [], 'blue': []}
+    for i, item in enumerate(seq):
+        if isinstance(item, float):
+            r1, g1, b1 = seq[i - 1]
+            r2, g2, b2 = seq[i + 1]
+            cdict['red'].append([item, r1, r2])
+            cdict['green'].append([item, g1, g2])
+            cdict['blue'].append([item, b1, b2])
+    return mcolors.LinearSegmentedColormap('CustomMap', cdict)
 
 def save_plot(pdfname, run, ifile = None):
 
@@ -65,6 +101,33 @@ def set_plot_defaults():
     rcParams.update({'legend.frameon': False})
     #rcParams.update({'animation.ffmpeg_path':'/marconi/home/userexternal/nchriste/codes/ffmpeg'}) # for HPC use only
 
+
+
+def nearNeighb_interp_1d(x,y,xout):
+
+    if isinstance(x,(list)):
+        n = len(x)
+    elif isinstance(x,(np.ndarray)):
+        n = x.size
+    if isinstance(xout,(list)):
+        nout = len(xout)
+        yout = [0*i for i in range(nout)]
+    elif isinstance(xout,(np.ndarray)):
+        nout = xout.size
+        yout = np.zeros(nout)
+
+    i = 0
+    iout = 0
+    for i in range(n-1):
+        while xout[iout]-x[i] < (x[i+1]-x[i])/2.0:
+            yout[iout] = y[i]
+            iout += 1
+    yout[iout:] = y[-1]
+
+    return yout
+
+
+
 def plot_1d(x,y,xlab,title='',ylab=''):
 
     fig = plt.figure(figsize=(12,8))
@@ -81,6 +144,10 @@ def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor
     fig = plt.figure(figsize=(12,8))
     x,y = np.meshgrid(xin,yin)
 
+    # Centered blue->red color map
+    if cmp=='RdBu_c':
+        cmp = RdBu_centered(zmin, zmax)
+
     if use_logcolor:
         color_norm = mcolors.LogNorm(zmin,zmax)
     else:
@@ -96,6 +163,26 @@ def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor
     plt.ylabel(ylab)
     plt.title(title)
     return fig
+
+# Input:
+# x = x[iy][ix]
+# y = y[iy]
+# z = z[iy][ix]
+def plot_2d_uneven_xgrid(x, y, z, xmin, xmax, cbarmin, cbarmax, xlabel, ylabel, title, ngrid_fine = 1001):
+
+    # Here we assume that the scan uses a fixed set of ky.
+    ny = y.size
+
+    # Finer and regular x mesh
+    ntheta0_fine = 1001
+    x_fine = np.linspace(xmin, xmax, ngrid_fine)
+    z_fine = np.zeros((ny, ngrid_fine))
+
+    # For each ky, interpolate to nearest neighbour in x
+    for iy in range(ny):
+        z_fine[iy,:] = nearNeighb_interp_1d(x[iy],z[iy],x_fine)
+
+    plot_2d(z_fine, x_fine, y, cbarmin, cbarmax, xlabel, ylabel, title, 'RdBu_c')
 
 def movie_2d(z,xin,yin,zmin,zmax,nframes,outfile,xlab='',ylab='',title='',step=1,cmp='RdBu'):
 
@@ -142,3 +229,36 @@ def movie_1d(x,y,xmin,xmax,ymin,ymax,nframes):
                                  frames=nframes, interval=200)
 
     return anim
+
+def str_tt0(theta0):
+
+    n = int(round(theta0/(2.0*pi)))
+
+    txt = '{: .2f}'.format(theta0 - 2*pi*n)
+
+    if n > 0:
+        txt += '$+' + str(2*n) + '\\pi$'
+    elif n < 0:
+        txt += '$-' + str(abs(2*n)) + '\\pi$'
+
+    return txt
+
+def str_t(time):
+
+    return '${:.2E}$'.format(time)
+
+def str_ky(ky):
+
+    return '{: .2f}'.format(ky)
+
+def legend_matlab(my_legend=None):
+
+    if my_legend:
+        legend = plt.legend(my_legend, frameon=True, fancybox=False)
+    else:
+        legend = plt.legend(frameon=True, fancybox=False)
+    frame = legend.get_frame()
+    frame.set_facecolor('white')
+    frame.set_edgecolor('black')
+    frame.set_linewidth(0.5)
+    frame.set_alpha(1)
