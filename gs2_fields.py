@@ -12,7 +12,7 @@ class fieldobj:
     def __init__(self, myout, mygrids, mytime):
         
         ( self.phi2_avg, self.phi_gs2, self.dens_gs2, self.upar_gs2, self.tpar_gs2, self.tperp_gs2,
-                self.phi, self.phi2, self.gphi_gs2, self.Ex_gs2, self.Ey_gs2, 
+                self.phi, self.phi2, self.phi_bytheta_tfinal, self.gphi_gs2, self.Ex_gs2, self.Ey_gs2, 
                 self.zonal_E ) = self.get_attr(myout, mygrids, mytime)
 
     def get_attr(self, myout, mygrids, mytime):
@@ -23,6 +23,9 @@ class fieldobj:
         print('arranging fields in Fourier space ...',end='')
 
         # combine real and imaginary parts into single complex variables
+        mydim = (mygrids.ny, mygrids.nx, mygrids.ntheta)
+        phi_bytheta_tfinal = form_complex('phi', myout, mydim)
+
         mydim = (mytime.ntime, mygrids.ny, mygrids.nx)
         phi_gs2 = form_complex('phi_igomega_by_mode', myout, mydim)
         
@@ -33,6 +36,7 @@ class fieldobj:
         tperp_gs2 = form_complex('tperp_igomega_by_mode', myout, mydim)
 
         # reorder kx grid to be monotonic
+        phi_bytheta_tfinal = np.concatenate((phi_bytheta_tfinal[:,mygrids.nxmid:,:],phi_bytheta_tfinal[:,:mygrids.nxmid,:]),axis=1)
         phi = np.concatenate((phi_gs2[:,:,mygrids.nxmid:],phi_gs2[:,:,:mygrids.nxmid]),axis=2)
         phi2 = np.abs(phi)**2
         # get gyro-averaged phi (at vperp = vth)
@@ -57,7 +61,7 @@ class fieldobj:
         print('complete')
 
         return ( phi2_avg, phi_gs2, dens_gs2, upar_gs2, tpar_gs2, tperp_gs2,
-                phi, phi2, gphi_gs2, Ex_gs2, Ey_gs2, zonal_E )
+                phi, phi2, phi_bytheta_tfinal, gphi_gs2, Ex_gs2, Ey_gs2, zonal_E )
 
 class field_ffted_obj:
 
