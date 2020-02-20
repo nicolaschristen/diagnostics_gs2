@@ -35,13 +35,18 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             spec_names.append(myin['species_parameters_'+str(ispec+1)]['type'])
         naky = (myin['kt_grids_box_parameters']['ny']-1)//3 + 1
     
+        theta = mygrids.theta
+        theta0 = mygrids.theta0
         kx = mygrids.kx
         ky = mygrids.ky
+        jtwist = mygrids.jtwist
 
         time = mytime.time
         time_steady = mytime.time_steady
         it_min = mytime.it_min
         it_max = mytime.it_max
+
+        phi_bytheta_tfinal = myfields.phi_bytheta_tfinal
         
         phi2_avg = myfields.phi2_avg
         if myout['phi2_by_ky_present']:
@@ -164,8 +169,9 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
                 'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,'pflx_vpth_tavg':pflx_vpth_tavg,
                 'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
                 'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
-                'naky':naky,'kx':kx,'ky':ky,'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
-                'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,'has_flowshear':has_flowshear,
+                'naky':naky,'kx':kx,'ky':ky,'theta':theta,'theta0':theta0,'jtwist':jtwist,
+                'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
+                'phi_bytheta_tfinal':phi_bytheta_tfinal, 'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,'has_flowshear':has_flowshear,
                 'phi2_kxky_tavg':phi2_kxky_tavg,'phi2_kxky':phi2_kxky}
         with open(datfile_name,'wb') as datfile:
             pickle.dump(mydict,datfile)
@@ -235,9 +241,15 @@ def stitching_fluxes(run):
     naky = full_fluxes[0]['naky']
     kx = full_fluxes[0]['kx']
     ky = full_fluxes[0]['ky']
+    jtwist = full_fluxes[0]['jtwist']
+    theta = full_fluxes[0]['theta']
+    theta0 = full_fluxes[0]['theta0']
     datfile_name = run.out_dir + run.fnames[0] + '.grids.dat'
     with open(datfile_name,'rb') as datfile:
         my_grids = pickle.load(datfile)
+
+    # Quantities evaluated at the last time step
+    phi_bytheta_tfinal = full_fluxes[-1]['phi_bytheta_tfinal']
 
     # Stitching the arrays together
     stitch_my_time = cp.deepcopy(full_time[0])
@@ -294,7 +306,10 @@ def stitching_fluxes(run):
             stitch_phi2_by_ky[it_tot,:] = full_fluxes[ifile]['phi2_by_ky'][it,:]
             it_tot += 1
 
-    stitch_my_time.it_min = int(np.ceil((1.0-twin)*stitch_my_time.ntime))
+    tmin = stitch_my_time.time[-1] * (1.0-twin)
+    stitch_my_time.it_min = 0
+    while stitch_my_time.time[stitch_my_time.it_min] < tmin:
+        stitch_my_time.it_min += 1
     stitch_my_time.it_max = stitch_my_time.ntime-1
     stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
     stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
@@ -316,7 +331,8 @@ def stitching_fluxes(run):
     # Save computed quantities
     stitch_flux_dict = {'pflx':stitch_pflx,'qflx':stitch_qflx,'vflx':stitch_vflx,'pioq':stitch_pioq,
             'nx':nx,'ny':ny,'islin':islin,'has_flowshear':has_flowshear,'nspec':nspec,'spec_names':spec_names,
-            'naky':naky,'kx':kx,'ky':ky,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
+            'naky':naky,'kx':kx,'ky':ky,'jtwist':jtwist,'theta':theta,'theta0':theta0,
+            'phi_bytheta_tfinal':phi_bytheta_tfinal,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
             'pflx_kxky_tavg':stitch_pflx_kxky_tavg,'qflx_kxky_tavg':stitch_qflx_kxky_tavg,
             'vflx_kxky_tavg':stitch_vflx_kxky_tavg,'phi2_kxky_tavg':stitch_phi2_kxky_tavg,
             'pflx_tavg':stitch_pflx_tavg,'qflx_tavg':stitch_qflx_tavg,
@@ -361,6 +377,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
     naky = mydict['naky']
     kx = mydict['kx']
     ky = mydict['ky']
+    jtwist = mydict['jtwist']
+    theta0 = mydict['theta0']
+    
+     # theta grids
+    theta = mydict['theta']
 
     # species
     nspec = mydict['nspec']
@@ -378,6 +399,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     vflx_kxky_tavg = mydict['vflx_kxky_tavg']
 
     # potential
+    phi_bytheta_tfinal = mydict['phi_bytheta_tfinal']
     phi2_avg = mydict['phi2_avg']
     phi2_by_ky = mydict['phi2_by_ky']
     phi2_kxky_tavg = mydict['phi2_kxky_tavg']
@@ -396,6 +418,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
             gplot.plot_1d(time,np.log(phi2_avg),'$t (a/v_{t})$',title)
         else:
             gplot.plot_1d(time,phi2_avg,'$t (a/v_{t})$',title)
+        # indicating area of saturation
+        plt.xlim((time[0], time[-1]))
+        plt.axvline(x=time_steady[0], color='grey', linestyle='-')
+        ax = plt.gca()
+        ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
         plt.grid(True)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
@@ -483,6 +510,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
         plt.xlabel('$t (a/v_t)$')
         plt.title(title)
         plt.legend(prop={'size': 11}, ncol=6)
+        # indicating area of saturation
+        plt.xlim((time[0], time[-1]))
+        plt.axvline(x=time_steady[0], color='grey', linestyle='-')
+        ax = plt.gca()
+        ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
 
         plt.grid(True)
         write_fluxes_vs_t = True
@@ -510,6 +542,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
             #plt.ylabel('$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$') # NDCDEL
             plt.title(title)
             plt.legend()
+            # indicating area of saturation
+            plt.xlim((time[0], time[-1]))
+            plt.axvline(x=time_steady[0], color='grey', linestyle='-')
+            ax = plt.gca()
+            ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
             plt.grid(True)
             # NDCDEL
             #axes = plt.gca()
@@ -533,6 +570,11 @@ def plot_fluxes(ifile,run,mytime,mydict):
             plt.xlabel('$t (a/v_t)$')
             plt.title(title)
             plt.legend()
+            # indicating area of saturation
+            plt.xlim((time[0], time[-1]))
+            plt.axvline(x=time_steady[0], color='grey', linestyle='-')
+            ax = plt.gca()
+            ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
             plt.grid(True)
             write_fluxes_vs_t = True
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
@@ -554,20 +596,71 @@ def plot_fluxes(ifile,run,mytime,mydict):
     tmp_pdf_id = 1
     pdflist = []
 
-    ## Plot phi2 averaged over t and theta, vs (kx,ky)
-    # First, non-zonal modes
-    plot_phi2_vs_kxky(kx,ky,phi2_kxky_tavg,has_flowshear)
+    ## Plot energy spectrum kx*<phi2>_{t,theta,ky} vs kx
+    energy_dens_x = np.squeeze(kx*np.sum(phi2_kxky_tavg[1:,:],axis=0))
+    plt.loglog(kx, energy_dens_x, color=gplot.myblue, linewidth=3.0)
+    [xmin,xmax] = plt.gca().get_xlim()
+    xvec = np.linspace(xmin,xmax)
+    [ymin,ymax] = plt.gca().get_ylim()
+    yvec = np.linspace(ymin,ymax)
+    fit = (xvec/kx[-1])**(-7.0/3.0) * energy_dens_x[-1]
+    plt.loglog(xvec, fit, color='k', linewidth=1.5, label='$(\\bar{k}_x\\rho_i)^{-7/3}$')
+    plt.xlim((xmin,xmax))
+    plt.ylim((ymin,ymax))
+    plt.grid(True)
+    plt.xlabel('$\\bar{k}_{x}\\rho_i$')
+    plt.ylabel('$\\sum_{k_y\\neq 0} \\bar{k}_x\\rho_i\\langle \\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
+    legend = plt.legend(frameon = True, fancybox = False)
+    frame = legend.get_frame()
+    frame.set_facecolor('white')
+    frame.set_edgecolor('black')
+    frame.set_linewidth(0.5)
+    frame.set_alpha(1)
     tmp_pdfname = 'tmp'+str(tmp_pdf_id)
     gplot.save_plot(tmp_pdfname, run, ifile)
     pdflist.append(tmp_pdfname)
     tmp_pdf_id += 1
-    # Then zonal mode
+
+    ## Plot energy spectrum ky*<phi2>_{t,theta,kx} vs ky
+    energy_dens_y = np.squeeze(ky*np.sum(phi2_kxky_tavg,axis=1))
+    iky_energymax = np.argmax(energy_dens_y)
+    plt.loglog(ky, energy_dens_y, color=gplot.myblue, linewidth=2.0)
+    [xmin,xmax] = plt.gca().get_xlim()
+    xvec = np.linspace(xmin,xmax)
+    [ymin,ymax] = plt.gca().get_ylim()
+    yvec = np.linspace(ymin,ymax)
+    fit = (xvec/ky[-1])**(-7.0/3.0) * energy_dens_y[-1]
+    plt.loglog(xvec, fit, color='k', linewidth=1.5, label='$(k_y\\rho_i)^{-7/3}$')
+    plt.xlim((xmin,xmax))
+    plt.ylim((ymin,ymax))
+    plt.grid(True)
+    plt.xlabel('$k_{y}\\rho_i$')
+    plt.ylabel('$\\sum_{k_x} k_y\\rho_i\\langle \\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
+    legend = plt.legend(frameon = True, fancybox = False)
+    frame = legend.get_frame()
+    frame.set_facecolor('white')
+    frame.set_edgecolor('black')
+    frame.set_linewidth(0.5)
+    frame.set_alpha(1)
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id += 1
+
+    ## Plot phi2 averaged over t and theta, vs (kx,ky)
+    # First zonal mode
     plt.semilogy(kx,phi2_kxky_tavg[0,:], marker='o', color=gplot.myblue, \
             markersize=8, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=2.0)
     plt.grid(True)
     plt.xlabel('$\\bar{k}_{x}\\rho_i$')
     plt.ylabel('$\\langle\\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
     plt.title('$k_y\\rho_i = 0$')
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id += 1
+    # Then non-zonal modes
+    plot_phi2_vs_kxky(kx,ky,phi2_kxky_tavg,has_flowshear)
     tmp_pdfname = 'tmp'+str(tmp_pdf_id)
     gplot.save_plot(tmp_pdfname, run, ifile)
     pdflist.append(tmp_pdfname)
@@ -608,43 +701,44 @@ def plot_fluxes(ifile,run,mytime,mydict):
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
     print('complete')
+    
+    print()
+    print('producing plots of potential vs (theta-theta0)...', end='')
 
-    #print()
-    #print('producing plots of fluxes vs (vpa,theta)...',end='')
+    # Plot for the smallest non-zero ky,
+    # for the ky with the maximum energy,
+    # and for the largest ky.
+    iky_to_plot = [1,iky_energymax,ny-1]
+    phi2_bytheta_tfinal = np.abs(phi_bytheta_tfinal)**2
 
-    #write_vpathetasym = False
-    #tmp_pdf_id = 1
-    #pdflist = []
-    #if pflx_vpth_tavg is not None and mygrids.vpa is not None:
-    #    title = '$\Gamma_{GS2}$'
-    #    plot_flux_vs_vpth(mygrids,pflx_vpth_tavg,title)
-    #    write_vpathetasym = True
-    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    #    gplot.save_plot(tmp_pdfname, run, ifile)
-    #    pdflist.append(tmp_pdfname)
-    #    tmp_pdf_id = tmp_pdf_id+1
-    #if qflx_vpth_tavg is not None and mygrids.vpa is not None:
-    #    title = '$Q_{GS2}$'
-    #    plot_flux_vs_vpth(mygrids,qflx_vpth_tavg,title)
-    #    write_vpathetasym = True
-    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    #    gplot.save_plot(tmp_pdfname, run, ifile)
-    #    pdflist.append(tmp_pdfname)
-    #    tmp_pdf_id = tmp_pdf_id+1
-    #if vflx_vpth_tavg is not None and mygrids.vpa is not None:
-    #    title = '$\Pi_{GS2}$'
-    #    plot_flux_vs_vpth(mygrids,vflx_vpth_tavg,title)
-    #    write_vpathetasym = True
-    #    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    #    gplot.save_plot(tmp_pdfname, run, ifile)
-    #    pdflist.append(tmp_pdfname)
-    #    tmp_pdf_id = tmp_pdf_id+1
+    for iky in iky_to_plot:
 
-    #if write_vpathetasym:  
-    #    merged_pdfname = 'fluxes_vs_vpa_theta'
-    #    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+        tmp_pdf_id = 1
+        pdflist = []
 
-    #print('complete')
+        for dmid in range(jtwist*iky):
+
+            # Get chain of (theta-theta0) and associated phi2.
+            bloonang, phi2bloon = get_bloon(theta,theta0,phi2_bytheta_tfinal,iky,dmid,jtwist)
+
+            plt.semilogy(bloonang,phi2bloon,color=gplot.myblue,linewidth=3.0)
+            plt.grid(True)
+            plt.xlabel('$\\theta-\\theta_0$')
+            plt.ylabel('$\\vert\\varphi\\vert^2$')
+            plt.title('$k_y = '+str(round(ky[iky],2))+'$, $d_{mid} = '+str(dmid)+'$, at $t='+str(round(time[-1],3))+'$')
+
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id += 1
+
+        merged_pdfname = 'potential_vs_theta_theta0_iky_'+str(iky)
+        if ifile==None: # This is the case when we stitch fluxes together
+            merged_pdfname += '_'+run.scan_name
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+    print('complete')
+
 
 def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None,avg_in_title=None):
 
@@ -789,3 +883,35 @@ def plot_flux_vs_vpth(mygrids,flx,title):
         fig = plot_2d(z,mygrids.theta,mygrids.vpa,z_min,z_max,xlab,ylab,title+' (is= '+str(idx+1)+')',cmap)
 
     return fig
+
+def get_bloon(theta,theta0,phi2_bytheta_tfinal,iky,dmid,jtwist):
+
+    ntheta = theta.size
+    nx = phi2_bytheta_tfinal.shape[1]
+    ikx0 = (nx-1)//2
+    sgn_shat = np.sign(theta0[1,1]-theta0[1,0])
+
+    # List of ikx's belonging to this chain,
+    # in decreasing order which corresponds to
+    # increasing(theta-thet0) for shat>0
+    ikx_bloon = []
+    ikx = ikx0 + dmid
+    while ikx + jtwist*iky < nx:
+        ikx += jtwist*iky
+    while ikx >= 0:
+        ikx_bloon.append(ikx)
+        ikx -= jtwist*iky
+
+    # If shat<0, need to invert the kx-indices list
+    if sgn_shat == -1:
+        ikx_bloon = list(reversed(ikx_bloon))
+
+    bloonang = []
+    phi2bloon = []
+    
+    for ilink in ikx_bloon:
+        for itheta in range(ntheta):
+            bloonang.append(theta[itheta]-theta0[iky,ilink])
+            phi2bloon.append(phi2_bytheta_tfinal[iky,ilink,itheta])
+
+    return bloonang, phi2bloon
