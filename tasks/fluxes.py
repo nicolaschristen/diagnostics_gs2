@@ -435,6 +435,8 @@ def plot_fluxes(ifile,run,mytime,mydict):
             ylims = [-0.2, 6.0]
             #label_ypos = [1.8,0.3,4.8] # for old algo
             label_ypos = [1.25,0.25,3.0] # for old algo
+        else:
+            ylims = None
         plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,ylims,label_ypos,avg_in_title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
@@ -716,7 +718,7 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_
     plt.xlabel('$t [L/v_{th,i}]$')
     plt.ylabel(ylabel)
     plt.xlim([mytime.time[0],mytime.time[-1]])
-    if ylims:
+    if ylims is not None:
         plt.ylim(ylims)
     plt.grid(True)
 

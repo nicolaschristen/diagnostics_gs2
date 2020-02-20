@@ -35,16 +35,16 @@ scan = {ONE:[],TWO:[]}
 
 # Import all parameters from paramfiles/myfile.py
 base_name = 'rpsi_0.6'  
-pf = __import__('scan_linrange_tprimi_ijp_950_rpsi_06')  
+pf = __import__('scan_linrange_coll_elec_ijp_950_rpsi_06')  
 
 # Number of dimensions in the scan
 # e.g. vs R/LTi -> ndim = ONE
 ndim = ONE
 
 # Define first dimension of the scan
-firstdim_label = '$a/L_{T_i}$' # for plotting
-firstdim_var = 'tprimi' # name of variable to append to figure names
-firstdim = pf.tprimi # variable name in paramfiles/myfile.py
+firstdim_label = '$\\nu_{ee}\ [v_{th}/a]$' # for plotting
+firstdim_var = 'vnewk' # name of variable to append to figure names
+firstdim = pf.vnewk # variable name in paramfiles/myfile.py
 
 # Apply limits to axis when plotting ?
 use_my_xlim = False

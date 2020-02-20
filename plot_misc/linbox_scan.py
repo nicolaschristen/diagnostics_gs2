@@ -40,8 +40,8 @@ scan = {ONE:[],TWO:[]}
 # vvv USER PARAMETERS vvv
 
 # Import all parameters from paramfiles/myfile.py
-base_name = 'rpsi_0.6'  
-pf = __import__('scan_ky_kxmax_fixed_dkx_ijp_950_rpsi_06')  
+base_name = 'rpsi_0.8'  
+pf = __import__('scan_ky_kxmax_fixed_dkx_ijp_950_rpsi_08')  
 
 # Number of dimensions in the scan
 # e.g. vs (ky, R/LTi) -> ndim = TWO
@@ -93,14 +93,32 @@ scan_with_single_ky = False
 use_my_xlim = False
 my_xlim = (0.0, 2.0)  
 
-use_my_ylim = False
+use_my_ylim = True
+# rpsi = 0.6
 my_ylim_max = (0.0, 0.35)
 my_ylim_avg = (-0.05, 0.15)
+# rpsi = 0.7
+#my_ylim_max = (0.0, 0.40)
+#my_ylim_avg = (-0.02, 0.09)
+# rpsi = 0.8
+#my_ylim_max = (0.0, 0.50)
+#my_ylim_avg = (-0.02, 0.08)
+# rpsi = 0.9
+#my_ylim_max = (0.0, 0.30)
+#my_ylim_avg = (-0.06, 0.00)
+#my_ylim_avg = my_ylim_max
 
 # Fix colorbar limits ?
 fix_cbarlim = True
-my_cbarmin = -0.015
-my_cbarmax = 0.105
+# rpsi = 0.6
+my_cbarmin = -0.20
+my_cbarmax = 0.2
+# rpsi = 0.7
+#my_cbarmin = -0.30
+#my_cbarmax = 0.3
+# rpsi = 0.8
+#my_cbarmin = -0.30
+#my_cbarmax = 0.3
 
 # Original code was written for kyas second dim of scan (not first).
 # To restore this, set invert_dims = True
@@ -114,6 +132,9 @@ invert_dims = False
 
 
 def main():
+
+    # Logical testing if instantaneous growthrate was computed
+    gamma_inst_pres = True
 
     if scan_with_single_ky:
         valdim = firstdim.size
@@ -130,15 +151,24 @@ def main():
     dmid_list_vs_v2_ky_tt0 = []
     itheta0_list_vs_v2_ky_tt0 = []
     theta0_vs_v2_ky_tt0 = []
+    theta0_star_for_inst_vs_v2_ky_tt0 = []
     firstdim_vs_v2_ky_tt0 = []
     gamma_avg_vs_v2_ky_tt0 = []
+    gamma_avg_fromSum_vs_v2_ky_tt0 = []
     gamma_max_vs_v2_ky_tt0 = []
+    gamma_max_fromSum_vs_v2_ky_tt0 = []
+    gamma_inst_vs_v2_ky_tt0 = []
+    gamma_inst_fromSum_vs_v2_ky_tt0 = []
     Qratio_avg_vs_v2_ky_tt0 = []
     scandim=ONE
     ival_firstdim = -1
     valtree = [0*i for i in range(nparams)]
     read_data(base_name, valtree, scandim, ival_firstdim, dmid_list_vs_v2_ky_tt0, itheta0_list_vs_v2_ky_tt0, theta0_vs_v2_ky_tt0, \
-            firstdim_vs_v2_ky_tt0, gamma_avg_vs_v2_ky_tt0, gamma_max_vs_v2_ky_tt0, Qratio_avg_vs_v2_ky_tt0, g_exb_vs_v2_ky_tt0)
+            firstdim_vs_v2_ky_tt0, gamma_avg_vs_v2_ky_tt0, gamma_avg_fromSum_vs_v2_ky_tt0, gamma_max_vs_v2_ky_tt0, \
+             gamma_max_fromSum_vs_v2_ky_tt0, Qratio_avg_vs_v2_ky_tt0, g_exb_vs_v2_ky_tt0, \
+            gamma_inst_vs_v2_ky_tt0, gamma_inst_fromSum_vs_v2_ky_tt0, theta0_star_for_inst_vs_v2_ky_tt0)
+    if not gamma_inst_vs_v2_ky_tt0[0]:
+        gamma_inst_pres = False
 
 
 
@@ -153,14 +183,22 @@ def main():
         theta0_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         firstdim_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         gamma_avg_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
+        gamma_avg_fromSum_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         gamma_max_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
+        gamma_max_fromSum_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         Qratio_avg_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         g_exb_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
+        if gamma_inst_pres:
+            gamma_inst_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
+            gamma_inst_fromSum_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
+            theta0_star_for_inst_vs_v2_ky_tt0_new = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
 
         # Arrays for data with only theta0 = 0
         firstdim_vs_v2_ky = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         gamma_avg_vs_v2_ky = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
+        gamma_avg_fromSum_vs_v2_ky = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         gamma_max_vs_v2_ky = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
+        gamma_max_fromSum_vs_v2_ky = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         Qratio_avg_vs_v2_ky = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
         g_exb_vs_v2_ky = [[0*i*j for i in range(firstdim.size)] for j in range(seconddim.size)]
 
@@ -174,9 +212,15 @@ def main():
                 theta0_vs_v2_ky_tt0_new[ival_scnd][ival_first] = theta0_vs_v2_ky_tt0[ival_first][ival_scnd]
                 firstdim_vs_v2_ky_tt0_new[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
                 gamma_avg_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
+                gamma_avg_fromSum_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_avg_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd]
                 gamma_max_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_max_vs_v2_ky_tt0[ival_first][ival_scnd]
+                gamma_max_fromSum_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_max_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd]
                 Qratio_avg_vs_v2_ky_tt0_new[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
                 g_exb_vs_v2_ky_tt0_new[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
+                if gamma_inst_pres:
+                    gamma_inst_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_inst_vs_v2_ky_tt0[ival_first][ival_scnd]
+                    gamma_inst_fromSum_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_inst_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd]
+                    theta0_star_for_inst_vs_v2_ky_tt0_new[ival_scnd][ival_first] = theta0_star_for_inst_vs_v2_ky_tt0[ival_first][ival_scnd]
 
                 # try to find the index of theta0 = 0
                 idmid = 0
@@ -189,7 +233,9 @@ def main():
                 # Rearrange keeping only theta0 = 0
                 firstdim_vs_v2_ky[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
                 gamma_avg_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
+                gamma_avg_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
                 gamma_max_vs_v2_ky[ival_scnd][ival_first] = gamma_max_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
+                gamma_max_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_max_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
                 Qratio_avg_vs_v2_ky[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
                 g_exb_vs_v2_ky[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
 
@@ -199,9 +245,15 @@ def main():
         theta0_vs_v2_ky_tt0 = theta0_vs_v2_ky_tt0_new
         firstdim_vs_v2_ky_tt0 = firstdim_vs_v2_ky_tt0_new
         gamma_avg_vs_v2_ky_tt0 = gamma_avg_vs_v2_ky_tt0_new
+        gamma_avg_fromSum_vs_v2_ky_tt0 = gamma_avg_fromSum_vs_v2_ky_tt0_new
         gamma_max_vs_v2_ky_tt0 = gamma_max_vs_v2_ky_tt0_new
+        gamma_max_fromSum_vs_v2_ky_tt0 = gamma_max_fromSum_vs_v2_ky_tt0_new
         Qratio_avg_vs_v2_ky_tt0 = Qratio_avg_vs_v2_ky_tt0_new
         g_exb_vs_v2_ky_tt0 = g_exb_vs_v2_ky_tt0_new
+        if gamma_inst_pres:
+            gamma_inst_vs_v2_ky_tt0 = gamma_inst_vs_v2_ky_tt0_new
+            gamma_inst_fromSum_vs_v2_ky_tt0 = gamma_inst_fromSum_vs_v2_ky_tt0_new
+            theta0_star_for_inst_vs_v2_ky_tt0 = theta0_star_for_inst_vs_v2_ky_tt0_new
 
         # Get rid of extra dimension if ndim=1
         if ndim == ONE:
@@ -215,12 +267,20 @@ def main():
             firstdim_vs_v2_ky_tt0 = firstdim_vs_v2_ky_tt0[0]
             firstdim_vs_v2_ky = firstdim_vs_v2_ky[0]
             gamma_avg_vs_v2_ky_tt0 = gamma_avg_vs_v2_ky_tt0[0]
+            gamma_avg_fromSum_vs_v2_ky_tt0 = gamma_avg_fromSum_vs_v2_ky_tt0[0]
             gamma_avg_vs_v2_ky = gamma_avg_vs_v2_ky[0]
+            gamma_avg_fromSum_vs_v2_ky = gamma_avg_fromSum_vs_v2_ky[0]
             gamma_max_vs_v2_ky_tt0 = gamma_max_vs_v2_ky_tt0[0]
+            gamma_max_fromSum_vs_v2_ky_tt0 = gamma_max_fromSum_vs_v2_ky_tt0[0]
             gamma_max_vs_v2_ky = gamma_max_vs_v2_ky[0]
+            gamma_max_fromSum_vs_v2_ky = gamma_max_fromSum_vs_v2_ky[0]
             Qratio_avg_vs_v2_ky_tt0 = Qratio_avg_vs_v2_ky_tt0[0]
             Qratio_avg_vs_v2_ky = Qratio_avg_vs_v2_ky[0]
             g_exb_vs_v2_ky = g_exb_vs_v2_ky[0]
+            if gamma_inst_pres:
+                gamma_inst_vs_v2_ky_tt0 = gamma_inst_vs_v2_ky_tt0[0]
+                gamma_inst_fromSum_vs_v2_ky_tt0 = gamma_inst_fromSum_vs_v2_ky_tt0[0]
+                theta0_star_for_inst_vs_v2_ky_tt0 = theta0_star_for_inst_vs_v2_ky_tt0[0]
 
     # Save data vs var2,ky with all theta0
     vardict = {}
@@ -229,9 +289,15 @@ def main():
     vardict['theta0_vs_v2_ky_tt0'] = theta0_vs_v2_ky_tt0
     vardict['firstdim_vs_v2_ky_tt0'] = firstdim_vs_v2_ky_tt0
     vardict['gamma_avg_vs_v2_ky_tt0'] = gamma_avg_vs_v2_ky_tt0
+    vardict['gamma_avg_fromSum_vs_v2_ky_tt0'] = gamma_avg_fromSum_vs_v2_ky_tt0
     vardict['gamma_max_vs_v2_ky_tt0'] = gamma_max_vs_v2_ky_tt0
+    vardict['gamma_max_fromSum_vs_v2_ky_tt0'] = gamma_max_fromSum_vs_v2_ky_tt0
     vardict['Qratio_avg_vs_v2_ky_tt0'] = Qratio_avg_vs_v2_ky_tt0
     vardict['g_exb_vs_v2_ky_tt0'] = g_exb_vs_v2_ky_tt0
+    if gamma_inst_pres:
+        vardict['theta0_star_for_inst_vs_v2_ky_tt0'] = theta0_star_for_inst_vs_v2_ky_tt0
+        vardict['gamma_inst_vs_v2_ky_tt0'] = gamma_inst_vs_v2_ky_tt0
+        vardict['gamma_inst_fromSum_vs_v2_ky_tt0'] = gamma_inst_fromSum_vs_v2_ky_tt0
     write_to_file(vardict)
 
     # Here we assume that all runs have the same g_exb
@@ -276,13 +342,46 @@ def main():
             plt.ylim(my_ylim_max)
         plt.savefig(pdfname)
 
+        # Same plots, obtained from sum(phi2) instead of max(phi2)
+
+        pdfname = 'postproc/linbox_gamma_avg_fromSum_scan_'+firstdim_var+'.pdf'
+        plt.figure()
+        my_legend = []
+        plt.grid(True)
+        plt.xlabel(firstdim_label)
+        if g_exb == 0.0:
+            plt.ylabel('$\\gamma [v_{th}/a]$')
+        else:
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
+        plt.plot(firstdim_vs_v2_ky, gamma_avg_fromSum_vs_v2_ky, linewidth=2.0, color='k')
+        if use_my_ylim:
+            plt.ylim(my_ylim_avg)
+        plt.savefig(pdfname)
+
+        pdfname = 'postproc/linbox_gamma_max_fromSum_scan_'+firstdim_var+'.pdf'
+        plt.figure()
+        my_legend = []
+        plt.grid(True)
+        plt.xlabel(firstdim_label)
+        if g_exb == 0.0:
+            plt.ylabel('$\\gamma [v_{th}/a]$')
+        else:
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
+        plt.plot(firstdim_vs_v2_ky, gamma_max_fromSum_vs_v2_ky, linewidth=2.0, color='k')
+        if use_my_ylim:
+            plt.ylim(my_ylim_max)
+        plt.savefig(pdfname)
+
     elif ndim == TWO:
 
         color_vs_v2_ky = plt.cm.gnuplot_r(np.linspace(0.05,0.9,seconddim.size))
         if scan_with_single_ky:
             color_vs_v2_ky = ['blue']
 
-        pdfname = 'postproc/linbox_gamma_avg_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        if g_exb == 0.0:
+            pdfname = 'postproc/linbox_gamma_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        else:
+            pdfname = 'postproc/linbox_gamma_avg_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
         plt.figure()
         my_legend = []
         plt.grid(True)
@@ -309,7 +408,12 @@ def main():
         frame.set_alpha(1)
         plt.savefig(pdfname)
 
-        pdfname = 'postproc/linbox_gamma_max_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        # Same plot obtained with sum(phi2) instead of max(phi2)
+
+        if g_exb == 0.0:
+            pdfname = 'postproc/linbox_gamma_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        else:
+            pdfname = 'postproc/linbox_gamma_avg_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
         plt.figure()
         my_legend = []
         plt.grid(True)
@@ -317,24 +421,76 @@ def main():
         if g_exb == 0.0:
             plt.ylabel('$\\gamma [v_{th}/a]$')
         else:
-            plt.ylabel('$\\gamma_{max}\ [v_{th}/a]$')
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
         for ival in range(valdim):
             if scan_with_single_ky:
-                plt.plot(seconddim, gamma_max_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
+                plt.plot(seconddim, gamma_avg_fromSum_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
             else:
-                plt.plot(firstdim_vs_v2_ky[ival], gamma_max_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
+                plt.plot(firstdim_vs_v2_ky[ival], gamma_avg_fromSum_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
             my_legend.append(seconddim_label + '$=' + str(seconddim[ival]) + '$')
         if use_my_ylim:
-            plt.ylim(my_ylim_max)
+            plt.ylim(my_ylim_avg)
         if use_my_xlim:
             plt.xlim(my_xlim)
-        legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=8)
+        legend = plt.legend(my_legend, frameon = True, fancybox = False)
         frame = legend.get_frame()
         frame.set_facecolor('white')
         frame.set_edgecolor('black')
         frame.set_linewidth(0.5)
         frame.set_alpha(1)
         plt.savefig(pdfname)
+
+        if g_exb != 0.0:
+
+            pdfname = 'postproc/linbox_gamma_max_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+            plt.figure()
+            my_legend = []
+            plt.grid(True)
+            plt.xlabel(firstdim_label)
+            plt.ylabel('$\\gamma_{max}\ [v_{th}/a]$')
+            for ival in range(valdim):
+                if scan_with_single_ky:
+                    plt.plot(seconddim, gamma_max_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
+                else:
+                    plt.plot(firstdim_vs_v2_ky[ival], gamma_max_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
+                my_legend.append(seconddim_label + '$=' + str(seconddim[ival]) + '$')
+            if use_my_ylim:
+                plt.ylim(my_ylim_max)
+            if use_my_xlim:
+                plt.xlim(my_xlim)
+            legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=8)
+            frame = legend.get_frame()
+            frame.set_facecolor('white')
+            frame.set_edgecolor('black')
+            frame.set_linewidth(0.5)
+            frame.set_alpha(1)
+            plt.savefig(pdfname)
+
+            # Same plot obtained with sum(phi2) instead of max(phi2)
+
+            pdfname = 'postproc/linbox_gamma_max_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+            plt.figure()
+            my_legend = []
+            plt.grid(True)
+            plt.xlabel(firstdim_label)
+            plt.ylabel('$\\gamma_{max}\ [v_{th}/a]$')
+            for ival in range(valdim):
+                if scan_with_single_ky:
+                    plt.plot(seconddim, gamma_max_fromSum_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
+                else:
+                    plt.plot(firstdim_vs_v2_ky[ival], gamma_max_fromSum_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
+                my_legend.append(seconddim_label + '$=' + str(seconddim[ival]) + '$')
+            if use_my_ylim:
+                plt.ylim(my_ylim_max)
+            if use_my_xlim:
+                plt.xlim(my_xlim)
+            legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=8)
+            frame = legend.get_frame()
+            frame.set_facecolor('white')
+            frame.set_edgecolor('black')
+            frame.set_linewidth(0.5)
+            frame.set_alpha(1)
+            plt.savefig(pdfname)
 
         try:
             pdfname = 'postproc/linbox_qe_vs_qi_scan_'+seconddim_var+'.pdf'
@@ -348,14 +504,16 @@ def main():
         except:
             print('Fluxes cannot be found in the output.')
 
-    # When g_exb = 0, plot gamma vs (theta0, ky),
+    # Plot gamma vs (theta0, ky),
     # for every value of the second dimension in the scan.
     
-    if firstdim_var == 'ky' and g_exb == 0.0:
+    if firstdim_var == 'ky' and not (g_exb != 0.0 and not gamma_inst_pres):
 
         # Preparing to stitch multiple pdfs together
         tmp_pdf_id = 1
         pdflist = []
+        tmp_pdf_id_fromSum = 1
+        pdflist_fromSum = []
 
         # Here we assume that the scan uses a fixed set of ky.
         ky = np.array(firstdim_vs_v2_ky_tt0[0])
@@ -365,32 +523,85 @@ def main():
 
             gamma_min = 1e20
             gamma_max = -1e20
+            gamma_min_fromSum = 1e20
+            gamma_max_fromSum = -1e20
 
             theta0 = []
             gamma = []
+            theta0_fromSum = []
+            gamma_fromSum = []
 
             for iky in range(naky):
 
-                theta0.append([])
-                gamma.append([])
+                if g_exb == 0.0:
 
-                ntheta0 = len(itheta0_list_vs_v2_ky_tt0[ival][iky])
+                    theta0.append([])
+                    gamma.append([])
+                    theta0_fromSum.append([])
+                    gamma_fromSum.append([])
 
-                for iitheta0 in range(ntheta0):
+                    ntheta0 = len(itheta0_list_vs_v2_ky_tt0[ival][iky])
 
-                    this_theta0 = theta0_vs_v2_ky_tt0[ival][iky][itheta0_list_vs_v2_ky_tt0[ival][iky][iitheta0]]
-                    this_gamma = gamma_avg_vs_v2_ky_tt0[ival][iky][iitheta0]
+                    for iitheta0 in range(ntheta0):
 
-                    theta0[iky].append(this_theta0)
-                    gamma[iky].append(this_gamma)
+                        this_theta0 = theta0_vs_v2_ky_tt0[ival][iky][itheta0_list_vs_v2_ky_tt0[ival][iky][iitheta0]]
+                        this_gamma = gamma_avg_vs_v2_ky_tt0[ival][iky][iitheta0]
+
+                        theta0[iky].append(this_theta0)
+                        gamma[iky].append(this_gamma)
+
+                        # Update min and max gamma
+                        if this_gamma < gamma_min:
+                            gamma_min = this_gamma
+                        if this_gamma > gamma_max:
+                            gamma_max = this_gamma
+
+
+                        # Do the same, based on sum(phi2) instead of max(phi2)
+
+                        this_gamma = gamma_avg_fromSum_vs_v2_ky_tt0[ival][iky][iitheta0]
+
+                        theta0[iky].append(this_theta0)
+                        gamma_fromSum[iky].append(this_gamma)
+
+                        # Update min and max gamma
+                        if this_gamma < gamma_min_fromSum:
+                            gamma_min_fromSum = this_gamma
+                        if this_gamma > gamma_max_fromSum:
+                            gamma_max_fromSum = this_gamma
+
+                else:
+
+                    theta0.append(theta0_star_for_inst_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
+                    gamma.append(gamma_inst_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
 
                     # Update min and max gamma
-                    if this_gamma < gamma_min:
-                        gamma_min = this_gamma
-                    if this_gamma > gamma_max:
-                        gamma_max = this_gamma
+                    for idx in range(len(gamma[-1])):
 
-            xlabel = '$\\theta_0$'
+                        this_gamma = gamma[-1][idx]
+                        if this_gamma < gamma_min:
+                            gamma_min = this_gamma
+                        if this_gamma > gamma_max:
+                            gamma_max = this_gamma
+                    
+
+                    # Do the same, based on sum(phi2) instead of max(phi2)
+
+                    gamma_fromSum.append(gamma_inst_fromSum_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
+
+                    # Update min and max gamma
+                    for idx in range(len(gamma_fromSum[-1])):
+
+                        this_gamma = gamma_fromSum[-1][idx]
+                        if this_gamma < gamma_min_fromSum:
+                            gamma_min_fromSum = this_gamma
+                        if this_gamma > gamma_max_fromSum:
+                            gamma_max_fromSum = this_gamma
+
+            if g_exb == 0.0:
+                xlabel = '$\\theta_0$'
+            else:
+                xlabel = '$\\theta_0^*$'
             ylabel = '$k_y$'
             title = '$\\gamma\ [v_{th}/a]$' + ', ' + seconddim_label + '$= {:.2f}$'.format(seconddim[ival])
             if fix_cbarlim:
@@ -399,17 +610,34 @@ def main():
             else:
                 cbarmin = gamma_min
                 cbarmax = gamma_max
+            # NUmber of points in refined x-grid
+            ngrid_fine = 1001
             gplot.plot_2d_uneven_xgrid(theta0, ky, gamma, -pi, pi, \
-                    cbarmin, cbarmax, xlabel, ylabel, title, 1001)
+                    cbarmin, cbarmax, xlabel, ylabel, title, ngrid_fine)
 
             tmp_pdfname = 'tmp'+str(tmp_pdf_id)
             plt.savefig('postproc/'+tmp_pdfname+'.pdf')
             pdflist.append(tmp_pdfname)
             tmp_pdf_id = tmp_pdf_id+1
+        
+
+            # Same plot obtained with sum(phi2) instead of max(phi2)
+
+            gplot.plot_2d_uneven_xgrid(theta0, ky, gamma_fromSum, -pi, pi, \
+                    cbarmin, cbarmax, xlabel, ylabel, title, ngrid_fine)
+
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id_fromSum)+'_fromSum'
+            plt.savefig('postproc/'+tmp_pdfname+'.pdf')
+            pdflist_fromSum.append(tmp_pdfname)
+            tmp_pdf_id_fromSum = tmp_pdf_id_fromSum+1
 
         # Stitch the pdfs together
+
         merged_pdfname = 'linbox_gam_vs_theta0_ky'
         merge_pdfs(pdflist, merged_pdfname, 'postproc/')
+
+        merged_pdfname = 'linbox_gam_fromSum_vs_theta0_ky'
+        merge_pdfs(pdflist_fromSum, merged_pdfname, 'postproc/')
 
 
 
@@ -452,7 +680,9 @@ def increment_dim(scandim):
 
 
 def read_data(fname, valtree, scandim, ival_firstdim, dmid_list_vs_v2_ky, itheta0_list_vs_v2_ky, theta0_vs_v2_ky, \
-        firstdim_vs_v2_ky, gamma_avg_vs_v2_ky, gamma_max_vs_v2_ky, Qratio_avg_vs_v2_ky, g_exb_vs_v2_ky):
+        firstdim_vs_v2_ky, gamma_avg_vs_v2_ky, gamma_avg_fromSum_vs_v2_ky, gamma_max_vs_v2_ky, gamma_max_fromSum_vs_v2_ky, \
+        Qratio_avg_vs_v2_ky, g_exb_vs_v2_ky, \
+        gamma_inst_vs_v2_ky, gamma_inst_fromSum_vs_v2_ky, theta0_star_for_inst_vs_v2_ky):
 
     # Iterate over every set of values taken by parameters in this dimension of the scan.
     for ival in range(scan[scandim][0].dim):
@@ -467,9 +697,14 @@ def read_data(fname, valtree, scandim, ival_firstdim, dmid_list_vs_v2_ky, itheta
             dmid_list_vs_v2_ky.append([])
             itheta0_list_vs_v2_ky.append([])
             theta0_vs_v2_ky.append([])
+            theta0_star_for_inst_vs_v2_ky.append([])
             firstdim_vs_v2_ky.append([])
             gamma_avg_vs_v2_ky.append([])
+            gamma_avg_fromSum_vs_v2_ky.append([])
             gamma_max_vs_v2_ky.append([])
+            gamma_max_fromSum_vs_v2_ky.append([])
+            gamma_inst_vs_v2_ky.append([])
+            gamma_inst_fromSum_vs_v2_ky.append([])
             Qratio_avg_vs_v2_ky.append([])
 
         # For every parameter in this dimension of the scan, modify the files.
@@ -495,13 +730,23 @@ def read_data(fname, valtree, scandim, ival_firstdim, dmid_list_vs_v2_ky, itheta
             theta0_vs_v2_ky[ival_firstdim].append(my_vars['theta0'])
             firstdim_vs_v2_ky[ival_firstdim].append(my_vars[firstdim_var])
             gamma_avg_vs_v2_ky[ival_firstdim].append(my_vars['gamma_avg'])
+            gamma_avg_fromSum_vs_v2_ky[ival_firstdim].append(my_vars['gamma_avg_fromSum'])
             gamma_max_vs_v2_ky[ival_firstdim].append(my_vars['gamma_max'])
+            gamma_max_fromSum_vs_v2_ky[ival_firstdim].append(my_vars['gamma_max_fromSum'])
             Qratio_avg_vs_v2_ky[ival_firstdim].append(my_vars['Qratio_avg'])
+            try:
+                gamma_inst_vs_v2_ky[ival_firstdim].append(my_vars['gamma_inst'])
+                gamma_inst_fromSum_vs_v2_ky[ival_firstdim].append(my_vars['gamma_inst_fromSum'])
+                theta0_star_for_inst_vs_v2_ky[ival_firstdim].append(my_vars['theta0_star_for_inst'])
+            except:
+                pass
         # Or move on to the next dimension of the scan by calling function recursively
         else:
             next_scandim = increment_dim(scandim)
             read_data(my_fname, valtree, next_scandim, ival_firstdim, dmid_list_vs_v2_ky, itheta0_list_vs_v2_ky, theta0_vs_v2_ky, \
-                    firstdim_vs_v2_ky, gamma_avg_vs_v2_ky, gamma_max_vs_v2_ky, Qratio_avg_vs_v2_ky, g_exb_vs_v2_ky)
+                    firstdim_vs_v2_ky, gamma_avg_vs_v2_ky, gamma_avg_fromSum_vs_v2_ky, gamma_max_vs_v2_ky, gamma_max_fromSum_vs_v2_ky, \
+                    Qratio_avg_vs_v2_ky, g_exb_vs_v2_ky, \
+                    gamma_inst_vs_v2_ky, gamma_inst_fromSum_vs_v2_ky, theta0_star_for_inst_vs_v2_ky)
 
 
 

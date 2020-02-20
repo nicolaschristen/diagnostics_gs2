@@ -157,6 +157,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     itheta0_list = [dmid + ikx0 for dmid in dmid_list]
     theta0 = kx_bar/(shat*ky)
     theta0_star = np.zeros((nt,nakx))
+    theta0_star[0,:] = theta0
     for it in range(1,nt):
         for ikx in range(nakx):
             theta0_star[it,ikx] = (kx_bar[ikx]-g_exb*ky*delt*(nwrite*it-0.5))/(shat*ky)
@@ -170,6 +171,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     phi2bloon_discont = []
     phi2bloon_jump = []
     max_phi2bloon = []
+    sum_phi2bloon = []
     omegabloon = []
     gamma = []
     kx_star_for_gamma = []
@@ -185,6 +187,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         phi2bloon_discont_chain = []
         phi2bloon_jump_chain = []
         max_phi2bloon_chain = []
+        sum_phi2bloon_chain = []
         gamma_chain = []
         omegabloon_chain = []
 
@@ -300,6 +303,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
             phi2bloon_jump_chain.append(phi2bloon_jump_now)
             omegabloon_chain.append(omegabloon_now)
             max_phi2bloon_chain.append(max(phi2bloon_now))
+            sum_phi2bloon_chain.append(sum(phi2bloon_now))
 
         # Add this chain to the full collection
         ikx_members.append(ikx_members_chain)
@@ -310,6 +314,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         phi2bloon_discont.append(phi2bloon_discont_chain)
         phi2bloon_jump.append(phi2bloon_jump_chain)
         max_phi2bloon.append(max_phi2bloon_chain)
+        sum_phi2bloon.append(sum_phi2bloon_chain)
         omegabloon.append(omegabloon_chain)
 
     # Start comparing simulations at time-step it_start
@@ -323,50 +328,123 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
 
     t_collec = []
     max_phi2_collec = []
+    sum_phi2_collec = []
     
     # Compute <gamma>_t
     gamma_avg = np.zeros(len(dmid_list))
     offset_avg = np.zeros(len(dmid_list))
+    gamma_avg_fromSum = np.zeros(len(dmid_list))
+    offset_avg_fromSum = np.zeros(len(dmid_list))
+
     for idmid in range(len(dmid_list)):
+
+        # Selected time window
+        t_tmp = np.zeros(nt-it_start)
+        for it in range(t_tmp.size):
+            t_tmp[it] = t[it_start+it]
+        t_collec.append(t_tmp)
+
+        # Gamma from max(phi2)
         max_phi2_tmp = np.zeros(len(max_phi2bloon[idmid])-it_start)
         for it in range(max_phi2_tmp.size):
             max_phi2_tmp[it] = max_phi2bloon[idmid][it_start+it]
         if it_start > 0:
             max_phi2_tmp = max_phi2_tmp/max_phi2_tmp[0]
         max_phi2_collec.append(max_phi2_tmp)
-        
-        t_tmp = np.zeros(nt-it_start)
-        for it in range(t_tmp.size):
-            t_tmp[it] = t[it_start+it]
-        t_collec.append(t_tmp)
 
         [gam,offset] = leastsq_lin(t_tmp,np.log(max_phi2_tmp))
         gamma_avg[idmid] = gam/2. # divide by 2 because fitted square
         offset_avg[idmid] = offset
+
+        # Gamma from sum(phi2)
+        sum_phi2_tmp = np.zeros(len(sum_phi2bloon[idmid])-it_start)
+        for it in range(sum_phi2_tmp.size):
+            sum_phi2_tmp[it] = sum_phi2bloon[idmid][it_start+it]
+        if it_start > 0:
+            sum_phi2_tmp = sum_phi2_tmp/sum_phi2_tmp[0]
+        sum_phi2_collec.append(sum_phi2_tmp)
+
+        [gam,offset] = leastsq_lin(t_tmp,np.log(sum_phi2_tmp))
+        gamma_avg_fromSum[idmid] = gam/2. # divide by 2 because fitted square
+        offset_avg_fromSum[idmid] = offset
+
     # At this point:
     # fit_avg(t) ~ phi2(tstart) * exp[2*gam*t + offset]
 
-    # Compute gamma_max from ln(phi2_max)
+
+
+    # Compute instantaneous and maximum growthrates from ln(phi2_max)
+    # For each chain and at every time, gamma_inst will
+    # have a corresponding theta0* stored in theta0_star_for_inst
+
+    # If gexb = 0, growthrate is cst in time
+    # so the following variables are unused and should not be considered
+
     if g_exb != 0.0:
         it_gamma_max = np.zeros(len(dmid_list))
+        it_gamma_max_fromSum = np.zeros(len(dmid_list))
         gamma_max = np.zeros(len(dmid_list))
+        gamma_max_fromSum = np.zeros(len(dmid_list))
+        gamma_inst = []
+        gamma_inst_fromSum = []
+        theta0_star_for_inst = []
         for idmid in range(len(dmid_list)):
             # Start looking for derivatives one Floquet period before last time-step
-            it_start_last_floq = max(int(len(max_phi2bloon[idmid]) - Tf//(delt*nwrite) - 1),0)
-            it_end_last_floq = int(len(max_phi2bloon[idmid]) - 1)
-            for it in range(it_start_last_floq, it_end_last_floq):
+            it_start_last_floq = max(int(nt-1-Tf//(delt*nwrite)),0)
+            it_end_last_floq = nt-1
+            it_lastFloq = [it for it in range(it_start_last_floq, it_end_last_floq)]
+            gamma_inst_by_dmid = []
+            gamma_inst_fromSum_by_dmid = []
+            theta0_star_for_inst_by_dmid = []
+            for it in it_lastFloq:
                 # Factor of 0.5 because we fit phi^2
                 gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
                         ( np.log(max_phi2bloon[idmid][it+1]) - np.log(max_phi2bloon[idmid][it-1]) )
+                gamma_max_fromSum_tmp = 0.5 * 1./(2*delt*nwrite) * \
+                        ( np.log(sum_phi2bloon[idmid][it+1]) - np.log(sum_phi2bloon[idmid][it-1]) )
+                # Fill instantaneous growthrate and corresponding theta0_star
+                gamma_inst_by_dmid.append(gamma_max_tmp)
+                gamma_inst_fromSum_by_dmid.append(gamma_max_fromSum_tmp)
+                # Update maximum growthrate if needed
+                # First from max(phi2)
                 if (gamma_max_tmp > gamma_max[idmid]):
                     it_gamma_max[idmid] = it
                     gamma_max[idmid] = gamma_max_tmp
+                # Then from sum(phi2)
+                if (gamma_max_fromSum_tmp > gamma_max_fromSum[idmid]):
+                    it_gamma_max_fromSum[idmid] = it
+                    gamma_max_fromSum[idmid] = gamma_max_fromSum_tmp
+                # Determine current theta0_star associated with this chain
+                tt0_tmp = theta0_star[it,itheta0_list[idmid]]
+                # Shift it to [-pi,+pi]
+                n = int(round(tt0_tmp/(2.0*pi)))
+                tt0_tmp -= 2*pi*n
+                theta0_star_for_inst_by_dmid.append(tt0_tmp)
+            # Get theta0_star in ascending order
+            idx_sort = np.argsort(theta0_star_for_inst_by_dmid)
+            theta0_star_for_inst_by_dmid = [theta0_star_for_inst_by_dmid[idx] for idx in idx_sort]
+            # Sort gamma_inst accordingly
+            gamma_inst_by_dmid = [gamma_inst_by_dmid[idx] for idx in idx_sort]
+            gamma_inst_fromSum_by_dmid = [gamma_inst_fromSum_by_dmid[idx] for idx in idx_sort]
+            # Append theta0_star and gamma_inst to full lists
+            theta0_star_for_inst.append(theta0_star_for_inst_by_dmid)
+            gamma_inst.append(gamma_inst_by_dmid)
+            gamma_inst_fromSum.append(gamma_inst_fromSum_by_dmid)
+
         it_gamma_max = it_gamma_max.astype(int)
+        it_gamma_max_fromSum = it_gamma_max_fromSum.astype(int)
         # At this point:
         # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
     else:
-        # If gexb = 0, max and avg growthrates are identical.
+        gamma_inst = []
+        gamma_inst_fromSum = []
+        theta0_star_for_inst = []
+        for idmid in range(len(dmid_list)):
+            gamma_inst.append([])
+            gamma_inst_fromSum.append([])
+            theta0_star_for_inst.append([])
         gamma_max = gamma_avg
+        gamma_max_fromSum = gamma_avg_fromSum
 
     
     # Save quantities to file for scan plots
@@ -381,12 +459,20 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         vardict['g_exb'] = g_exb
         vardict['Qratio_avg'] = Qratio_avg
         vardict['gamma_max'] = gamma_max
+        vardict['gamma_max_fromSum'] = gamma_max_fromSum
         vardict['gamma_avg'] = gamma_avg
+        vardict['gamma_avg_fromSum'] = gamma_avg_fromSum
+        vardict['gamma_inst'] = gamma_inst
+        vardict['gamma_inst_fromSum'] = gamma_inst_fromSum
         vardict['dmid_list'] = dmid_list
         vardict['itheta0_list'] = itheta0_list
         vardict['theta0'] = theta0
+        vardict['theta0_star_for_inst'] = theta0_star_for_inst
 
         pickle.dump(vardict, outfile)
+
+
+
 
 
     
@@ -427,6 +513,44 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
             tmp_pdf_id = tmp_pdf_id+1
 
         merged_pdfname = 'maxphi_vs_t'
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+        plt.clf()
+        plt.cla()
+
+
+
+        # Plot sum(phi2) in chain vs time, one dmid per plot
+
+        plt.figure(figsize=(12,8))
+
+        tmp_pdf_id = 1
+        pdflist = []
+        for idmid in range(len(dmid_list)):
+            my_legend = []
+            plt.semilogy(t[0:nt], sum_phi2bloon[idmid], color=gplot.myblue, linewidth=3.0)
+            plt.title('$k_y=$'+gplot.str_ky(ky) + ', $\\theta_0=$'+gplot.str_tt0(theta0[itheta0_list[idmid]]))
+            my_legend.append('$\\sum_{K_x}\\vert \\langle\\varphi\\rangle_\\theta \\vert ^2$')
+            # Add fits for average and maximum growthrates
+            plt.semilogy(t[0:nt], sum_phi2bloon[idmid][it_start]*np.exp(2.0*gamma_avg_fromSum[idmid]*t[0:nt]+offset_avg_fromSum[idmid]),\
+                    color=gplot.myblue, linewidth=3.0, linestyle='--')
+            if g_exb != 0.0:
+                my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(gamma_avg_fromSum[idmid]))
+                bot, top = plt.ylim()
+                plt.semilogy(t[0:nt],sum_phi2bloon[idmid][it_gamma_max_fromSum[idmid]]*np.exp(2.0*gamma_max_fromSum[idmid]*(t[0:nt]-t[it_gamma_max_fromSum[idmid]])),\
+                        color=gplot.myblue, linewidth=3.0, linestyle=':')
+                my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max_fromSum[idmid]))
+                plt.ylim(bot,top)
+            else:
+                my_legend.append('$\\gamma = {:.3f}$'.format(gamma_avg_fromSum[idmid]))
+            plt.xlabel('$t$')
+            plt.grid(True)
+            gplot.legend_matlab(my_legend)
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+
+        merged_pdfname = 'sumphi_vs_t'
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
         plt.clf()
         plt.cla()
