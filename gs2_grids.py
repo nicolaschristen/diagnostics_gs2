@@ -4,12 +4,15 @@ from math import pi
 
 class gridobj:
 
-    def __init__(self, myout):
+    def __init__(self, myout, myin):
 
         print()
         print('constructing grids ... ', end='')
 
+        self.jtwist = myin['kt_grids_box_parameters']['jtwist']
+
         self.kx_gs2 = np.copy(myout['kx'])
+        self.theta0_gs2 = np.copy(myout['theta0'])
         self.ky = np.copy(myout['ky'])
 
         # number of kx and ky grid points
@@ -22,6 +25,7 @@ class gridobj:
 
         # get the monotonically increasing kx grid
         self.kx = np.concatenate((self.kx_gs2[self.nxmid:],self.kx_gs2[:self.nxmid]))
+        self.theta0 = np.concatenate((self.theta0_gs2[:,self.nxmid:],self.theta0_gs2[:,:self.nxmid]),axis=1)
 
         self.kperp = np.arange(self.ny*self.nx,dtype=float).reshape(self.ny,self.nx)
         for i in range(self.nx):

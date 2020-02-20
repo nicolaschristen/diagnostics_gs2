@@ -45,7 +45,7 @@ for ifile in range(len(run.fnames)):
         myout = gdata.get_output(ifile, run)
 
         # Extract grids from output
-        mygrids = ggrids.gridobj(myout)
+        mygrids = ggrids.gridobj(myout, myin)
         # Extract time from output
         mytime = gtime.timeobj(myout, run.twin)
         # Extract fields from output
