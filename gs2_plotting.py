@@ -97,7 +97,7 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
 def set_plot_defaults():
 
     # setup some plot defaults
-    plt.rc('text', usetex=False)
+    plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
     plt.rc('font', size=30)
     rcParams.update({'figure.autolayout': True})

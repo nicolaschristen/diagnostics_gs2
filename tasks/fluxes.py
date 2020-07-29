@@ -39,7 +39,7 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
         theta0 = mygrids.theta0
         kx = mygrids.kx
         ky = mygrids.ky
-        jtwist = mygrids.jtwist
+        jtwist = myin['kt_grids_box_parameters']['jtwist']
 
         time = mytime.time
         time_steady = mytime.time_steady
