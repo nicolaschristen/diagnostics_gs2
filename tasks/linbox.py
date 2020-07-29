@@ -90,7 +90,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         Tf = np.nan
     # Number of t-steps in Floquet period
     if g_exb != 0.0:
-        Nf = int(round(Tf/delt))
+        Nf = int(round(Tf/(delt*nwrite)))
     else:
         Nf = np.nan
 
