@@ -335,6 +335,7 @@ def stitching_fluxes(run):
             'phi_bytheta_tfinal':phi_bytheta_tfinal,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
             'pflx_kxky_tavg':stitch_pflx_kxky_tavg,'qflx_kxky_tavg':stitch_qflx_kxky_tavg,
             'vflx_kxky_tavg':stitch_vflx_kxky_tavg,'phi2_kxky_tavg':stitch_phi2_kxky_tavg,
+            'phi2_kxky':stitch_phi2_kxky,
             'pflx_tavg':stitch_pflx_tavg,'qflx_tavg':stitch_qflx_tavg,
             'vflx_tavg':stitch_vflx_tavg}
     datfile_name = run.out_dir + run.scan_name + '.fluxes.dat'
@@ -402,6 +403,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     phi_bytheta_tfinal = mydict['phi_bytheta_tfinal']
     phi2_avg = mydict['phi2_avg']
     phi2_by_ky = mydict['phi2_by_ky']
+    phi2_kxky = mydict['phi2_kxky']
     phi2_kxky_tavg = mydict['phi2_kxky_tavg']
     
     print()
@@ -480,20 +482,77 @@ def plot_fluxes(ifile,run,mytime,mydict):
     #    tmp_pdf_id = tmp_pdf_id+1
     print("-- plotting momentum/heat flux ratio")
     if pioq is not None:
-        title = '$\Pi_{GS2}/Q_{GS2}$'
-        for idx in range(nspec):
-            plt.plot(mytime.time_steady,pioq[it_min:it_max,idx],label=spec_names[idx])
-        plt.title(title)
+        title = '$\Pi/Q$'
+        #for idx in range(nspec):
+        #    plt.plot(mytime.time_steady,pioq[it_min:it_max,idx],label=spec_names[idx])
+        #plt.title(title)
+        #plt.xlabel('$t\ [r_r/v_{thr}]$')
+        #plt.legend()
+        #plt.grid(True)
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,pioq,title,ylims,label_ypos,avg_in_title,only_steady=True)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+
+    print("-- plotting field by ky")
+
+    if phi2_kxky is not None:
+
+        # Plot zonal velocity squared
+
+        title = '$\sum_{k_x} k_x^2\\langle|\\hat{\\varphi}_{k_x,0}|^2\\rangle_{\\theta}$'
+        zvelsq = np.zeros(mytime.ntime)
+        for ikx in range(nx):
+            zvelsq += kx[ikx]**2 * phi2_kxky[:,0,ikx]
+        if islin:
+            title = '$\\ln$' + title
+            zvelsq = np.log(zvelsq)
+        plt.semilogy(time, zvelsq, color=gplot.mybluestd)
         plt.xlabel('$t (a/v_t)$')
-        plt.legend()
+        plt.title(title)
+        # indicating area of saturation
+        plt.xlim((time[0], time[-1]))
+        plt.axvline(x=time_steady[0], color='grey', linestyle='-')
+        ax = plt.gca()
+        ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
         plt.grid(True)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
-    print("-- plotting phi2 by ky")
+
+
+        # Plot zonal shear squared
+
+        title = '$\sum_{k_x} k_x^4\\langle|\\hat{\\varphi}_{k_x,0}|^2\\rangle_{\\theta}$'
+        zshearsq = np.zeros(mytime.ntime)
+        for ikx in range(nx):
+            zshearsq += kx[ikx]**4 * phi2_kxky[:,0,ikx]
+        if islin:
+            title = '$\\ln$' + title
+            zshearsq = np.log(zshearsq)
+        plt.semilogy(time, zshearsq, color=gplot.mybluestd)
+        plt.xlabel('$t (a/v_t)$')
+        plt.title(title)
+        # indicating area of saturation
+        plt.xlim((time[0], time[-1]))
+        plt.axvline(x=time_steady[0], color='grey', linestyle='-')
+        ax = plt.gca()
+        ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
+        plt.grid(True)
+        write_fluxes_vs_t = True
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+
     if phi2_by_ky is not None:
+
         title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$'
         # Create list of colors
         cmap = plt.get_cmap('nipy_spectral')
@@ -509,7 +568,10 @@ def plot_fluxes(ifile,run,mytime,mydict):
                 plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
         plt.xlabel('$t (a/v_t)$')
         plt.title(title)
-        plt.legend(prop={'size': 11}, ncol=6)
+        leg = plt.legend(prop={'size': 10}, ncol=3,frameon=True,fancybox=False,framealpha=1.0)
+        leg.get_frame().set_facecolor('w')
+        leg.get_frame().set_edgecolor('k')
+        leg.get_frame().set_linewidth(1.0)
         # indicating area of saturation
         plt.xlim((time[0], time[-1]))
         plt.axvline(x=time_steady[0], color='grey', linestyle='-')
@@ -521,65 +583,91 @@ def plot_fluxes(ifile,run,mytime,mydict):
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
 
-        if naky>4:
-            
-            tmp_pdf_id = tmp_pdf_id+1
-            title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$ for low $k_y$'
-            #plt.figure(figsize=(8,8)) # NDCDEL
-            if islin:
-                title = '$\\ln$' + title
-                plt.semilogy(time, np.log(phi2_by_ky[:,0]),label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed',color='black')
-                for iky in range(1,5) :
-                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
-            else:
-                plt.plot(time[:], phi2_by_ky[:,0],label='ky = '+'{:5.3f}'.format(ky[0]),linestyle='dashed',color='black')
-                #for iky in range(1,4) :# NDCDEL
-                for iky in range(1,5) :
-                    plt.semilogy(time[:], phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
-            #plt.xlabel('$t$') # NDCDEL
-            plt.xlabel('$t (a/v_t)$')
-            #plt.ylabel('$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$') # NDCDEL
-            plt.title(title)
-            plt.legend()
-            # indicating area of saturation
-            plt.xlim((time[0], time[-1]))
-            plt.axvline(x=time_steady[0], color='grey', linestyle='-')
-            ax = plt.gca()
-            ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
-            plt.grid(True)
-            # NDCDEL
-            #axes = plt.gca()
-            #axes.set_xlim([0,500])
-            #plt.savefig('terrific.pdf')
-            # endNDCDEL
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
 
-            title = '$\\langle|\phi^{2}|\\rangle_{\\theta,k_x}$ for high $k_y$'
-            if islin:
-                title = '$\\ln$' + title
-                for iky in range(naky-5,naky) :
-                    plt.semilogy(time, np.log(phi2_by_ky[:,iky]),label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
-            else:
-                for iky in range(naky-5,naky) :
-                    plt.semilogy(time, phi2_by_ky[:,iky],label='ky = '+'{:5.3f}'.format(ky[iky]),color=my_colors[iky-1])
-            plt.xlabel('$t (a/v_t)$')
-            plt.title(title)
-            plt.legend()
-            # indicating area of saturation
-            plt.xlim((time[0], time[-1]))
-            plt.axvline(x=time_steady[0], color='grey', linestyle='-')
-            ax = plt.gca()
-            ax.axvspan(time_steady[0], time_steady[-1], alpha=0.1, color='grey')
-            plt.grid(True)
-            write_fluxes_vs_t = True
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
+        # Break down the previous plot into smaller sets of (kx,ky):
+        # ibin*(kmax/nbin) < |k| < (ibin+1)*(kmax/nbin), with 0 <= ibin <= nbin
+
+        # Set number of bins for kx
+        nbinx = 3
+
+        # Set number of bins for ky
+        nbiny = 3
+
+        if nx>nbinx and ny>nbiny:
+
+            # Set up colors, linestyle and label
+            cmap = plt.get_cmap('nipy_spectral')
+            clrs = [cmap(i) for i in np.linspace(0,1,naky-1)]
+            clrs.insert(0,'black')
+            lstyle = ['dashed']
+            for iky in range(naky-1):
+                lstyle.append('solid')
+            lab = []
+            for iky in range(naky):
+                lab.append('ky = '+'{:5.3f}'.format(ky[iky]))
+
+            for ibiny in range(nbiny):
+
+                # ky range for this bin
+                kyminbin = ibiny*ky[-1]/nbiny
+                kymaxbin = (ibiny+1)*ky[-1]/nbiny
+
+                # Corresponding indices, with zonal for the first bin in y
+                ikybin = np.where((ky>kyminbin) & (ky<=kymaxbin))[0]
+                if ibiny == 0:
+                    ikybin = np.insert(ikybin,0,0)
+
+                for ibinx in range(nbinx):
+
+                    # kx range for this bin
+                    kxminbin = ibinx*kx[-1]/nbinx
+                    kxmaxbin = (ibinx+1)*kx[-1]/nbinx
+
+                    # Corresponding indices, with streamers for the first bin in x
+                    ikxbin = np.where((np.abs(kx)>kxminbin) & (np.abs(kx)<=kxmaxbin))[0]
+                    if ibinx == 0:
+                        ikxbin = np.insert(ikxbin,ikxbin.size//2,0)
+
+                    title = "$|k_x| \\in $" + " [{0:.2f},{1:.2f}]".format(kxminbin,kxmaxbin)
+
+                    if islin:
+                        title = '$\\ln$' + title
+
+                    # Plot sum_kx(phi2) for every ky in the bin,
+                    # summed over all kx's in the bin
+
+                    plt.figure(figsize=(12,8))
+
+                    for iky in ikybin:
+
+                        # Average over all kx's in this bin
+                        toplot = np.sum(phi2_kxky[:,iky,ikxbin],1)/ikxbin.size
+
+                        # In linear runs, plot the log
+                        if islin:
+                            toplot = np.log(toplot)
+
+                        plt.semilogy(time, toplot, label=lab[iky], linestyle=lstyle[iky], color=clrs[iky])
+
+                    # Fine-tune plot
+                    plt.xlabel('$t\ [r_r/v_{thr}]$')
+                    plt.ylabel("$\\langle|\\hat{\\varphi}|^{2}\\rangle_{\\theta,k_x}$")
+                    plt.title(title, fontsize=24)
+                    leg = plt.legend(prop={'size': 16}, ncol=2,frameon=True,fancybox=False,framealpha=1.0)
+                    leg.get_frame().set_facecolor('w')
+                    leg.get_frame().set_edgecolor('k')
+                    leg.get_frame().set_linewidth(1.0)
+                    plt.grid(True)
+
+                    # Save plot to collate later
+                    write_fluxes_vs_t = True
+                    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                    gplot.save_plot(tmp_pdfname, run, ifile)
+                    pdflist.append(tmp_pdfname)
+                    tmp_pdf_id = tmp_pdf_id+1
+
 
     if write_fluxes_vs_t:
         merged_pdfname = 'fluxes_vs_t'
@@ -740,37 +828,46 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print('complete')
 
 
-def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None,avg_in_title=None):
+def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None,avg_in_title=None,only_steady=False):
 
     fig=plt.figure(figsize=(12,8))
     if islin:
         ylabel = '$\\ln($' + ylabel + '$)$'
 
     #my_colorlist = plt.cm.YlGnBu(np.linspace(0.5,1,nspec)) # for old algo
-    my_colorlist = plt.cm.YlOrBr(np.linspace(0.5,1,nspec)) # for new algo
+    #my_colorlist = plt.cm.YlOrBr(np.linspace(0.5,1,nspec)) # for new algo
+    my_colorlist =  [gplot.mybluestd, gplot.myredstd, gplot.myyellow, gplot.mygreen] # for standard cases
 
     my_curves = []
     my_labels = ['$^2H$','$e^-$','$^{12}C$']
     #my_linestyle_list = ['-', '--', ':']
     my_linestyle_list = ['-', '-', '-']
 
-    # indicating area of saturation
-    plt.axvline(x=mytime.time_steady[0], color='grey', linestyle='-')
-    ax = plt.gca()
-    ax.axvspan(mytime.time_steady[0], mytime.time_steady[-1], alpha=0.1, color='grey')
+    # Adapt to selected time window
+    if not only_steady:
+        tselect = mytime.time
+        flxselect = flx
+        # indicating area of saturation
+        plt.axvline(x=mytime.time_steady[0], color='grey', linestyle='-')
+        ax = plt.gca()
+        ax.axvspan(mytime.time_steady[0], mytime.time_steady[-1], alpha=0.1, color='grey')
+    else:
+        tselect = mytime.time_steady
+        flxselect = flx[mytime.it_min:mytime.it_max,:]
     
     # plot time-traces for each species
     for idx in range(nspec):
         # get the time-averaged flux
         if islin:
-            crv, = plt.plot(mytime.time,np.log(flx[:,idx]),color=my_colorlist[idx],linewidth=3.0, \
+            crv, = plt.plot(tselect,np.log(flxselect[:,idx]),color=my_colorlist[idx],linewidth=3.0, \
                     linestyle=my_linestyle_list[idx])
         else:
-            crv, = plt.plot(mytime.time,flx[:,idx],color=my_colorlist[idx],linewidth=3.0, \
+            crv, = plt.plot(tselect,flxselect[:,idx],color=my_colorlist[idx],linewidth=3.0, \
                     linestyle=my_linestyle_list[idx])
         my_curves.append(crv)
     
     # plot time-averages
+    ttl = 'Time avg: '
     for idx in range(nspec):
         
         if not islin:
@@ -805,18 +902,23 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_
 
             elif avg_in_title:
 
-                plt.title('avg = {:.2f}'.format(flxavg))
+                my_labels[idx] += '  (avg: {:.1E})'.format(flxavg)
 
             print('flux avg for '+spec_names[idx]+': '+str(flxavg))
 
     plt.xlabel('$t [L/v_{th,i}]$')
     plt.ylabel(ylabel)
-    plt.xlim([mytime.time[0],mytime.time[-1]])
+    plt.xlim([tselect[0],tselect[-1]])
     if ylims is not None:
         plt.ylim(ylims)
     plt.grid(True)
+    #plt.title(ttl)
 
-    my_legend = plt.legend(my_curves,my_labels,frameon=True,fancybox=False,framealpha=1.0,loc='upper left')
+    if only_steady:
+        legloc = 'best'
+    else:
+        legloc = 'upper left'
+    my_legend = plt.legend(my_curves,my_labels,frameon=True,fancybox=False,framealpha=1.0,loc=legloc)
     my_legend.get_frame().set_facecolor('w')
     my_legend.get_frame().set_edgecolor('k')
     my_legend.get_frame().set_linewidth(1.0)
