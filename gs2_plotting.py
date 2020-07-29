@@ -20,6 +20,10 @@ darkRed = [102./255,26./255,0./255]
 midLoBlue = [179./255,217./255,255./255]
 midHiBlue = [0./255,115./255,153./255]
 darkBlue = [0./255,0./255,77./255]
+myredstd = [217./255, 83./255, 25./255]
+mybluestd = [0./255, 114./255, 189./255]
+myyellow = [237./255,177./255,32./255]
+mygreen = [51./255,153./255,51./255]
 
 def RdBu_centered(minVal, maxVal):
 
@@ -93,7 +97,7 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
 def set_plot_defaults():
 
     # setup some plot defaults
-    plt.rc('text', usetex=True)
+    plt.rc('text', usetex=False)
     plt.rc('font', family='serif')
     plt.rc('font', size=30)
     rcParams.update({'figure.autolayout': True})

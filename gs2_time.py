@@ -16,7 +16,10 @@ class timeobj:
 
         # get starting index for steady-state
         self.twin = twin
-        self.it_min = int(ceil((1.0-twin)*self.ntime))
+        tmin = self.time[-1]*(1.0-twin)
+        self.it_min = 0
+        while self.time[self.it_min] < tmin:
+            self.it_min += 1
         self.it_max = self.ntime-1
         # get number of time points in steady-state interval
         self.it_interval = self.ntime - self.it_min
