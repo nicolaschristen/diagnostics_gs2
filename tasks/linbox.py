@@ -318,11 +318,32 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         omegabloon.append(omegabloon_chain)
 
     # Start comparing simulations at time-step it_start
-    # With flow shear, it_start = N_start*Tfloquet/dt
+
     if g_exb != 0.0:
-        N_start = 0
-        it_start = int(round((N_start*Tf/delt)/nwrite))
+
+        # Number of full Floquet periods in simulation (first might be incomplete)
+        nTf = int((nt-1)//Nf)
+        # Add the incomplete interval, if it has more than one time-step
+        if (nt-1)%Nf > 1:
+            nTf += 1
+        # Indices of start/end time corresponding to each interval
+        it_Tfend = [(nt-1)-(nTf-1-i)*Nf for i in range(nTf)]
+        it_Tfstart = [max(1,i-Nf) for i in it_Tfend]
+        # Number of time steps in every interval
+        nt_Tf = [it_Tfend[i]-it_Tfstart[i] for i in range(nTf)]
+
+        # Decide how many intervals to skip at start of simulation
+        if nTf==0:
+            skip_nTf = 0
+        elif nt_Tf[0] < 0.8*Nf and nTf>=2:
+            skip_nTf = 2
+        else:
+            skip_nTf = 1
+
+        it_start = it_Tfstart[skip_nTf]
+
     else:
+
         fac = 0.5
         it_start = round(fac*nt)
 
@@ -381,6 +402,17 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     # so the following variables are unused and should not be considered
 
     if g_exb != 0.0:
+
+    ## NDCTEST: start new
+
+        print(nt)
+        print(Nf)
+        print(it_Tfstart[0])
+        print(it_Tfend[0])
+        print(it_Tfstart[-1])
+        print(it_Tfend[-1])
+        print(skip_nTf)
+
         it_gamma_max = np.zeros(len(dmid_list))
         it_gamma_max_fromSum = np.zeros(len(dmid_list))
         gamma_max = np.zeros(len(dmid_list))
@@ -388,54 +420,97 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         gamma_inst = []
         gamma_inst_fromSum = []
         theta0_star_for_inst = []
+
         for idmid in range(len(dmid_list)):
-            # Start looking for derivatives one Floquet period before last time-step
-            it_start_last_floq = max(int(nt-1-Tf//(delt*nwrite)),0)
-            it_end_last_floq = nt-1
-            it_lastFloq = [it for it in range(it_start_last_floq, it_end_last_floq)]
-            gamma_inst_by_dmid = []
-            gamma_inst_fromSum_by_dmid = []
-            theta0_star_for_inst_by_dmid = []
-            for it in it_lastFloq:
-                # Factor of 0.5 because we fit phi^2
-                gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
-                        ( np.log(max_phi2bloon[idmid][it+1]) - np.log(max_phi2bloon[idmid][it-1]) )
-                gamma_max_fromSum_tmp = 0.5 * 1./(2*delt*nwrite) * \
-                        ( np.log(sum_phi2bloon[idmid][it+1]) - np.log(sum_phi2bloon[idmid][it-1]) )
-                # Fill instantaneous growthrate and corresponding theta0_star
-                gamma_inst_by_dmid.append(gamma_max_tmp)
-                gamma_inst_fromSum_by_dmid.append(gamma_max_fromSum_tmp)
-                # Update maximum growthrate if needed
-                # First from max(phi2)
-                if (gamma_max_tmp > gamma_max[idmid]):
-                    it_gamma_max[idmid] = it
-                    gamma_max[idmid] = gamma_max_tmp
-                # Then from sum(phi2)
-                if (gamma_max_fromSum_tmp > gamma_max_fromSum[idmid]):
-                    it_gamma_max_fromSum[idmid] = it
-                    gamma_max_fromSum[idmid] = gamma_max_fromSum_tmp
-                # Determine current theta0_star associated with this chain
-                tt0_tmp = theta0_star[it,itheta0_list[idmid]]
-                # Shift it to [-pi,+pi]
-                n = int(round(tt0_tmp/(2.0*pi)))
-                tt0_tmp -= 2*pi*n
-                theta0_star_for_inst_by_dmid.append(tt0_tmp)
-            # Get theta0_star in ascending order
-            idx_sort = np.argsort(theta0_star_for_inst_by_dmid)
-            theta0_star_for_inst_by_dmid = [theta0_star_for_inst_by_dmid[idx] for idx in idx_sort]
-            # Sort gamma_inst accordingly
-            gamma_inst_by_dmid = [gamma_inst_by_dmid[idx] for idx in idx_sort]
-            gamma_inst_fromSum_by_dmid = [gamma_inst_fromSum_by_dmid[idx] for idx in idx_sort]
+
+            gamma_max_by_Tf = np.zeros(nTf)
+            gamma_max_fromSum_by_Tf = np.zeros(nTf)
+            it_gamma_max_by_Tf = np.zeros(nTf)
+            it_gamma_max_fromSum_by_Tf = np.zeros(nTf)
+
+            # Pick refined, evenly spaced theta0 grid to apply nearest neighbour
+            # interpolation to gamma_inst for each Tf interval.
+            ntt0_fine = 1001
+            tt0_fine = np.linspace(-pi,pi,ntt0_fine)
+            gamma_inst_by_dmid = [0]*ntt0_fine
+            gamma_inst_fromSum_by_dmid = [0]*ntt0_fine
+
+            for iTf in range(skip_nTf,nTf):
+
+                gamma_inst_by_dmid_Tf = []
+                gamma_inst_fromSum_by_dmid_Tf = []
+                theta0_star_for_inst_by_dmid_Tf = []
+
+                for it in range(it_Tfstart[iTf],it_Tfend[iTf]):
+
+                    # Factor of 0.5 because we fit phi^2
+                    gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
+                            ( np.log(max_phi2bloon[idmid][it+1]) - np.log(max_phi2bloon[idmid][it-1]) )
+                    gamma_max_fromSum_tmp = 0.5 * 1./(2*delt*nwrite) * \
+                            ( np.log(sum_phi2bloon[idmid][it+1]) - np.log(sum_phi2bloon[idmid][it-1]) )
+
+                    # Fill instantaneous growthrate and corresponding theta0_star
+                    gamma_inst_by_dmid_Tf.append(gamma_max_tmp)
+                    gamma_inst_fromSum_by_dmid_Tf.append(gamma_max_fromSum_tmp)
+
+                    # Update maximum growthrate if needed
+                    # First from max(phi2)
+                    if (gamma_max_tmp > gamma_max_by_Tf[iTf]):
+                        it_gamma_max_by_Tf[iTf] = it
+                        gamma_max_by_Tf[iTf] = gamma_max_tmp
+                    # Then from sum(phi2)
+                    if (gamma_max_fromSum_tmp > gamma_max_fromSum_by_Tf[iTf]):
+                        it_gamma_max_fromSum_by_Tf[iTf] = it
+                        gamma_max_fromSum_by_Tf[iTf] = gamma_max_fromSum_tmp
+
+                    # Determine current theta0_star associated with this chain
+                    tt0_tmp = theta0_star[it,itheta0_list[idmid]]
+                    # Shift it to [-pi,+pi]
+                    n = int(round(tt0_tmp/(2.0*pi)))
+                    tt0_tmp -= 2*pi*n
+                    theta0_star_for_inst_by_dmid_Tf.append(tt0_tmp)
+
+                # Get theta0_star in ascending order
+                idx_sort = np.argsort(theta0_star_for_inst_by_dmid_Tf)
+                theta0_star_for_inst_by_dmid_Tf = [theta0_star_for_inst_by_dmid_Tf[idx] for idx in idx_sort]
+                # Sort gamma_inst accordingly
+                gamma_inst_by_dmid_Tf = [gamma_inst_by_dmid_Tf[idx] for idx in idx_sort]
+                gamma_inst_fromSum_by_dmid_Tf = [gamma_inst_fromSum_by_dmid_Tf[idx] for idx in idx_sort]
+
+                # Average gamma_inst over all Tf intervals,
+                # except the ones we decided to skip
+                print(len(theta0_star_for_inst_by_dmid_Tf))
+                print(len(gamma_inst_by_dmid_Tf))
+                gamma_inst_by_dmid_Tf_refined = gplot.nearNeighb_interp_1d(theta0_star_for_inst_by_dmid_Tf, gamma_inst_by_dmid_Tf, tt0_fine)
+                gamma_inst_fromSum_by_dmid_Tf_refined = gplot.nearNeighb_interp_1d(theta0_star_for_inst_by_dmid_Tf, gamma_inst_fromSum_by_dmid_Tf, tt0_fine)
+                for i in range(ntt0_fine):
+                    gamma_inst_by_dmid[i] += gamma_inst_by_dmid_Tf_refined[i]/(nTf-skip_nTf)
+                    gamma_inst_fromSum_by_dmid[i] += gamma_inst_fromSum_by_dmid_Tf_refined[i]/(nTf-skip_nTf)
+
             # Append theta0_star and gamma_inst to full lists
-            theta0_star_for_inst.append(theta0_star_for_inst_by_dmid)
+            theta0_star_for_inst.append(tt0_fine)
             gamma_inst.append(gamma_inst_by_dmid)
             gamma_inst_fromSum.append(gamma_inst_fromSum_by_dmid)
+
+            # Average max gamma over all Tf intervals,
+            # except the ones we decided to skip
+            for iTf in range(skip_nTf,nTf):
+                gamma_max[idmid] += gamma_max_by_Tf[iTf]
+                gamma_max_fromSum[idmid] += gamma_max_fromSum_by_Tf[iTf]
+            gamma_max[idmid] = gamma_max[idmid]/(nTf-skip_nTf)
+            gamma_max_fromSum[idmid] = gamma_max_fromSum[idmid]/(nTf-skip_nTf)
+
+            # Pick it_gamma_max at the end of the simulation (used for plotting only)
+            it_gamma_max[idmid] = it_gamma_max_by_Tf[-1]
+            it_gamma_max_fromSum[idmid] = it_gamma_max_fromSum_by_Tf[-1]
 
         it_gamma_max = it_gamma_max.astype(int)
         it_gamma_max_fromSum = it_gamma_max_fromSum.astype(int)
         # At this point:
         # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
+
     else:
+
         gamma_inst = []
         gamma_inst_fromSum = []
         theta0_star_for_inst = []
@@ -445,6 +520,75 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
             theta0_star_for_inst.append([])
         gamma_max = gamma_avg
         gamma_max_fromSum = gamma_avg_fromSum
+    ## NDCTEST: end new
+
+
+    ## NDCTEST: start orig
+    #    it_gamma_max = np.zeros(len(dmid_list))
+    #    it_gamma_max_fromSum = np.zeros(len(dmid_list))
+    #    gamma_max = np.zeros(len(dmid_list))
+    #    gamma_max_fromSum = np.zeros(len(dmid_list))
+    #    gamma_inst = []
+    #    gamma_inst_fromSum = []
+    #    theta0_star_for_inst = []
+    #    for idmid in range(len(dmid_list)):
+    #        # Start looking for derivatives one Floquet period before last time-step
+    #        it_start_last_floq = max(int(nt-1-Tf//(delt*nwrite)),0)
+    #        it_end_last_floq = nt-1
+    #        it_lastFloq = [it for it in range(it_start_last_floq, it_end_last_floq)]
+    #        gamma_inst_by_dmid = []
+    #        gamma_inst_fromSum_by_dmid = []
+    #        theta0_star_for_inst_by_dmid = []
+    #        for it in it_lastFloq:
+    #            # Factor of 0.5 because we fit phi^2
+    #            gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
+    #                    ( np.log(max_phi2bloon[idmid][it+1]) - np.log(max_phi2bloon[idmid][it-1]) )
+    #            gamma_max_fromSum_tmp = 0.5 * 1./(2*delt*nwrite) * \
+    #                    ( np.log(sum_phi2bloon[idmid][it+1]) - np.log(sum_phi2bloon[idmid][it-1]) )
+    #            # Fill instantaneous growthrate and corresponding theta0_star
+    #            gamma_inst_by_dmid.append(gamma_max_tmp)
+    #            gamma_inst_fromSum_by_dmid.append(gamma_max_fromSum_tmp)
+    #            # Update maximum growthrate if needed
+    #            # First from max(phi2)
+    #            if (gamma_max_tmp > gamma_max[idmid]):
+    #                it_gamma_max[idmid] = it
+    #                gamma_max[idmid] = gamma_max_tmp
+    #            # Then from sum(phi2)
+    #            if (gamma_max_fromSum_tmp > gamma_max_fromSum[idmid]):
+    #                it_gamma_max_fromSum[idmid] = it
+    #                gamma_max_fromSum[idmid] = gamma_max_fromSum_tmp
+    #            # Determine current theta0_star associated with this chain
+    #            tt0_tmp = theta0_star[it,itheta0_list[idmid]]
+    #            # Shift it to [-pi,+pi]
+    #            n = int(round(tt0_tmp/(2.0*pi)))
+    #            tt0_tmp -= 2*pi*n
+    #            theta0_star_for_inst_by_dmid.append(tt0_tmp)
+    #        # Get theta0_star in ascending order
+    #        idx_sort = np.argsort(theta0_star_for_inst_by_dmid)
+    #        theta0_star_for_inst_by_dmid = [theta0_star_for_inst_by_dmid[idx] for idx in idx_sort]
+    #        # Sort gamma_inst accordingly
+    #        gamma_inst_by_dmid = [gamma_inst_by_dmid[idx] for idx in idx_sort]
+    #        gamma_inst_fromSum_by_dmid = [gamma_inst_fromSum_by_dmid[idx] for idx in idx_sort]
+    #        # Append theta0_star and gamma_inst to full lists
+    #        theta0_star_for_inst.append(theta0_star_for_inst_by_dmid)
+    #        gamma_inst.append(gamma_inst_by_dmid)
+    #        gamma_inst_fromSum.append(gamma_inst_fromSum_by_dmid)
+
+    #    it_gamma_max = it_gamma_max.astype(int)
+    #    it_gamma_max_fromSum = it_gamma_max_fromSum.astype(int)
+    #    # At this point:
+    #    # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
+    #else:
+    #    gamma_inst = []
+    #    gamma_inst_fromSum = []
+    #    theta0_star_for_inst = []
+    #    for idmid in range(len(dmid_list)):
+    #        gamma_inst.append([])
+    #        gamma_inst_fromSum.append([])
+    #        theta0_star_for_inst.append([])
+    #    gamma_max = gamma_avg
+    #    gamma_max_fromSum = gamma_avg_fromSum
+    ## NDCTEST: end orig
 
     
     # Save quantities to file for scan plots
@@ -583,6 +727,9 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
 
 
         # Plot phi2 vs (theta-theta0), one dmid per plot, one series of plots per selected time
+        # Plot vs lin-lin, lin-log and log-log scales
+
+        # lin-lin
 
         plt.figure(figsize=(12,8))
         it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
@@ -616,6 +763,80 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
                 tmp_pdf_id = tmp_pdf_id+1
 
             merged_pdfname = 'phi_vs_theta_it_' + str(it)
+            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+            plt.clf()
+            plt.cla()
+
+        # lin-log
+
+        plt.figure(figsize=(12,8))
+        it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
+
+        for it in it_toPlot:
+
+            tmp_pdf_id = 1
+            pdflist = []
+            for idmid in range(len(dmid_list)):
+                if g_exb == 0.0:
+                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0 =$' + gplot.str_tt0(theta0[itheta0_list[idmid]]))
+                else:
+                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0^* =$' + gplot.str_tt0(theta0_star[it,itheta0_list[idmid]]))
+                lphi, = plt.semilogy(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
+                        markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
+                lphi.set_label('$\\vert \\varphi \\vert ^2$')
+                lbdry, = plt.semilogy(bloonang_bndry[idmid][it],phi2bloon_discont[idmid][it], linestyle='', \
+                        marker='d', markersize=15, markerfacecolor='r', markeredgecolor='r')
+                lbdry.set_label('_skip')
+                if g_exb == 0.0:
+                    plt.xlabel('$\\theta-\\theta_0$')
+                else:
+                    plt.xlabel('$\\theta-\\theta_0^*$')
+                plt.grid(True)
+                gplot.legend_matlab()
+                ax = plt.gca()
+                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                gplot.save_plot(tmp_pdfname, run, ifile)
+                pdflist.append(tmp_pdfname)
+                tmp_pdf_id = tmp_pdf_id+1
+
+            merged_pdfname = 'phi_vs_theta_linlog_it_' + str(it)
+            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+            plt.clf()
+            plt.cla()
+
+        # log-log
+
+        plt.figure(figsize=(12,8))
+        it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
+
+        for it in it_toPlot:
+
+            tmp_pdf_id = 1
+            pdflist = []
+            for idmid in range(len(dmid_list)):
+                if g_exb == 0.0:
+                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0 =$' + gplot.str_tt0(theta0[itheta0_list[idmid]]))
+                else:
+                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0^* =$' + gplot.str_tt0(theta0_star[it,itheta0_list[idmid]]))
+                lphi, = plt.loglog(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
+                        markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
+                lphi.set_label('$\\vert \\varphi \\vert ^2$')
+                lbdry, = plt.loglog(bloonang_bndry[idmid][it],phi2bloon_discont[idmid][it], linestyle='', \
+                        marker='d', markersize=15, markerfacecolor='r', markeredgecolor='r')
+                lbdry.set_label('_skip')
+                if g_exb == 0.0:
+                    plt.xlabel('$\\theta-\\theta_0$')
+                else:
+                    plt.xlabel('$\\theta-\\theta_0^*$')
+                plt.grid(True)
+                gplot.legend_matlab()
+                ax = plt.gca()
+                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                gplot.save_plot(tmp_pdfname, run, ifile)
+                pdflist.append(tmp_pdfname)
+                tmp_pdf_id = tmp_pdf_id+1
+
+            merged_pdfname = 'phi_vs_theta_loglog_it_' + str(it)
             gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
             plt.clf()
             plt.cla()

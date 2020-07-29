@@ -289,6 +289,9 @@ def my_task_single(ifile, run, myin, myout, mytime):
 
 
     # Plot potential at t[it_stop] vs theta for every ky, one plot per theta0
+    # Plot vs lin-lin, lin-log and log-log scales.
+
+    # lin-lin
 
     plt.figure(figsize=(12,8))
 
@@ -316,6 +319,68 @@ def my_task_single(ifile, run, myin, myout, mytime):
         tmp_pdf_id = tmp_pdf_id+1
 
     merged_pdfname = 'phi_vs_theta'
+    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+    plt.clf()
+    plt.cla()
+
+    # lin-log
+
+    plt.figure(figsize=(12,8))
+
+    tmp_pdf_id = 1
+    pdflist = []
+    if naky > 1:
+        cmap = plt.get_cmap('nipy_spectral')
+        my_colors = [cmap(i) for i in np.linspace(0,1,naky)]
+    else:
+        my_colors = [gplot.myblue]
+    for itt0 in range(ntt0):
+        lgd = []
+        for iky in range(naky):
+            plt.semilogy(theta,phi2_bytheta[it_stop-1,iky,itt0,:],color=my_colors[iky])
+            lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
+        gplot.legend_matlab(lgd)
+        plt.grid(True)
+        plt.xlabel('$\\theta$')
+        plt.ylabel('$\\vert\\varphi\\vert^2$')
+        plt.title('$\\theta_0=$'+gplot.str_tt0(tt0[itt0]))
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+    merged_pdfname = 'phi_vs_theta_linlog'
+    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+    plt.clf()
+    plt.cla()
+
+    # log-log
+
+    plt.figure(figsize=(12,8))
+
+    tmp_pdf_id = 1
+    pdflist = []
+    if naky > 1:
+        cmap = plt.get_cmap('nipy_spectral')
+        my_colors = [cmap(i) for i in np.linspace(0,1,naky)]
+    else:
+        my_colors = [gplot.myblue]
+    for itt0 in range(ntt0):
+        lgd = []
+        for iky in range(naky):
+            plt.loglog(theta,phi2_bytheta[it_stop-1,iky,itt0,:],color=my_colors[iky])
+            lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
+        gplot.legend_matlab(lgd)
+        plt.grid(True)
+        plt.xlabel('$\\theta$')
+        plt.ylabel('$\\vert\\varphi\\vert^2$')
+        plt.title('$\\theta_0=$'+gplot.str_tt0(tt0[itt0]))
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+    merged_pdfname = 'phi_vs_theta_loglog'
     gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
     plt.clf()
     plt.cla()

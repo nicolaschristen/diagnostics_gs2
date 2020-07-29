@@ -40,8 +40,8 @@ scan = {ONE:[],TWO:[]}
 # vvv USER PARAMETERS vvv
 
 # Import all parameters from paramfiles/myfile.py
-base_name = 'rpsi_0.8'  
-pf = __import__('scan_ky_kxmax_fixed_dkx_ijp_950_rpsi_08')  
+base_name = 'rpsi_0.51'  
+pf = __import__('scan_gexb_linbox_gexb_vs_ky_theta0_ijp_950_rpsi_051')  
 
 # Number of dimensions in the scan
 # e.g. vs (ky, R/LTi) -> ndim = TWO
@@ -61,28 +61,28 @@ firstdim = pf.ky # variable name in paramfiles/myfile.py
 # Define second dimension of the scan
 if ndim == TWO:
 
-    #seconddim_label = '$N_x = {0:d}$'.format(seconddim[ival]))  
+    #seconddim_label = '$N_x$'
     #seconddim_label = '$N_{2\\pi}$'
-    seconddim_label = '$k_{x,max}$'
+    #seconddim_label = '$k_{x,max}$'
     #seconddim_label = '$\\Delta k_x$'
     #seconddim_label = '$\\rho k_y$'
     #seconddim_label = '$N_\\theta$'
     #seconddim_label = '$N_\\varepsilon$'
     #seconddim_label = '$v_{max}$'
     #seconddim_label = '$N_{\\lambda,untrap}$'
-    #seconddim_label = '$a/L_{T_e}$'
-    #seconddim_label = '$\gamma_E$$'
+    #seconddim_label = '$a/L_{T_i}$'
+    seconddim_label = '$\\gamma_E$'
 
-    seconddim_var = 'nx'  
+    seconddim_var = 'g_exb'  
 
     #seconddim = (2*np.round((pf.nx-1)/3)+1).astype(int) # nakx
-    seconddim = np.round((pf.nx-1)/3) * pf.dkx  # kxmax
+    #seconddim = np.round((pf.nx-1)/3) * pf.dkx  # kxmax
     #seconddim = np.round((2*np.round((pf.nx-1)/3))/(2*pi*pf.shat*firstdim[-1]/pf.dkx)+1,2) # Ntwopi
-    #seconddim = pf.negrid  
+    seconddim = pf.g_exb
 
 elif ndim == ONE:
 
-    seconddim_label = '_dummy'
+    seconddim_label = 'dummy'
     seconddim_var = 'dummy'
     seconddim = np.array([0])
 
@@ -90,33 +90,46 @@ elif ndim == ONE:
 scan_with_single_ky = False  
 
 # Apply limits to axis when plotting ?
-use_my_xlim = False
-my_xlim = (0.0, 2.0)  
+use_my_xlim = True
+my_xlim = (0.0, None)  
 
 use_my_ylim = True
+# rpsi = 0.5
+my_ylim_max = (0.0, 0.15)
+my_ylim_max_gamoverksq = (0.0, 0.75)
+my_ylim_avg = (-0.035, 0.020)
+my_ylim_avg_gamoverksq = (-0.1, 0.15)
 # rpsi = 0.6
-my_ylim_max = (0.0, 0.35)
-my_ylim_avg = (-0.05, 0.15)
+#my_ylim_max = (0.0, 0.35)
+#my_ylim_avg = (-0.05, 0.15)
 # rpsi = 0.7
 #my_ylim_max = (0.0, 0.40)
 #my_ylim_avg = (-0.02, 0.09)
 # rpsi = 0.8
 #my_ylim_max = (0.0, 0.50)
-#my_ylim_avg = (-0.02, 0.08)
+#my_ylim_avg = (-0.03, 0.03)
 # rpsi = 0.9
 #my_ylim_max = (0.0, 0.30)
 #my_ylim_avg = (-0.06, 0.00)
+
+# For cases without flow shear (otherwise comment out):
 #my_ylim_avg = my_ylim_max
 
 # Fix colorbar limits ?
 fix_cbarlim = True
-# rpsi = 0.6
+# rpsi = 0.5
 my_cbarmin = -0.20
-my_cbarmax = 0.2
+my_cbarmax = 0.20
+# rpsi = 0.6
+#my_cbarmin = -0.20
+#my_cbarmax = 0.2
 # rpsi = 0.7
 #my_cbarmin = -0.30
 #my_cbarmax = 0.3
 # rpsi = 0.8
+#my_cbarmin = -0.25
+#my_cbarmax = 0.25
+# rpsi = 0.9
 #my_cbarmin = -0.30
 #my_cbarmax = 0.3
 
@@ -256,31 +269,27 @@ def main():
             theta0_star_for_inst_vs_v2_ky_tt0 = theta0_star_for_inst_vs_v2_ky_tt0_new
 
         # Get rid of extra dimension if ndim=1
-        if ndim == ONE:
+        #if ndim == ONE:
 
-            dmid_list_vs_v2_ky_tt0 = dmid_list_vs_v2_ky_tt0[0]
-            dmid_list_vs_v2_ky = dmid_list_vs_v2_ky[0]
-            itheta0_list_vs_v2_ky_tt0 = itheta0_list_vs_v2_ky_tt0[0]
-            itheta0_list_vs_v2_ky = itheta0_list_vs_v2_ky[0]
-            theta0_vs_v2_ky_tt0 = theta0_vs_v2_ky_tt0[0]
-            theta0_vs_v2_ky = theta0_vs_v2_ky[0]
-            firstdim_vs_v2_ky_tt0 = firstdim_vs_v2_ky_tt0[0]
-            firstdim_vs_v2_ky = firstdim_vs_v2_ky[0]
-            gamma_avg_vs_v2_ky_tt0 = gamma_avg_vs_v2_ky_tt0[0]
-            gamma_avg_fromSum_vs_v2_ky_tt0 = gamma_avg_fromSum_vs_v2_ky_tt0[0]
-            gamma_avg_vs_v2_ky = gamma_avg_vs_v2_ky[0]
-            gamma_avg_fromSum_vs_v2_ky = gamma_avg_fromSum_vs_v2_ky[0]
-            gamma_max_vs_v2_ky_tt0 = gamma_max_vs_v2_ky_tt0[0]
-            gamma_max_fromSum_vs_v2_ky_tt0 = gamma_max_fromSum_vs_v2_ky_tt0[0]
-            gamma_max_vs_v2_ky = gamma_max_vs_v2_ky[0]
-            gamma_max_fromSum_vs_v2_ky = gamma_max_fromSum_vs_v2_ky[0]
-            Qratio_avg_vs_v2_ky_tt0 = Qratio_avg_vs_v2_ky_tt0[0]
-            Qratio_avg_vs_v2_ky = Qratio_avg_vs_v2_ky[0]
-            g_exb_vs_v2_ky = g_exb_vs_v2_ky[0]
-            if gamma_inst_pres:
-                gamma_inst_vs_v2_ky_tt0 = gamma_inst_vs_v2_ky_tt0[0]
-                gamma_inst_fromSum_vs_v2_ky_tt0 = gamma_inst_fromSum_vs_v2_ky_tt0[0]
-                theta0_star_for_inst_vs_v2_ky_tt0 = theta0_star_for_inst_vs_v2_ky_tt0[0]
+        #    dmid_list_vs_v2_ky_tt0 = dmid_list_vs_v2_ky_tt0[0]
+        #    itheta0_list_vs_v2_ky_tt0 = itheta0_list_vs_v2_ky_tt0[0]
+        #    theta0_vs_v2_ky_tt0 = theta0_vs_v2_ky_tt0[0]
+        #    firstdim_vs_v2_ky_tt0 = firstdim_vs_v2_ky_tt0[0]
+        #    firstdim_vs_v2_ky = firstdim_vs_v2_ky[0]
+        #    gamma_avg_vs_v2_ky_tt0 = gamma_avg_vs_v2_ky_tt0[0]
+        #    gamma_avg_fromSum_vs_v2_ky_tt0 = gamma_avg_fromSum_vs_v2_ky_tt0[0]
+        #    gamma_avg_vs_v2_ky = gamma_avg_vs_v2_ky[0]
+        #    gamma_avg_fromSum_vs_v2_ky = gamma_avg_fromSum_vs_v2_ky[0]
+        #    gamma_max_vs_v2_ky_tt0 = gamma_max_vs_v2_ky_tt0[0]
+        #    gamma_max_fromSum_vs_v2_ky_tt0 = gamma_max_fromSum_vs_v2_ky_tt0[0]
+        #    gamma_max_vs_v2_ky = gamma_max_vs_v2_ky[0]
+        #    gamma_max_fromSum_vs_v2_ky = gamma_max_fromSum_vs_v2_ky[0]
+        #    Qratio_avg_vs_v2_ky_tt0 = Qratio_avg_vs_v2_ky_tt0[0]
+        #    Qratio_avg_vs_v2_ky = Qratio_avg_vs_v2_ky[0]
+        #    if gamma_inst_pres:
+        #        #gamma_inst_vs_v2_ky_tt0 = gamma_inst_vs_v2_ky_tt0[0] # NDCmod
+        #        #gamma_inst_fromSum_vs_v2_ky_tt0 = gamma_inst_fromSum_vs_v2_ky_tt0[0] # NDCmod
+        #        theta0_star_for_inst_vs_v2_ky_tt0 = theta0_star_for_inst_vs_v2_ky_tt0[0]
 
     # Save data vs var2,ky with all theta0
     vardict = {}
@@ -300,8 +309,11 @@ def main():
         vardict['gamma_inst_fromSum_vs_v2_ky_tt0'] = gamma_inst_fromSum_vs_v2_ky_tt0
     write_to_file(vardict)
 
-    # Here we assume that all runs have the same g_exb
-    g_exb = g_exb_vs_v2_ky[0][0]
+    # Here we check if any run as nonzero g_exb
+    try:
+        has_g_exb = False in [0 in g_exb_vs_v2_ky[i] for i in len(g_exb_vs_v2_ky)]
+    except TypeError:
+        has_g_exb = g_exb_vs_v2_ky != [0]*len(g_exb_vs_v2_ky)
 
 
 
@@ -319,13 +331,27 @@ def main():
         my_legend = []
         plt.grid(True)
         plt.xlabel(firstdim_label)
-        if g_exb == 0.0:
-            plt.ylabel('$\\gamma [v_{th}/a]$')
+        if not has_g_exb:
+            plt.ylabel('$\\gamma [v_{\\textrm{\large th},i}/a]$')
         else:
-            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
-        plt.plot(firstdim_vs_v2_ky, gamma_avg_vs_v2_ky, linewidth=2.0, color='k')
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{\\textrm{\large th},i}/a]$')
+        plt.plot(firstdim_vs_v2_ky[0], gamma_avg_vs_v2_ky[0], linewidth=2.0, color='k')
         if use_my_ylim:
             plt.ylim(my_ylim_avg)
+        plt.savefig(pdfname)
+
+        pdfname = 'postproc/linbox_gamoverksq_avg_scan_'+firstdim_var+'.pdf'
+        plt.figure()
+        my_legend = []
+        plt.grid(True)
+        plt.xlabel(firstdim_label)
+        if not has_g_exb:
+            plt.ylabel('$\\gamma/k_y^2 [v_{\\textrm{\large th},i}\\rho_i^2/a]$')
+        else:
+            plt.ylabel('$\\langle\\gamma\\rangle_t/k_y^2 [v_{\\textrm{\large th},i}\\rho_i^2/a]$')
+        plt.plot(firstdim_vs_v2_ky[0], [g/k**2 for g,k in zip(gamma_avg_vs_v2_ky[0],firstdim_vs_v2_ky[0])], linewidth=2.0, color='k')
+        if use_my_ylim:
+            plt.ylim(my_ylim_avg_gamoverksq)
         plt.savefig(pdfname)
 
         pdfname = 'postproc/linbox_gamma_max_scan_'+firstdim_var+'.pdf'
@@ -333,11 +359,11 @@ def main():
         my_legend = []
         plt.grid(True)
         plt.xlabel(firstdim_label)
-        if g_exb == 0.0:
-            plt.ylabel('$\\gamma [v_{th}/a]$')
+        if not has_g_exb:
+            plt.ylabel('$\\gamma [v_{\\textrm{\large th},i}/a]$')
         else:
-            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
-        plt.plot(firstdim_vs_v2_ky, gamma_max_vs_v2_ky, linewidth=2.0, color='k')
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{\\textrm{\large th},i}/a]$')
+        plt.plot(firstdim_vs_v2_ky[0], gamma_max_vs_v2_ky[0], linewidth=2.0, color='k')
         if use_my_ylim:
             plt.ylim(my_ylim_max)
         plt.savefig(pdfname)
@@ -349,11 +375,11 @@ def main():
         my_legend = []
         plt.grid(True)
         plt.xlabel(firstdim_label)
-        if g_exb == 0.0:
-            plt.ylabel('$\\gamma [v_{th}/a]$')
+        if not has_g_exb:
+            plt.ylabel('$\\gamma [v_{\\textrm{\large th},i}/a]$')
         else:
-            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
-        plt.plot(firstdim_vs_v2_ky, gamma_avg_fromSum_vs_v2_ky, linewidth=2.0, color='k')
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{\\textrm{\large th},i}/a]$')
+        plt.plot(firstdim_vs_v2_ky[0], gamma_avg_fromSum_vs_v2_ky[0], linewidth=2.0, color='k')
         if use_my_ylim:
             plt.ylim(my_ylim_avg)
         plt.savefig(pdfname)
@@ -363,11 +389,11 @@ def main():
         my_legend = []
         plt.grid(True)
         plt.xlabel(firstdim_label)
-        if g_exb == 0.0:
-            plt.ylabel('$\\gamma [v_{th}/a]$')
+        if not has_g_exb:
+            plt.ylabel('$\\gamma [v_{\\textrm{\large th},i}/a]$')
         else:
-            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
-        plt.plot(firstdim_vs_v2_ky, gamma_max_fromSum_vs_v2_ky, linewidth=2.0, color='k')
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{\\textrm{\large th},i}/a]$')
+        plt.plot(firstdim_vs_v2_ky[0], gamma_max_fromSum_vs_v2_ky[0], linewidth=2.0, color='k')
         if use_my_ylim:
             plt.ylim(my_ylim_max)
         plt.savefig(pdfname)
@@ -375,10 +401,12 @@ def main():
     elif ndim == TWO:
 
         color_vs_v2_ky = plt.cm.gnuplot_r(np.linspace(0.05,0.9,seconddim.size))
-        if scan_with_single_ky:
-            color_vs_v2_ky = ['blue']
+        if scan_with_single_ky or seconddim.size==1:
+            color_vs_v2_ky = ['k']
 
-        if g_exb == 0.0:
+        # <gamma>_t vs ky
+
+        if not has_g_exb:
             pdfname = 'postproc/linbox_gamma_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
         else:
             pdfname = 'postproc/linbox_gamma_avg_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
@@ -386,21 +414,24 @@ def main():
         my_legend = []
         plt.grid(True)
         plt.xlabel(firstdim_label)
-        if g_exb == 0.0:
-            plt.ylabel('$\\gamma [v_{th}/a]$')
+        if not has_g_exb:
+            plt.ylabel('$\\gamma [v_{\\textrm{\large th},i}/a]$')
         else:
-            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{\\textrm{\large th},i}/a]$')
         for ival in range(valdim):
             if scan_with_single_ky:
                 plt.plot(seconddim, gamma_avg_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
             else:
                 plt.plot(firstdim_vs_v2_ky[ival], gamma_avg_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
-            my_legend.append(seconddim_label + '$=' + str(seconddim[ival]) + '$')
+            if ndim==TWO:
+                my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
         if use_my_ylim:
             plt.ylim(my_ylim_avg)
         if use_my_xlim:
             plt.xlim(my_xlim)
-        legend = plt.legend(my_legend, frameon = True, fancybox = False)
+        if ndim==TWO:
+            legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=13, ncol=3,
+                    handlelength=0.75, columnspacing=1.0)
         frame = legend.get_frame()
         frame.set_facecolor('white')
         frame.set_edgecolor('black')
@@ -408,9 +439,46 @@ def main():
         frame.set_alpha(1)
         plt.savefig(pdfname)
 
-        # Same plot obtained with sum(phi2) instead of max(phi2)
+        # <gamma>_t/ky^2 vs ky
 
-        if g_exb == 0.0:
+        if not has_g_exb:
+            pdfname = 'postproc/linbox_gamoverksq_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        else:
+            pdfname = 'postproc/linbox_gamoverksq_avg_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        plt.figure()
+        my_legend = []
+        plt.grid(True)
+        plt.xlabel(firstdim_label)
+        if not has_g_exb:
+            plt.ylabel('$\\gamma/k_y^2$ [$v_{\\textrm{\large th},i}\\rho_i^2/a$]')
+        else:
+            plt.ylabel('$\\langle\\gamma\\rangle_t/k_y^2$ [$v_{\\textrm{\large th},i}\\rho_i^2/a$]')
+        for ival in range(valdim):
+            if scan_with_single_ky:
+                plt.plot(seconddim, [g/k**2 for g,k in zip(gamma_avg_vs_v2_ky,seconddim)], linewidth=2.0, color=color_vs_v2_ky[ival])
+            else:
+                plt.plot(firstdim_vs_v2_ky[ival], [g/k**2 for g,k in zip(gamma_avg_vs_v2_ky[ival],firstdim_vs_v2_ky[ival])], linewidth=2.0, color=color_vs_v2_ky[ival])
+            if ndim==TWO:
+                my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
+        if use_my_ylim:
+            plt.ylim(my_ylim_avg_gamoverksq)
+        if use_my_xlim:
+            plt.xlim(my_xlim)
+        if ndim==TWO:
+            legend = plt.legend(my_legend, frameon = True, fancybox = False,
+                    handlelength=1.0)
+        frame = legend.get_frame()
+        frame.set_facecolor('white')
+        frame.set_edgecolor('black')
+        frame.set_linewidth(0.5)
+        frame.set_alpha(1)
+        plt.savefig(pdfname)
+
+        # Same plots obtained with sum(phi2) instead of max(phi2)
+
+        # <gamma>_t vs ky from sum(phi)
+
+        if not has_g_exb:
             pdfname = 'postproc/linbox_gamma_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
         else:
             pdfname = 'postproc/linbox_gamma_avg_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
@@ -418,21 +486,24 @@ def main():
         my_legend = []
         plt.grid(True)
         plt.xlabel(firstdim_label)
-        if g_exb == 0.0:
-            plt.ylabel('$\\gamma [v_{th}/a]$')
+        if not has_g_exb:
+            plt.ylabel('$\\gamma [v_{\\textrm{\large th},i}/a]$')
         else:
-            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{th}/a]$')
+            plt.ylabel('$\\langle\\gamma\\rangle_t [v_{\\textrm{\large th},i}/a]$')
         for ival in range(valdim):
             if scan_with_single_ky:
                 plt.plot(seconddim, gamma_avg_fromSum_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
             else:
                 plt.plot(firstdim_vs_v2_ky[ival], gamma_avg_fromSum_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
-            my_legend.append(seconddim_label + '$=' + str(seconddim[ival]) + '$')
+            if ndim==TWO:
+                my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
         if use_my_ylim:
             plt.ylim(my_ylim_avg)
         if use_my_xlim:
             plt.xlim(my_xlim)
-        legend = plt.legend(my_legend, frameon = True, fancybox = False)
+        if ndim==TWO:
+            legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=13, ncol=3,
+                    handlelength=0.75, columnspacing=1.0)
         frame = legend.get_frame()
         frame.set_facecolor('white')
         frame.set_edgecolor('black')
@@ -440,25 +511,94 @@ def main():
         frame.set_alpha(1)
         plt.savefig(pdfname)
 
-        if g_exb != 0.0:
+        # <gamma>_t/ky^2 vs ky from sum(phi)
+
+        if not has_g_exb:
+            pdfname = 'postproc/linbox_gamoverksq_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        else:
+            pdfname = 'postproc/linbox_gamoverksq_avg_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+        plt.figure()
+        my_legend = []
+        plt.grid(True)
+        plt.xlabel(firstdim_label)
+        if not has_g_exb:
+            plt.ylabel('$\\gamma/k_y^2$ [$v_{\\textrm{\large th},i}\\rho_i^2/a$]')
+        else:
+            plt.ylabel('$\\langle\\gamma\\rangle_t/k_y^2$ [$v_{\\textrm{\large th},i}\\rho_i^2/a$]')
+        for ival in range(valdim):
+            if scan_with_single_ky:
+                plt.plot(seconddim, [g/k**2 for g,k in zip(gamma_avg_fromSum_vs_v2_ky,seconddim)], linewidth=2.0, color=color_vs_v2_ky[ival])
+            else:
+                plt.plot(firstdim_vs_v2_ky[ival], [g/k**2 for g,k in zip(gamma_avg_fromSum_vs_v2_ky[ival],firstdim_vs_v2_ky[ival])], linewidth=2.0, color=color_vs_v2_ky[ival])
+            if ndim==TWO:
+                my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
+        if use_my_ylim:
+            plt.ylim(my_ylim_avg_gamoverksq)
+        if use_my_xlim:
+            plt.xlim(my_xlim)
+        if ndim==TWO:
+            legend = plt.legend(my_legend, frameon = True, fancybox = False,
+                    handlelength=1.0)
+        frame = legend.get_frame()
+        frame.set_facecolor('white')
+        frame.set_edgecolor('black')
+        frame.set_linewidth(0.5)
+        frame.set_alpha(1)
+        plt.savefig(pdfname)
+
+        if has_g_exb:
+
+            # gamma_max vs ky
 
             pdfname = 'postproc/linbox_gamma_max_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
             plt.figure()
             my_legend = []
             plt.grid(True)
             plt.xlabel(firstdim_label)
-            plt.ylabel('$\\gamma_{max}\ [v_{th}/a]$')
+            plt.ylabel('$\\gamma_{\\textrm{\\large max}}\ [v_{\\textrm{\large th},i}/a]$')
             for ival in range(valdim):
                 if scan_with_single_ky:
                     plt.plot(seconddim, gamma_max_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
                 else:
                     plt.plot(firstdim_vs_v2_ky[ival], gamma_max_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
-                my_legend.append(seconddim_label + '$=' + str(seconddim[ival]) + '$')
+                if ndim==TWO:
+                    my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
             if use_my_ylim:
                 plt.ylim(my_ylim_max)
             if use_my_xlim:
                 plt.xlim(my_xlim)
-            legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=8)
+            if ndim==TWO:
+                legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=13, ncol=3,
+                        handlelength=0.75, columnspacing=1.0)
+            frame = legend.get_frame()
+            frame.set_facecolor('white')
+            frame.set_edgecolor('black')
+            frame.set_linewidth(0.5)
+            frame.set_alpha(1)
+            plt.savefig(pdfname)
+
+            # gamma_max/ky^2 vs ky
+
+            pdfname = 'postproc/linbox_gamoverksq_max_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+            plt.figure()
+            my_legend = []
+            plt.grid(True)
+            plt.xlabel(firstdim_label)
+            plt.ylabel('$\\gamma_{\\textrm{\\large max}}/k_y^2$ [$v_{\\textrm{\large th},i}\\rho_i^2/a$]')
+            for ival in range(valdim):
+                if scan_with_single_ky:
+                    plt.plot(seconddim, [g/k**2 for g,k in zip(gamma_max_vs_v2_ky,seconddim)], linewidth=2.0, color=color_vs_v2_ky[ival])
+                else:
+                    plt.plot(firstdim_vs_v2_ky[ival], [g/k**2 for g,k in zip(gamma_max_vs_v2_ky[ival],firstdim_vs_v2_ky[ival])], linewidth=2.0, color=color_vs_v2_ky[ival])
+                if ndim==TWO:
+                    my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
+            if use_my_ylim:
+                plt.ylim(my_ylim_max_gamoverksq)
+            if use_my_xlim:
+                plt.xlim(my_xlim)
+            if ndim==TWO:
+                legend = plt.legend(my_legend, frameon = True, fancybox = False,
+                        handlelength=1.0)
             frame = legend.get_frame()
             frame.set_facecolor('white')
             frame.set_edgecolor('black')
@@ -468,23 +608,28 @@ def main():
 
             # Same plot obtained with sum(phi2) instead of max(phi2)
 
+            # gamma_max vs ky from sum(phi)
+
             pdfname = 'postproc/linbox_gamma_max_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
             plt.figure()
             my_legend = []
             plt.grid(True)
             plt.xlabel(firstdim_label)
-            plt.ylabel('$\\gamma_{max}\ [v_{th}/a]$')
+            plt.ylabel('$\\gamma_{\\textrm{\\large max}}\ [v_{\\textrm{\large th},i}/a]$')
             for ival in range(valdim):
                 if scan_with_single_ky:
                     plt.plot(seconddim, gamma_max_fromSum_vs_v2_ky, linewidth=2.0, color=color_vs_v2_ky[ival])
                 else:
                     plt.plot(firstdim_vs_v2_ky[ival], gamma_max_fromSum_vs_v2_ky[ival], linewidth=2.0, color=color_vs_v2_ky[ival])
-                my_legend.append(seconddim_label + '$=' + str(seconddim[ival]) + '$')
+                if ndim==TWO:
+                    my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
             if use_my_ylim:
                 plt.ylim(my_ylim_max)
             if use_my_xlim:
                 plt.xlim(my_xlim)
-            legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=8)
+            if ndim==TWO:
+                legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=13, ncol=3,
+                        handlelength=0.75, columnspacing=1.0)
             frame = legend.get_frame()
             frame.set_facecolor('white')
             frame.set_edgecolor('black')
@@ -492,22 +637,52 @@ def main():
             frame.set_alpha(1)
             plt.savefig(pdfname)
 
-        try:
-            pdfname = 'postproc/linbox_qe_vs_qi_scan_'+seconddim_var+'.pdf'
+            # gamma_max/ky^2 vs ky from sum(phi)
+
+            pdfname = 'postproc/linbox_gamoverksq_max_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
             plt.figure()
             my_legend = []
             plt.grid(True)
-            plt.xlabel(seconddim_label)
-            plt.ylabel('$\\langle Q_e/Q_i\\rangle_t$')
-            plt.plot(seconddim, Qratio_avg_vs_v2_ky, linewidth=2.0, color='k')
+            plt.xlabel(firstdim_label)
+            plt.ylabel('$\\gamma_{\\textrm{\\large max}}/k_y^2$ [$v_{\\textrm{\large th},i}\\rho_i^2/a$]')
+            for ival in range(valdim):
+                if scan_with_single_ky:
+                    plt.plot(seconddim, [g/k**2 for g,k in zip(gamma_max_fromSum_vs_v2_ky,seconddim)], linewidth=2.0, color=color_vs_v2_ky[ival])
+                else:
+                    plt.plot(firstdim_vs_v2_ky[ival], [g/k**2 for g,k in zip(gamma_max_fromSum_vs_v2_ky[ival],firstdim_vs_v2_ky[ival])], linewidth=2.0, color=color_vs_v2_ky[ival])
+                if ndim==TWO:
+                    my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
+            if use_my_ylim:
+                plt.ylim(my_ylim_max_gamoverksq)
+            if use_my_xlim:
+                plt.xlim(my_xlim)
+            if ndim==TWO:
+                legend = plt.legend(my_legend, frameon = True, fancybox = False,
+                        handlelength=1.0)
+            frame = legend.get_frame()
+            frame.set_facecolor('white')
+            frame.set_edgecolor('black')
+            frame.set_linewidth(0.5)
+            frame.set_alpha(1)
             plt.savefig(pdfname)
-        except:
-            print('Fluxes cannot be found in the output.')
+
+        if ndim==TWO:
+            try:
+                pdfname = 'postproc/linbox_qe_vs_qi_scan_'+seconddim_var+'.pdf'
+                plt.figure()
+                my_legend = []
+                plt.grid(True)
+                plt.xlabel(seconddim_label)
+                plt.ylabel('$\\langle Q_e/Q_i\\rangle_t$')
+                plt.plot(seconddim, Qratio_avg_vs_v2_ky, linewidth=2.0, color='k')
+                plt.savefig(pdfname)
+            except:
+                print('Fluxes cannot be found in the output.')
 
     # Plot gamma vs (theta0, ky),
     # for every value of the second dimension in the scan.
     
-    if firstdim_var == 'ky' and not (g_exb != 0.0 and not gamma_inst_pres):
+    if firstdim_var == 'ky' and not (has_g_exb and not gamma_inst_pres):
 
         # Preparing to stitch multiple pdfs together
         tmp_pdf_id = 1
@@ -533,7 +708,7 @@ def main():
 
             for iky in range(naky):
 
-                if g_exb == 0.0:
+                if not has_g_exb:
 
                     theta0.append([])
                     gamma.append([])
@@ -561,7 +736,6 @@ def main():
 
                         this_gamma = gamma_avg_fromSum_vs_v2_ky_tt0[ival][iky][iitheta0]
 
-                        theta0[iky].append(this_theta0)
                         gamma_fromSum[iky].append(this_gamma)
 
                         # Update min and max gamma
@@ -598,12 +772,14 @@ def main():
                         if this_gamma > gamma_max_fromSum:
                             gamma_max_fromSum = this_gamma
 
-            if g_exb == 0.0:
+            if not has_g_exb:
                 xlabel = '$\\theta_0$'
             else:
                 xlabel = '$\\theta_0^*$'
-            ylabel = '$k_y$'
-            title = '$\\gamma\ [v_{th}/a]$' + ', ' + seconddim_label + '$= {:.2f}$'.format(seconddim[ival])
+            ylabel = '$\\rho_ik_y$'
+            title = '$\\gamma\ [v_{\\textrm{\large th},i}/a]$'
+            if ndim==TWO:
+                title = title + ', ' + seconddim_label + '$= {:.3f}$'.format(seconddim[ival])
             if fix_cbarlim:
                 cbarmin = my_cbarmin
                 cbarmax = my_cbarmax

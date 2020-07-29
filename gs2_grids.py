@@ -9,7 +9,7 @@ class gridobj:
         print()
         print('constructing grids ... ', end='')
 
-        self.jtwist = myin['kt_grids_box_parameters']['jtwist']
+        # self.jtwist = myin['kt_grids_box_parameters']['jtwist']
 
         self.kx_gs2 = np.copy(myout['kx'])
         self.theta0_gs2 = np.copy(myout['theta0'])

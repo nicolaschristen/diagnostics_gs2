@@ -34,21 +34,25 @@ scan = {ONE:[],TWO:[]}
 # vvv User parameters vvv
 
 # Import all parameters from paramfiles/myfile.py
-base_name = 'rpsi_0.6'  
-pf = __import__('scan_linrange_coll_elec_ijp_950_rpsi_06')  
+base_name = 'rpsi_0.8'  
+pf = __import__('scan_linrange_tprime_ijp_950_rpsi_08')  
 
 # Number of dimensions in the scan
 # e.g. vs R/LTi -> ndim = ONE
 ndim = ONE
 
 # Define first dimension of the scan
-firstdim_label = '$\\nu_{ee}\ [v_{th}/a]$' # for plotting
-firstdim_var = 'vnewk' # name of variable to append to figure names
-firstdim = pf.vnewk # variable name in paramfiles/myfile.py
+firstdim_label = '$a/L_{T_e}$' # for plotting
+#firstdim_label = '$\\gamma_E$ [$v_{th}$/$r_r$]' # for plotting
+#firstdim_label = '$\\beta$' # for plotting
+#firstdim_label = '$q$' # for plotting
+#firstdim_label = '$\\hat{s}$' # for plotting
+firstdim_var = 'tprime' # name of variable to append to figure names
+firstdim = pf.tprime # variable name in paramfiles/myfile.py
 
 # Apply limits to axis when plotting ?
 use_my_xlim = False
-my_xlim = (0.0, 2.0)  
+my_xlim = (0.0, 5.0)  
 
 use_my_ylim = False
 my_ylim_max = (0.0, 0.50)
