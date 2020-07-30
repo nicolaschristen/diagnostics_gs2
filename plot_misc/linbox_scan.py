@@ -51,7 +51,8 @@ ndim = TWO
 # dmid is the number of dkx between kx=0 and the
 # smallest kx>0 that is a member of a particular
 # twist and shift chain at t=0, ie it identifies that chain.
-dmid_for_plots_vs_ky = 0
+# NB: if None is selected, growthrates are averaged over all chains
+dmid_for_plots_vs_ky = None
 
 # Define first dimension of the scan
 firstdim_label = '$\\rho_i k_y$' # for plotting
@@ -72,6 +73,7 @@ if ndim == TWO:
     #seconddim_label = '$N_{\\lambda,untrap}$'
     #seconddim_label = '$a/L_{T_i}$'
     seconddim_label = '$\\gamma_E$'
+    #seconddim_label = '$\\Delta t$ [$a/v_{th,i}$]'
 
     seconddim_var = 'g_exb'  
 
@@ -94,14 +96,21 @@ use_my_xlim = True
 my_xlim = (0.0, None)  
 
 use_my_ylim = True
-# rpsi = 0.5
-my_ylim_max = (0.0, 0.15)
+# rpsi = 0.5, Batch 1
+#~ my_ylim_max = (0.0, 0.15)
+#~ my_ylim_max_gamoverksq = (0.0, 0.75)
+#~ my_ylim_avg = (-0.035, 0.020)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.15)
+# rpsi = 0.5, Batch 2
+my_ylim_max = (0.0, 0.3)
 my_ylim_max_gamoverksq = (0.0, 0.75)
 my_ylim_avg = (-0.035, 0.020)
 my_ylim_avg_gamoverksq = (-0.1, 0.15)
 # rpsi = 0.6
-#my_ylim_max = (0.0, 0.35)
-#my_ylim_avg = (-0.05, 0.15)
+#~ my_ylim_max = (0.0, 0.2)
+#~ my_ylim_max_gamoverksq = (0.0, 0.85)
+#~ my_ylim_avg = (-0.035, 0.02)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.1)
 # rpsi = 0.7
 #my_ylim_max = (0.0, 0.40)
 #my_ylim_avg = (-0.02, 0.09)
@@ -118,11 +127,11 @@ my_ylim_avg_gamoverksq = (-0.1, 0.15)
 # Fix colorbar limits ?
 fix_cbarlim = True
 # rpsi = 0.5
-my_cbarmin = -0.20
-my_cbarmax = 0.20
-# rpsi = 0.6
 #my_cbarmin = -0.20
-#my_cbarmax = 0.2
+#my_cbarmax = 0.20
+# rpsi = 0.6
+my_cbarmin = -0.20
+my_cbarmax = 0.2
 # rpsi = 0.7
 #my_cbarmin = -0.30
 #my_cbarmax = 0.3
@@ -235,22 +244,46 @@ def main():
                     gamma_inst_fromSum_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_inst_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd]
                     theta0_star_for_inst_vs_v2_ky_tt0_new[ival_scnd][ival_first] = theta0_star_for_inst_vs_v2_ky_tt0[ival_first][ival_scnd]
 
-                # try to find the index of theta0 = 0
-                idmid = 0
-                try:
-                    while dmid_list_vs_v2_ky_tt0[ival_first][ival_scnd][idmid] != dmid_for_plots_vs_ky:
-                        idmid += 1
-                except:
-                    idmid = 0
+                if dmid_for_plots_vs_ky is not None:
 
-                # Rearrange keeping only theta0 = 0
-                firstdim_vs_v2_ky[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
-                gamma_avg_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
-                gamma_avg_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
-                gamma_max_vs_v2_ky[ival_scnd][ival_first] = gamma_max_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
-                gamma_max_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_max_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
-                Qratio_avg_vs_v2_ky[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
-                g_exb_vs_v2_ky[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
+                    # Find the correct chain
+                    idmid = 0
+                    try:
+                        while dmid_list_vs_v2_ky_tt0[ival_first][ival_scnd][idmid] != dmid_for_plots_vs_ky:
+                            idmid += 1
+                    except:
+                        idmid = 0
+
+                    # Rearrange keeping only theta0 = 0
+                    firstdim_vs_v2_ky[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
+                    gamma_avg_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
+                    gamma_avg_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
+                    gamma_max_vs_v2_ky[ival_scnd][ival_first] = gamma_max_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
+                    gamma_max_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_max_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
+                    Qratio_avg_vs_v2_ky[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
+                    g_exb_vs_v2_ky[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
+
+                else:
+
+                    firstdim_vs_v2_ky[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
+                    Qratio_avg_vs_v2_ky[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
+                    g_exb_vs_v2_ky[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
+
+                    # Average over all chains
+                    ndmid = len(gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd])
+                    for idmid in range(ndmid):
+                        gamma_avg_vs_v2_ky[ival_scnd][ival_first] += gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]/ndmid
+                    ndmid = len(gamma_avg_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd])
+                    for idmid in range(ndmid):
+                        gamma_avg_fromSum_vs_v2_ky[ival_scnd][ival_first] += gamma_avg_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]/ndmid
+                    ndmid = len(gamma_max_vs_v2_ky_tt0[ival_first][ival_scnd])
+                    for idmid in range(ndmid):
+                        gamma_max_vs_v2_ky[ival_scnd][ival_first] += gamma_max_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]/ndmid
+                    ndmid = len(gamma_max_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd])
+                    for idmid in range(ndmid):
+                        gamma_max_fromSum_vs_v2_ky[ival_scnd][ival_first] += gamma_max_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]/ndmid
+
+
 
         # Overwrite old arrays
         dmid_list_vs_v2_ky_tt0 = dmid_list_vs_v2_ky_tt0_new
@@ -746,8 +779,28 @@ def main():
 
                 else:
 
-                    theta0.append(theta0_star_for_inst_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
-                    gamma.append(gamma_inst_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
+                    if dmid_for_plots_vs_ky is not None:
+
+                        theta0.append(theta0_star_for_inst_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
+                        gamma.append(gamma_inst_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
+
+                    else:
+
+                        # Average over chains
+                        tt0_avg = 0
+                        ndmid = len(theta0_star_for_inst_vs_v2_ky_tt0[ival][iky])
+                        # tt0 is stored in np.array, so following works:
+                        for idmid in range(ndmid):
+                            tt0_avg += theta0_star_for_inst_vs_v2_ky_tt0[ival][iky][idmid]/ndmid
+                        theta0.append(tt0_avg)
+                        # gamma is in a list, so do it differently
+                        numt = len(gamma_inst_vs_v2_ky_tt0[ival][iky][0])
+                        g_avg = [0]*numt
+                        ndmid = len(gamma_inst_vs_v2_ky_tt0[ival][iky])
+                        for idmid in range(ndmid):
+                            for it in range(numt):
+                                g_avg[it] += gamma_inst_vs_v2_ky_tt0[ival][iky][idmid][it]/ndmid
+                        gamma.append(g_avg)
 
                     # Update min and max gamma
                     for idx in range(len(gamma[-1])):
@@ -761,7 +814,20 @@ def main():
 
                     # Do the same, based on sum(phi2) instead of max(phi2)
 
-                    gamma_fromSum.append(gamma_inst_fromSum_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
+                    if dmid_for_plots_vs_ky is not None:
+
+                        gamma_fromSum.append(gamma_inst_fromSum_vs_v2_ky_tt0[ival][iky][dmid_for_plots_vs_ky])
+
+                    else:
+
+                        # Average over chains
+                        numt = len(gamma_inst_fromSum_vs_v2_ky_tt0[ival][iky][0])
+                        g_avg = [0]*numt
+                        ndmid = len(gamma_inst_fromSum_vs_v2_ky_tt0[ival][iky])
+                        for idmid in range(ndmid):
+                            for it in range(numt):
+                                g_avg[it] += gamma_inst_fromSum_vs_v2_ky_tt0[ival][iky][idmid][it]/ndmid
+                        gamma_fromSum.append(g_avg)
 
                     # Update min and max gamma
                     for idx in range(len(gamma_fromSum[-1])):
