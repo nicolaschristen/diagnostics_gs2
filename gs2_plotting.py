@@ -25,13 +25,13 @@ mybluestd = [0./255, 114./255, 189./255]
 myyellow = [237./255,177./255,32./255]
 mygreen = [51./255,153./255,51./255]
 
-def RdBu_centered(minVal, maxVal):
+def RdBu_centered(minVal, maxVal, center=0.0):
 
-    if minVal<0 and maxVal>0:
-        bluePart = abs(minVal)/(maxVal-minVal)
-    elif minVal>0:
+    if minVal<center and maxVal>center:
+        bluePart = abs(center-minVal)/(maxVal-minVal)
+    elif minVal>center:
         bluePart = 0.0
-    elif maxVal<0:
+    elif maxVal<center:
         bluePart = 1.0
     c = mcolors.ColorConverter().to_rgb
     seq = [darkBlue, midHiBlue, bluePart/3.0, \
@@ -143,7 +143,7 @@ def plot_1d(x,y,xlab,title='',ylab=''):
         plt.title(title)
     return fig
 
-def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor=False,x_is_2pi=False):
+def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor=False,x_is_2pi=False, z_ticks=None, z_ticks_labels=None):
 
     fig = plt.figure(figsize=(12,8))
     x,y = np.meshgrid(xin,yin)
@@ -153,6 +153,8 @@ def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor
     # Centered blue->red color map
     if cmp=='RdBu_c':
         cmp = RdBu_centered(zmin, zmax)
+    elif cmp == 'RdBu_c_one':
+        cmp = RdBu_centered(zmin, zmax, center=1.0)
 
     if use_logcolor:
         color_norm = mcolors.LogNorm(zmin,zmax)
@@ -165,21 +167,28 @@ def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor
                norm=color_norm)
     plt.axis([x.min(), x.max(), y.min()-dy/2, y.max()+dy/2])
     plt.yticks(fontsize=28)
+    plt.xticks(fontsize=28)
     if x_is_2pi:
         plt.xticks([-pi,-pi/2,0,pi/2,pi],['$-\\pi$','$-\\pi/2$','$0$','$\\pi/2$','$\\pi$'],
                 fontsize=28)
-    cbar = plt.colorbar(cax, ticks=[zmin+(zmax-zmin)*f for f in [0,0.25,0.5,0.75,1.0]])
+
+    if z_ticks is None:
+        z_ticks = [zmin+(zmax-zmin)*f for f in [0,0.25,0.5,0.75,1.0]]
+    if z_ticks_labels is None:
+        z_ticks_labels = [str(round(iz,3)) for iz in z_ticks]
+    cbar = plt.colorbar(cax, ticks=z_ticks)
+    cbar.ax.set_yticklabels(z_ticks_labels)
     cbar.ax.tick_params(labelsize=28)
-    plt.xlabel(xlab, fontsize=30)
-    plt.ylabel(ylab, fontsize=30)
-    plt.title(title, fontsize=28)
+    plt.xlabel(xlab, fontsize=32)
+    plt.ylabel(ylab, fontsize=32)
+    plt.title(title, fontsize=32)
     return fig
 
 # Input:
 # x = x[iy][ix]
 # y = y[iy]
 # z = z[iy][ix]
-def plot_2d_uneven_xgrid(x, y, z, xmin, xmax, cbarmin, cbarmax, xlabel, ylabel, title, ngrid_fine = 1001):
+def plot_2d_uneven_xgrid(x, y, z, xmin, xmax, cbarmin, cbarmax, xlabel, ylabel, title, x_is_twopi=True, ngrid_fine = 1001, clrmap='RdBu_c', zticks=None, zticks_labels=None):
 
     # Here we assume that the scan uses a fixed set of ky.
     ny = y.size
@@ -193,7 +202,7 @@ def plot_2d_uneven_xgrid(x, y, z, xmin, xmax, cbarmin, cbarmax, xlabel, ylabel, 
     for iy in range(ny):
         z_fine[iy,:] = nearNeighb_interp_1d(x[iy],z[iy],x_fine)
 
-    plot_2d(z_fine, x_fine, y, cbarmin, cbarmax, xlabel, ylabel, title, 'RdBu_c', x_is_2pi=True)
+    plot_2d(z_fine, x_fine, y, cbarmin, cbarmax, xlabel, ylabel, title, cmp=clrmap, x_is_2pi=x_is_twopi, z_ticks=zticks, z_ticks_labels=zticks_labels)
 
 def movie_2d(z,xin,yin,zmin,zmax,nframes,outfile,xlab='',ylab='',title='',step=1,cmp='RdBu'):
 

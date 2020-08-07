@@ -40,8 +40,8 @@ scan = {ONE:[],TWO:[]}
 # vvv USER PARAMETERS vvv
 
 # Import all parameters from paramfiles/myfile.py
-base_name = 'rpsi_0.51'  
-pf = __import__('scan_gexb_linbox_gexb_vs_ky_theta0_ijp_950_rpsi_051')  
+base_name = 'rpsi_0.8'  
+pf = __import__('scan_delt_linbox_gexb_vs_ky_theta0_ijp_950_rpsi_08')  
 
 # Number of dimensions in the scan
 # e.g. vs (ky, R/LTi) -> ndim = TWO
@@ -53,6 +53,9 @@ ndim = TWO
 # twist and shift chain at t=0, ie it identifies that chain.
 # NB: if None is selected, growthrates are averaged over all chains
 dmid_for_plots_vs_ky = None
+
+# Save data for a scan in (tprimi,gexb)
+sav_for_tprimigexb_scan = False
 
 # Define first dimension of the scan
 firstdim_label = '$\\rho_i k_y$' # for plotting
@@ -72,15 +75,15 @@ if ndim == TWO:
     #seconddim_label = '$v_{max}$'
     #seconddim_label = '$N_{\\lambda,untrap}$'
     #seconddim_label = '$a/L_{T_i}$'
-    seconddim_label = '$\\gamma_E$'
-    #seconddim_label = '$\\Delta t$ [$a/v_{th,i}$]'
+    #seconddim_label = '$\\gamma_E$'
+    seconddim_label = '$\\Delta t$ [$a/v_{th,i}$]'
 
-    seconddim_var = 'g_exb'  
+    seconddim_var = 'delt'  
 
     #seconddim = (2*np.round((pf.nx-1)/3)+1).astype(int) # nakx
     #seconddim = np.round((pf.nx-1)/3) * pf.dkx  # kxmax
     #seconddim = np.round((2*np.round((pf.nx-1)/3))/(2*pi*pf.shat*firstdim[-1]/pf.dkx)+1,2) # Ntwopi
-    seconddim = pf.g_exb
+    seconddim = pf.delt
 
 elif ndim == ONE:
 
@@ -96,33 +99,52 @@ use_my_xlim = True
 my_xlim = (0.0, None)  
 
 use_my_ylim = True
-# rpsi = 0.5, Batch 1
+#### rpsi = 0.5, Batch 1 gexb
 #~ my_ylim_max = (0.0, 0.15)
 #~ my_ylim_max_gamoverksq = (0.0, 0.75)
 #~ my_ylim_avg = (-0.035, 0.020)
 #~ my_ylim_avg_gamoverksq = (-0.1, 0.15)
-# rpsi = 0.5, Batch 2
-my_ylim_max = (0.0, 0.3)
-my_ylim_max_gamoverksq = (0.0, 0.75)
-my_ylim_avg = (-0.035, 0.020)
-my_ylim_avg_gamoverksq = (-0.1, 0.15)
-# rpsi = 0.6
+#### rpsi = 0.5, Batch 2,3,4 gexb
+#~ my_ylim_max = (0.0, 0.3)
+#~ my_ylim_max_gamoverksq = (0.0, 0.75)
+#~ my_ylim_avg = (-0.035, 0.020)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.15)
+#### rpsi = 0.5, Batch 6 gexb
+#~ my_ylim_max = (0.0, 0.3)
+#~ my_ylim_max_gamoverksq = (0.0, 0.75)
+#~ my_ylim_avg = (-0.02, 0.1)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.15)
+#### rpsi = 0.5, Batch 2 tprimi
+#~ my_ylim_max = (0.0, 0.3)
+#~ my_ylim_max_gamoverksq = (0.0, 0.75)
+#~ my_ylim_avg = (-0.02, 0.1)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.15)
+#### rpsi = 0.6
 #~ my_ylim_max = (0.0, 0.2)
 #~ my_ylim_max_gamoverksq = (0.0, 0.85)
 #~ my_ylim_avg = (-0.035, 0.02)
 #~ my_ylim_avg_gamoverksq = (-0.1, 0.1)
-# rpsi = 0.7
-#my_ylim_max = (0.0, 0.40)
-#my_ylim_avg = (-0.02, 0.09)
-# rpsi = 0.8
-#my_ylim_max = (0.0, 0.50)
-#my_ylim_avg = (-0.03, 0.03)
-# rpsi = 0.9
-#my_ylim_max = (0.0, 0.30)
-#my_ylim_avg = (-0.06, 0.00)
+#### rpsi = 0.7
+#~ my_ylim_max = (0.0, 0.40)
+#~ my_ylim_max_gamoverksq = (0.0, 0.85)
+#~ my_ylim_avg = (-0.02, 0.09)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.1)
+#### rpsi = 0.8
+#~ my_ylim_max = (0.0, 0.50)
+#~ my_ylim_max_gamoverksq = (0.0, 0.85)
+#~ my_ylim_avg = (-0.03, 0.03)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.1)
+#### rpsi = 0.9
+#~ my_ylim_max = (0.0, 0.30)
+#~ my_ylim_avg = (-0.06, 0.00)
+
+my_ylim_max = (0.0, 0.3)
+my_ylim_max_gamoverksq = (0.0, 0.75)
+my_ylim_avg = (-0.03, 0.02)
+my_ylim_avg_gamoverksq = (-0.1, 0.15)
 
 # For cases without flow shear (otherwise comment out):
-#my_ylim_avg = my_ylim_max
+my_ylim_avg = my_ylim_max
 
 # Fix colorbar limits ?
 fix_cbarlim = True
@@ -244,6 +266,10 @@ def main():
                     gamma_inst_fromSum_vs_v2_ky_tt0_new[ival_scnd][ival_first] = gamma_inst_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd]
                     theta0_star_for_inst_vs_v2_ky_tt0_new[ival_scnd][ival_first] = theta0_star_for_inst_vs_v2_ky_tt0[ival_first][ival_scnd]
 
+                firstdim_vs_v2_ky[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
+                Qratio_avg_vs_v2_ky[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
+                g_exb_vs_v2_ky[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
+                
                 if dmid_for_plots_vs_ky is not None:
 
                     # Find the correct chain
@@ -255,19 +281,12 @@ def main():
                         idmid = 0
 
                     # Rearrange keeping only theta0 = 0
-                    firstdim_vs_v2_ky[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
                     gamma_avg_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
                     gamma_avg_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_avg_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
                     gamma_max_vs_v2_ky[ival_scnd][ival_first] = gamma_max_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
                     gamma_max_fromSum_vs_v2_ky[ival_scnd][ival_first] = gamma_max_fromSum_vs_v2_ky_tt0[ival_first][ival_scnd][idmid]
-                    Qratio_avg_vs_v2_ky[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
-                    g_exb_vs_v2_ky[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
 
                 else:
-
-                    firstdim_vs_v2_ky[ival_scnd][ival_first] = firstdim_vs_v2_ky_tt0[ival_first][ival_scnd]
-                    Qratio_avg_vs_v2_ky[ival_scnd][ival_first] = Qratio_avg_vs_v2_ky_tt0[ival_first][ival_scnd]
-                    g_exb_vs_v2_ky[ival_scnd][ival_first] = g_exb_vs_v2_ky_tt0[ival_first][ival_scnd]
 
                     # Average over all chains
                     ndmid = len(gamma_avg_vs_v2_ky_tt0[ival_first][ival_scnd])
@@ -342,12 +361,30 @@ def main():
         vardict['gamma_inst_fromSum_vs_v2_ky_tt0'] = gamma_inst_fromSum_vs_v2_ky_tt0
     write_to_file(vardict)
 
-    # Here we check if any run as nonzero g_exb
+    # Here we check if any run has nonzero g_exb
     try:
-        has_g_exb = False in [0 in g_exb_vs_v2_ky[i] for i in len(g_exb_vs_v2_ky)]
-    except TypeError:
-        has_g_exb = g_exb_vs_v2_ky != [0]*len(g_exb_vs_v2_ky)
+        has_g_exb = False in [0 in g_exb_vs_v2_ky[i] for i in range(len(g_exb_vs_v2_ky))]
+    except:
+        has_g_exb = True in [g_exb_vs_v2_ky[i]!=0.0 for i in range(len(g_exb_vs_v2_ky))]
 
+
+    if sav_for_tprimigexb_scan:
+
+        fac_tprimi = 0.6
+        tprimi = round(fac_tprimi*1.7392,3)
+        vardict = {}
+        vardict['g_exb'] = [g_exb_vs_v2_ky[iv2][0] for iv2 in range(seconddim.size)]
+        vardict['tprimi'] = tprimi
+        vardict['ky'] = firstdim_vs_v2_ky[0][:]
+        vardict['gamma_max'] = [max(gamma_max_fromSum_vs_v2_ky[iv2][:]) for iv2 in range(seconddim.size)]
+        vardict['iky_atmax_gammax'] = [gamma_max_fromSum_vs_v2_ky[iv2][:].index(max(gamma_max_fromSum_vs_v2_ky[iv2][:])) for iv2 in range(seconddim.size)] 
+        vardict['gamma_avg'] = [max(gamma_avg_fromSum_vs_v2_ky[iv2][:]) for iv2 in range(seconddim.size)]
+        vardict['iky_atmax_gamavg'] = [gamma_avg_fromSum_vs_v2_ky[iv2][:].index(max(gamma_avg_fromSum_vs_v2_ky[iv2][:])) for iv2 in range(seconddim.size)] 
+
+        #datfile_name = 'postproc/tprimigexb_scan_tprimi_' + str(tprimi) + '.dat'
+        datfile_name = 'postproc/tprimigexb_scan_tprimi_' + str(tprimi) + '.dat'
+        with open(datfile_name, 'wb') as outfile: # 'wb' stands for write bytes
+            pickle.dump(vardict,outfile)
 
 
 
@@ -471,6 +508,7 @@ def main():
         frame.set_linewidth(0.5)
         frame.set_alpha(1)
         plt.savefig(pdfname)
+        print(gamma_avg_vs_v2_ky) # NDCDEL
 
         # <gamma>_t/ky^2 vs ky
 
@@ -609,6 +647,8 @@ def main():
             frame.set_linewidth(0.5)
             frame.set_alpha(1)
             plt.savefig(pdfname)
+            print('') # NDCDEL
+            print(gamma_max_vs_v2_ky) # NDCDEL
 
             # gamma_max/ky^2 vs ky
 

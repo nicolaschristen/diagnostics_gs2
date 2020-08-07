@@ -37,6 +37,10 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     # make snapshots/movies along ballooning angle ?
     make_plots = True
 
+    plot_phi_vs_t = True
+    plot_phi_vs_tt0 = True
+    plot_phi_vs_tt0_log = False
+
     make_snaps = False
     itSnap_min = 0
     itSnap_max = -1
@@ -63,7 +67,12 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     theta = myout['theta']
     ntheta = theta.size
     
-    g_exb = myin['dist_fn_knobs']['g_exb']
+    try:
+        g_exbfac = myin['dist_fn_knobs']['g_exbfac']
+    except:
+        g_exbfac = 1.0
+    g_exb = g_exbfac * myin['dist_fn_knobs']['g_exb']
+
     shat = myin['theta_grid_parameters']['shat']
     jtwist = int(myin['kt_grids_box_parameters']['jtwist'])
 
@@ -625,79 +634,81 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
 
     if make_plots:
 
-        # Plot max(phi2) in chain vs time, one dmid per plot
+        if plot_phi_vs_t:
 
-        plt.figure(figsize=(12,8))
+            # Plot max(phi2) in chain vs time, one dmid per plot
 
-        tmp_pdf_id = 1
-        pdflist = []
-        for idmid in range(len(dmid_list)):
-            my_legend = []
-            plt.semilogy(t[0:nt], max_phi2bloon[idmid], color=gplot.myblue, linewidth=3.0)
-            plt.title('$k_y=$'+gplot.str_ky(ky) + ', $\\theta_0=$'+gplot.str_tt0(theta0[itheta0_list[idmid]]))
-            my_legend.append('$\\max_{K_x}\\vert \\langle\\varphi\\rangle_\\theta \\vert ^2$')
-            # Add fits for average and maximum growthrates
-            plt.semilogy(t[0:nt], max_phi2bloon[idmid][it_start]*np.exp(2.0*gamma_avg[idmid]*t[0:nt]+offset_avg[idmid]),\
-                    color=gplot.myblue, linewidth=3.0, linestyle='--')
-            if g_exb != 0.0:
-                my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(gamma_avg[idmid]))
-                bot, top = plt.ylim()
-                plt.semilogy(t[0:nt], max_phi2bloon[idmid][it_gamma_max[idmid]]*np.exp(2.0*gamma_max[idmid]*(t[0:nt]-t[it_gamma_max[idmid]])),\
-                        color=gplot.myblue, linewidth=3.0, linestyle=':')
-                my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[idmid]))
-                plt.ylim(bot,top)
-            else:
-                my_legend.append('$\\gamma = {:.3f}$'.format(gamma_avg[idmid]))
-            plt.xlabel('$t$')
-            plt.grid(True)
-            gplot.legend_matlab(my_legend)
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
+            plt.figure(figsize=(12,8))
 
-        merged_pdfname = 'maxphi_vs_t'
-        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
-        plt.clf()
-        plt.cla()
+            tmp_pdf_id = 1
+            pdflist = []
+            for idmid in range(len(dmid_list)):
+                my_legend = []
+                plt.semilogy(t[0:nt], max_phi2bloon[idmid], color=gplot.myblue, linewidth=3.0)
+                plt.title('$k_y=$'+gplot.str_ky(ky) + ', $\\theta_0=$'+gplot.str_tt0(theta0[itheta0_list[idmid]]))
+                my_legend.append('$\\max_{K_x}\\vert \\langle\\varphi\\rangle_\\theta \\vert ^2$')
+                # Add fits for average and maximum growthrates
+                plt.semilogy(t[0:nt], max_phi2bloon[idmid][it_start]*np.exp(2.0*gamma_avg[idmid]*t[0:nt]+offset_avg[idmid]),\
+                        color=gplot.myblue, linewidth=3.0, linestyle='--')
+                if g_exb != 0.0:
+                    my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(gamma_avg[idmid]))
+                    bot, top = plt.ylim()
+                    plt.semilogy(t[0:nt], max_phi2bloon[idmid][it_gamma_max[idmid]]*np.exp(2.0*gamma_max[idmid]*(t[0:nt]-t[it_gamma_max[idmid]])),\
+                            color=gplot.myblue, linewidth=3.0, linestyle=':')
+                    my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max[idmid]))
+                    plt.ylim(bot,top)
+                else:
+                    my_legend.append('$\\gamma = {:.3f}$'.format(gamma_avg[idmid]))
+                plt.xlabel('$t$')
+                plt.grid(True)
+                gplot.legend_matlab(my_legend)
+                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                gplot.save_plot(tmp_pdfname, run, ifile)
+                pdflist.append(tmp_pdfname)
+                tmp_pdf_id = tmp_pdf_id+1
+
+            merged_pdfname = 'maxphi_vs_t'
+            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+            plt.clf()
+            plt.cla()
 
 
 
-        # Plot sum(phi2) in chain vs time, one dmid per plot
+            # Plot sum(phi2) in chain vs time, one dmid per plot
 
-        plt.figure(figsize=(12,8))
+            plt.figure(figsize=(12,8))
 
-        tmp_pdf_id = 1
-        pdflist = []
-        for idmid in range(len(dmid_list)):
-            my_legend = []
-            plt.semilogy(t[0:nt], sum_phi2bloon[idmid], color=gplot.myblue, linewidth=3.0)
-            plt.title('$k_y=$'+gplot.str_ky(ky) + ', $\\theta_0=$'+gplot.str_tt0(theta0[itheta0_list[idmid]]))
-            my_legend.append('$\\sum_{K_x}\\vert \\langle\\varphi\\rangle_\\theta \\vert ^2$')
-            # Add fits for average and maximum growthrates
-            plt.semilogy(t[0:nt], sum_phi2bloon[idmid][it_start]*np.exp(2.0*gamma_avg_fromSum[idmid]*t[0:nt]+offset_avg_fromSum[idmid]),\
-                    color=gplot.myblue, linewidth=3.0, linestyle='--')
-            if g_exb != 0.0:
-                my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(gamma_avg_fromSum[idmid]))
-                bot, top = plt.ylim()
-                plt.semilogy(t[0:nt],sum_phi2bloon[idmid][it_gamma_max_fromSum[idmid]]*np.exp(2.0*gamma_max_fromSum[idmid]*(t[0:nt]-t[it_gamma_max_fromSum[idmid]])),\
-                        color=gplot.myblue, linewidth=3.0, linestyle=':')
-                my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max_fromSum[idmid]))
-                plt.ylim(bot,top)
-            else:
-                my_legend.append('$\\gamma = {:.3f}$'.format(gamma_avg_fromSum[idmid]))
-            plt.xlabel('$t$')
-            plt.grid(True)
-            gplot.legend_matlab(my_legend)
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
+            tmp_pdf_id = 1
+            pdflist = []
+            for idmid in range(len(dmid_list)):
+                my_legend = []
+                plt.semilogy(t[0:nt], sum_phi2bloon[idmid], color=gplot.myblue, linewidth=3.0)
+                plt.title('$k_y=$'+gplot.str_ky(ky) + ', $\\theta_0=$'+gplot.str_tt0(theta0[itheta0_list[idmid]]))
+                my_legend.append('$\\sum_{K_x}\\vert \\langle\\varphi\\rangle_\\theta \\vert ^2$')
+                # Add fits for average and maximum growthrates
+                plt.semilogy(t[0:nt], sum_phi2bloon[idmid][it_start]*np.exp(2.0*gamma_avg_fromSum[idmid]*t[0:nt]+offset_avg_fromSum[idmid]),\
+                        color=gplot.myblue, linewidth=3.0, linestyle='--')
+                if g_exb != 0.0:
+                    my_legend.append('$\\langle\\gamma\\rangle_t = {:.3f}$'.format(gamma_avg_fromSum[idmid]))
+                    bot, top = plt.ylim()
+                    plt.semilogy(t[0:nt],sum_phi2bloon[idmid][it_gamma_max_fromSum[idmid]]*np.exp(2.0*gamma_max_fromSum[idmid]*(t[0:nt]-t[it_gamma_max_fromSum[idmid]])),\
+                            color=gplot.myblue, linewidth=3.0, linestyle=':')
+                    my_legend.append('$\\gamma_{max} '+'= {:.3f}$'.format(gamma_max_fromSum[idmid]))
+                    plt.ylim(bot,top)
+                else:
+                    my_legend.append('$\\gamma = {:.3f}$'.format(gamma_avg_fromSum[idmid]))
+                plt.xlabel('$t$')
+                plt.grid(True)
+                gplot.legend_matlab(my_legend)
+                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                gplot.save_plot(tmp_pdfname, run, ifile)
+                pdflist.append(tmp_pdfname)
+                tmp_pdf_id = tmp_pdf_id+1
 
-        merged_pdfname = 'sumphi_vs_t'
-        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
-        plt.clf()
-        plt.cla()
+            merged_pdfname = 'sumphi_vs_t'
+            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+            plt.clf()
+            plt.cla()
 
 
 
@@ -729,117 +740,84 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         # Plot phi2 vs (theta-theta0), one dmid per plot, one series of plots per selected time
         # Plot vs lin-lin, lin-log and log-log scales
 
-        # lin-lin
+        if plot_phi_vs_tt0:
 
-        plt.figure(figsize=(12,8))
-        it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
+            # lin-lin
 
-        for it in it_toPlot:
+            plt.figure(figsize=(12,8))
+            it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
 
-            tmp_pdf_id = 1
-            pdflist = []
-            for idmid in range(len(dmid_list)):
-                if g_exb == 0.0:
-                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0 =$' + gplot.str_tt0(theta0[itheta0_list[idmid]]))
-                else:
-                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0^* =$' + gplot.str_tt0(theta0_star[it,itheta0_list[idmid]]))
-                lphi, = plt.plot(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
-                        markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
-                lphi.set_label('$\\vert \\varphi \\vert ^2$')
-                lbdry, = plt.plot(bloonang_bndry[idmid][it],phi2bloon_discont[idmid][it], linestyle='', \
-                        marker='d', markersize=15, markerfacecolor='r', markeredgecolor='r')
-                lbdry.set_label('_skip')
-                if g_exb == 0.0:
-                    plt.xlabel('$\\theta-\\theta_0$')
-                else:
-                    plt.xlabel('$\\theta-\\theta_0^*$')
-                plt.grid(True)
-                gplot.legend_matlab()
-                ax = plt.gca()
-                ax.yaxis.set_major_formatter(FormatStrFormatter('%.2E'))
-                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-                gplot.save_plot(tmp_pdfname, run, ifile)
-                pdflist.append(tmp_pdfname)
-                tmp_pdf_id = tmp_pdf_id+1
+            for it in it_toPlot:
 
-            merged_pdfname = 'phi_vs_theta_it_' + str(it)
-            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
-            plt.clf()
-            plt.cla()
+                tmp_pdf_id = 1
+                pdflist = []
+                for idmid in range(len(dmid_list)):
+                    if g_exb == 0.0:
+                        plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0 =$' + gplot.str_tt0(theta0[itheta0_list[idmid]]))
+                    else:
+                        plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0^* =$' + gplot.str_tt0(theta0_star[it,itheta0_list[idmid]]))
+                    lphi, = plt.plot(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
+                            markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
+                    lphi.set_label('$\\vert \\varphi \\vert ^2$')
+                    lbdry, = plt.plot(bloonang_bndry[idmid][it],phi2bloon_discont[idmid][it], linestyle='', \
+                            marker='d', markersize=15, markerfacecolor='r', markeredgecolor='r')
+                    lbdry.set_label('_skip')
+                    if g_exb == 0.0:
+                        plt.xlabel('$\\theta-\\theta_0$')
+                    else:
+                        plt.xlabel('$\\theta-\\theta_0^*$')
+                    plt.grid(True)
+                    gplot.legend_matlab()
+                    ax = plt.gca()
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2E'))
+                    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                    gplot.save_plot(tmp_pdfname, run, ifile)
+                    pdflist.append(tmp_pdfname)
+                    tmp_pdf_id = tmp_pdf_id+1
 
-        # lin-log
+                merged_pdfname = 'phi_vs_theta_it_' + str(it)
+                gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+                plt.clf()
+                plt.cla()
 
-        plt.figure(figsize=(12,8))
-        it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
+            if plot_phi_vs_tt0_log:
 
-        for it in it_toPlot:
+                # lin-log
 
-            tmp_pdf_id = 1
-            pdflist = []
-            for idmid in range(len(dmid_list)):
-                if g_exb == 0.0:
-                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0 =$' + gplot.str_tt0(theta0[itheta0_list[idmid]]))
-                else:
-                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0^* =$' + gplot.str_tt0(theta0_star[it,itheta0_list[idmid]]))
-                lphi, = plt.semilogy(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
-                        markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
-                lphi.set_label('$\\vert \\varphi \\vert ^2$')
-                lbdry, = plt.semilogy(bloonang_bndry[idmid][it],phi2bloon_discont[idmid][it], linestyle='', \
-                        marker='d', markersize=15, markerfacecolor='r', markeredgecolor='r')
-                lbdry.set_label('_skip')
-                if g_exb == 0.0:
-                    plt.xlabel('$\\theta-\\theta_0$')
-                else:
-                    plt.xlabel('$\\theta-\\theta_0^*$')
-                plt.grid(True)
-                gplot.legend_matlab()
-                ax = plt.gca()
-                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-                gplot.save_plot(tmp_pdfname, run, ifile)
-                pdflist.append(tmp_pdfname)
-                tmp_pdf_id = tmp_pdf_id+1
+                plt.figure(figsize=(12,8))
+                it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
 
-            merged_pdfname = 'phi_vs_theta_linlog_it_' + str(it)
-            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
-            plt.clf()
-            plt.cla()
+                for it in it_toPlot:
 
-        # log-log
+                    tmp_pdf_id = 1
+                    pdflist = []
+                    for idmid in range(len(dmid_list)):
+                        if g_exb == 0.0:
+                            plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0 =$' + gplot.str_tt0(theta0[itheta0_list[idmid]]))
+                        else:
+                            plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0^* =$' + gplot.str_tt0(theta0_star[it,itheta0_list[idmid]]))
+                        lphi, = plt.semilogy(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
+                                markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
+                        lphi.set_label('$\\vert \\varphi \\vert ^2$')
+                        lbdry, = plt.semilogy(bloonang_bndry[idmid][it],phi2bloon_discont[idmid][it], linestyle='', \
+                                marker='d', markersize=15, markerfacecolor='r', markeredgecolor='r')
+                        lbdry.set_label('_skip')
+                        if g_exb == 0.0:
+                            plt.xlabel('$\\theta-\\theta_0$')
+                        else:
+                            plt.xlabel('$\\theta-\\theta_0^*$')
+                        plt.grid(True)
+                        gplot.legend_matlab()
+                        ax = plt.gca()
+                        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                        gplot.save_plot(tmp_pdfname, run, ifile)
+                        pdflist.append(tmp_pdfname)
+                        tmp_pdf_id = tmp_pdf_id+1
 
-        plt.figure(figsize=(12,8))
-        it_toPlot = [int(r*(nt-1)) for r in tRatio_toPlot]
-
-        for it in it_toPlot:
-
-            tmp_pdf_id = 1
-            pdflist = []
-            for idmid in range(len(dmid_list)):
-                if g_exb == 0.0:
-                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0 =$' + gplot.str_tt0(theta0[itheta0_list[idmid]]))
-                else:
-                    plt.title('$t=$' + gplot.str_t(t[it]) + ', $k_y=$' + gplot.str_ky(ky) + ', $\\theta_0^* =$' + gplot.str_tt0(theta0_star[it,itheta0_list[idmid]]))
-                lphi, = plt.loglog(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
-                        markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
-                lphi.set_label('$\\vert \\varphi \\vert ^2$')
-                lbdry, = plt.loglog(bloonang_bndry[idmid][it],phi2bloon_discont[idmid][it], linestyle='', \
-                        marker='d', markersize=15, markerfacecolor='r', markeredgecolor='r')
-                lbdry.set_label('_skip')
-                if g_exb == 0.0:
-                    plt.xlabel('$\\theta-\\theta_0$')
-                else:
-                    plt.xlabel('$\\theta-\\theta_0^*$')
-                plt.grid(True)
-                gplot.legend_matlab()
-                ax = plt.gca()
-                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-                gplot.save_plot(tmp_pdfname, run, ifile)
-                pdflist.append(tmp_pdfname)
-                tmp_pdf_id = tmp_pdf_id+1
-
-            merged_pdfname = 'phi_vs_theta_loglog_it_' + str(it)
-            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
-            plt.clf()
-            plt.cla()
+                    merged_pdfname = 'phi_vs_theta_linlog_it_' + str(it)
+                    gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+                    plt.clf()
+                    plt.cla()
 
 
 
