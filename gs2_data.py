@@ -58,6 +58,10 @@ out_varnames = [
         'tpar_igomega_by_mode',
         # complex perpendicular temperature fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
         'tperp_igomega_by_mode',
+        # total density at last time step [spec,ky,kx,theta,imag]
+        'ntot',
+        # non-adiabatic part of the density at last time step [spec,ky,kx,theta,imag]
+        'density',
         'gds2',
         'gds21',
         'gds22',

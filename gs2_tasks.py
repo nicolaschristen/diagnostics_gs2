@@ -10,8 +10,8 @@ import fluxes
 import time_correlation as tcorr
 # TODO: save your python script in the task/ folder and import it here.
 import flowtest
-import floquet
-import lingrowth
+import linbox
+import linrange
 import potential
 import boxballoon
 import fields_real_space
@@ -78,13 +78,13 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 
         flowtest.store(myin, myout, task_space)
 
-    if (task == 'floquet'):
+    if (task == 'floquet' or task == 'linbox'):
 
-        floquet.my_task_single(ifile, run, myin, myout, task_space)
+        linbox.my_task_single(ifile, run, myin, myout, mytime, task_space)
 
-    if (task == 'lingrowth'):
+    if (task == 'linrange'):
 
-        lingrowth.my_task_single(ifile, run, myin, myout)
+        linrange.my_task_single(ifile, run, myin, myout, mytime)
 
     if (task == 'potential'):
 
@@ -124,9 +124,9 @@ def complete_task_scan(task, run, full_space):
 
         flowtest.plot(run, full_space)
 
-    if (task == 'floquet_scan'):
+    if (task == 'floquet_scan' or task == 'linbox_scan'):
 
-        floquet.task_scan(run, full_space)
+        linbox.task_scan(run, full_space)
 
     if (task == 'fluxes_stitch'):
        
