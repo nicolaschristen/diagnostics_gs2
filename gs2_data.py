@@ -14,6 +14,14 @@ out_varnames = [
         'phi2_by_ky',
         # complex potential fluctuation [t,ky,kx,theta,imag]
         'phi_t',
+        # at itheta = igomega (=0 by default) [t,ky,kx,imag]
+        'phi_igomega_by_mode',
+        # at itheta = igomega (=0 by default) [t,spec,ky,kx,imag]
+        'density_igomega_by_mode',
+        # at itheta = igomega (=0 by default) [t,spec,ky,kx,imag]
+        'tpar_igomega_by_mode',
+        # at itheta = igomega (=0 by default) [t,spec,ky,kx,imag]
+        'tperp_igomega_by_mode',
         # complex frequency [t,ky,kx,imag]
         'omega',
         # complex frequency avged over navg time-steps [t,ky,kx,imag]
@@ -58,7 +66,11 @@ out_varnames = [
         'gbdrift0',
         'cvdrift0',
         'bmag',
-        'apar'
+        'apar',
+        # Cases with flow shear: difference between the time-varying kx in the lab-frame,
+        # and the fixed nearest neighbour kx in the shearing frame.
+        # [ky]
+        'kx_shift'
         ]
 
 def get_output(ifile, run):

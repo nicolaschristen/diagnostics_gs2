@@ -14,6 +14,7 @@ import floquet
 import lingrowth
 import potential
 import boxballoon
+import fields_real_space
 
 
 # Complete part of tasks that require a single in/out pair of files.
@@ -92,6 +93,10 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
     if (task == 'boxballoon'):
 
         boxballoon.my_task_single(ifile, run, myin, myout)
+
+    if (task == 'fields_real_space'):
+
+        fields_real_space.my_task_single(ifile, run, myin, myout, mygrids)
 
 # Complete part of tasks that require the collection of in/out pairs (e.g. plotting a parameter scan).
 
