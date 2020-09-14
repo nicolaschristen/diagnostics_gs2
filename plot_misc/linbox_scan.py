@@ -41,7 +41,7 @@ scan = {ONE:[],TWO:[]}
 
 # Import all parameters from paramfiles/myfile.py
 base_name = 'rpsi_0.8'  
-pf = __import__('scan_delt_linbox_gexb_vs_ky_theta0_ijp_950_rpsi_08')  
+pf = __import__('scan_tprimi_linbox_gexb_vs_ky_theta0_ijp_950_rpsi_08')  
 
 # Number of dimensions in the scan
 # e.g. vs (ky, R/LTi) -> ndim = TWO
@@ -56,6 +56,8 @@ dmid_for_plots_vs_ky = None
 
 # Save data for a scan in (tprimi,gexb)
 sav_for_tprimigexb_scan = False
+tprimi_orig = 1.7392
+fac_tprimi = 0.6
 
 # Define first dimension of the scan
 firstdim_label = '$\\rho_i k_y$' # for plotting
@@ -74,16 +76,16 @@ if ndim == TWO:
     #seconddim_label = '$N_\\varepsilon$'
     #seconddim_label = '$v_{max}$'
     #seconddim_label = '$N_{\\lambda,untrap}$'
-    #seconddim_label = '$a/L_{T_i}$'
+    seconddim_label = '$a/L_{T_i}$'
     #seconddim_label = '$\\gamma_E$'
-    seconddim_label = '$\\Delta t$ [$a/v_{th,i}$]'
+    #seconddim_label = '$\\Delta t$ [$a/v_{th,i}$]'
 
-    seconddim_var = 'delt'  
+    seconddim_var = 'tprimi'  
 
     #seconddim = (2*np.round((pf.nx-1)/3)+1).astype(int) # nakx
     #seconddim = np.round((pf.nx-1)/3) * pf.dkx  # kxmax
     #seconddim = np.round((2*np.round((pf.nx-1)/3))/(2*pi*pf.shat*firstdim[-1]/pf.dkx)+1,2) # Ntwopi
-    seconddim = pf.delt
+    seconddim = pf.tprimi
 
 elif ndim == ONE:
 
@@ -370,8 +372,7 @@ def main():
 
     if sav_for_tprimigexb_scan:
 
-        fac_tprimi = 0.6
-        tprimi = round(fac_tprimi*1.7392,3)
+        tprimi = round(fac_tprimi*tprimi_orig,3)
         vardict = {}
         vardict['g_exb'] = [g_exb_vs_v2_ky[iv2][0] for iv2 in range(seconddim.size)]
         vardict['tprimi'] = tprimi
