@@ -96,7 +96,7 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 
     if (task == 'fields_real_space'):
 
-        fields_real_space.my_task_single(ifile, run, myin, myout, mygrids)
+        fields_real_space.my_task_single(ifile, run, myin, myout, mygrids, mytime)
 
 # Complete part of tasks that require the collection of in/out pairs (e.g. plotting a parameter scan).
 
