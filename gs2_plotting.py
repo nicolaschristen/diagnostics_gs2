@@ -97,7 +97,7 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
 def set_plot_defaults():
 
     # setup some plot defaults
-    plt.rc('text', usetex=True)
+    plt.rc('text', usetex=False) # False for ARCHER, True for MARCONI
     plt.rc('font', family='serif')
     plt.rc('font', size=30)
     rcParams.update({'figure.autolayout': True})
@@ -175,7 +175,10 @@ def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor
     if z_ticks is None:
         z_ticks = [zmin+(zmax-zmin)*f for f in [0,0.25,0.5,0.75,1.0]]
     if z_ticks_labels is None:
-        z_ticks_labels = [str(round(iz,3)) for iz in z_ticks]
+        if abs(zmax-zmin) > 0.01:
+            z_ticks_labels = [str(round(iz,3)) for iz in z_ticks]
+        else:
+            z_ticks_labels = ['{:.2E}'.format(iz) for iz in z_ticks]
     cbar = plt.colorbar(cax, ticks=z_ticks)
     cbar.ax.set_yticklabels(z_ticks_labels)
     cbar.ax.tick_params(labelsize=28)

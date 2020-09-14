@@ -10,7 +10,7 @@ import copy
 
 # TODO: add 'your_task' to the array.
 tasks_choices = ['fluxes', 'zonal', 'tcorr', 'flowtest', 'floquet', \
-        'linrange','fluxes_stitch','potential']
+        'linrange','fluxes_stitch','potential', 'fields_real_space']
 
 # Fom command-line arguments, get info about this analysis run (filenames, tasks to complete ...)
 run = grunpar.runobj(tasks_choices)

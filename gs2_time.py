@@ -14,13 +14,16 @@ class timeobj:
         self.time = np.copy(myout['t'])
         self.ntime = self.time.size
 
-        # get starting index for steady-state
+        # get starting index for selected time window
         self.twin = twin
-        tmin = self.time[-1]*(1.0-twin)
+        tmin = self.time[-1]*twin[0]
         self.it_min = 0
         while self.time[self.it_min] < tmin:
             self.it_min += 1
-        self.it_max = self.ntime-1
+        tmax = self.time[-1]*twin[1]
+        self.it_max = 0
+        while self.time[self.it_max] < tmax and self.it_max < self.ntime-1:
+            self.it_max += 1
         # get number of time points in steady-state interval
         self.it_interval = self.ntime - self.it_min
 
@@ -40,8 +43,21 @@ class timeobj:
         print('complete')
 
 
-    def timeavg(self,ft):
+    def timeavg(self,ft,it_min=None,it_max=None,use_ft_full=False):
 
-        favg = simps(ft[self.it_min:self.it_max],x=self.time_steady) \
-            / (self.time[self.it_max-1]-self.time[self.it_min])
+        if it_min is None:
+            it_min = self.it_min
+            it_max = self.it_max
+            mytime = self.time_steady
+        else:
+            mytime = self.time[it_min:it_max]
+
+        if use_ft_full:
+            myft = ft
+        else:
+            myft = ft[it_min:it_max]
+
+        favg = simps(myft,x=mytime) \
+            / (mytime[-1]-mytime[0])
+
         return favg

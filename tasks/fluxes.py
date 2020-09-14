@@ -306,11 +306,14 @@ def stitching_fluxes(run):
             stitch_phi2_by_ky[it_tot,:] = full_fluxes[ifile]['phi2_by_ky'][it,:]
             it_tot += 1
 
-    tmin = stitch_my_time.time[-1] * (1.0-twin)
+    tmin = stitch_my_time.time[-1] * twin[0]
     stitch_my_time.it_min = 0
     while stitch_my_time.time[stitch_my_time.it_min] < tmin:
         stitch_my_time.it_min += 1
-    stitch_my_time.it_max = stitch_my_time.ntime-1
+    tmax = stitch_my_time.time[-1] * twin[1]
+    stitch_my_time.it_max = 0
+    while stitch_my_time.time[stitch_my_time.it_max] < tmax and stitch_my_time.it_max < stitch_my_time.ntime-1:
+        stitch_my_time.it_max += 1
     stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
     stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
 
@@ -849,6 +852,7 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_
         flxselect = flx
         # indicating area of saturation
         plt.axvline(x=mytime.time_steady[0], color='grey', linestyle='-')
+        plt.axvline(x=mytime.time_steady[-1], color='grey', linestyle='-')
         ax = plt.gca()
         ax.axvspan(mytime.time_steady[0], mytime.time_steady[-1], alpha=0.1, color='grey')
     else:

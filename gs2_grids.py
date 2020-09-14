@@ -15,6 +15,11 @@ class gridobj:
         self.theta0_gs2 = np.copy(myout['theta0'])
         self.ky = np.copy(myout['ky'])
 
+        if myout['kx_shift_present']:
+            self.kx_shift = myout['kx_shift']
+        else:
+            self.kx_shift = None
+
         # number of kx and ky grid points
         self.nx = self.kx_gs2.size
         self.ny = self.ky.size
@@ -34,10 +39,10 @@ class gridobj:
      
         if (self.nx > 1):
             # get real space grid in x
-            xgrid_fft = 2*pi*np.fft.fftfreq(self.nx,self.kx_gs2[1])
-            self.xgrid = np.concatenate((xgrid_fft[self.nxmid:],xgrid_fft[:self.nxmid]))
+            self.xgrid_fft = 2*pi*np.fft.fftfreq(self.nx,self.kx_gs2[1])
+            self.xgrid = np.concatenate((self.xgrid_fft[self.nxmid:],self.xgrid_fft[:self.nxmid]))
         else:
-            xgrid_fft = np.arange(1,dtype=float)
+            self.xgrid_fft = np.arange(1,dtype=float)
             self.xgrid = np.arange(1,dtype=float)
      
         if (self.ny > 1):

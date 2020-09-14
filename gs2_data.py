@@ -1,6 +1,7 @@
 from netCDF4 import Dataset
 import numpy as np
 import f90nml
+import copy as cp
 
 out_varnames = [
         't', 'kx', 'ky',
@@ -14,6 +15,22 @@ out_varnames = [
         'phi2_by_ky',
         # complex potential fluctuation [t,ky,kx,theta,imag]
         'phi_t',
+        # at itheta = igomega (=0 by default) [t,ky,kx,imag]
+        'phi_igomega_by_mode',
+        # Non-adiabatic part of perturb. dens. at itheta = igomega (=0 by default) [t,spec,ky,kx,imag]
+        'density_igomega_by_mode',
+        # total perturb. dens. for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
+        'ntot_igomega_by_mode',
+        # complex parallel flow fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
+        'upar_igomega_by_mode',
+        # at itheta = igomega (=0 by default) [t,spec,ky,kx,imag]
+        'tpar_igomega_by_mode',
+        # at itheta = igomega (=0 by default) [t,spec,ky,kx,imag]
+        'tperp_igomega_by_mode',
+        # total density at last time step [spec,ky,kx,theta,imag]
+        'ntot',
+        # non-adiabatic part of the density at last time step [spec,ky,kx,theta,imag]
+        'density',
         # complex frequency [t,ky,kx,imag]
         'omega',
         # complex frequency avged over navg time-steps [t,ky,kx,imag]
@@ -40,20 +57,6 @@ out_varnames = [
         'es_heat_sym',
         # electrostatic momentum flux function of vpa and theta [t,spec,vpa,theta]
         'es_mom_sym',
-        # complex phi for a given theta, usually outboard mid-plane [t,ky,kx,imag]
-        'phi_igomega_by_mode',
-        # complex density fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
-        'ntot_igomega_by_mode',
-        # complex parallel flow fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
-        'upar_igomega_by_mode',
-        # complex parallel temperature fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
-        'tpar_igomega_by_mode',
-        # complex perpendicular temperature fluctuation for a given theta, usually outboard mid-plane [t,spec,ky,kx,imag]
-        'tperp_igomega_by_mode',
-        # total density at last time step [spec,ky,kx,theta,imag]
-        'ntot',
-        # non-adiabatic part of the density at last time step [spec,ky,kx,theta,imag]
-        'density',
         'gds2',
         'gds21',
         'gds22',
@@ -62,7 +65,12 @@ out_varnames = [
         'gbdrift0',
         'cvdrift0',
         'bmag',
-        'apar'
+        'apar',
+        # Cases with flow shear: difference between the time-varying kx in the lab-frame,
+        # and the fixed nearest neighbour kx in the shearing frame.
+        # [ky]
+        'kx_shift',
+        'kx_shift_over_time'
         ]
 
 def get_output(ifile, run):
@@ -104,6 +112,13 @@ def get_output(ifile, run):
         myout['es_part_sym'] = np.delete(myout['es_part_sym'],indices_to_delete,axis=0)
         myout['es_heat_sym'] = np.delete(myout['es_heat_sym'],indices_to_delete,axis=0)
         myout['es_mom_sym'] = np.delete(myout['es_mom_sym'],indices_to_delete,axis=0)
+
+    # Adapt for different ways in which kx_shift is output by gs2:
+    # myout['kx_shift'] will contain kx_shift at every time-step
+    # if kx_shift has indeed been output at every time-step by the code.
+    # Otherwise it contains kx_shift at the last time-step.
+    if myout['kx_shift_over_time_present'] and myout['kx_shift'].ndim == 1:
+        myout['kx_shift'] = cp.deepcopy(myout['kx_shift_over_time'])
 
     return myout
 

@@ -14,7 +14,7 @@ class runobj:
         self.fnames = []
         self.scan_name = ''
         self.out_dir = './'
-        self.twin = 0.5
+        self.twin = [0.5, 1.0]
         self.no_plot = False
         self.only_plot = False
 
@@ -55,7 +55,13 @@ class runobj:
         if args.out_dir: self.out_dir = args.out_dir
         if (not self.out_dir[-1]=='/'): self.out_dir = self.out_dir + '/'
 
-        if args.twin: self.twin = float(args.twin)
+        if args.twin:
+            if len(args.twin) == 1:
+                self.twin = [float(args.twin[0]), 1.0]
+            elif len(args.twin) == 2 and args.twin[0] < args.twin[1]:
+                self.twin = [float(args.twin[0]), float(args.twin[1])]
+            else:
+                sys.exit("Please provide a valid time window (for help, use option -h).")
 
         if args.no_plot: self.no_plot = True
         
@@ -81,8 +87,11 @@ class runobj:
         parser.add_argument('-o', '--out_dir', nargs = '?',
                 help = 'Path to directory where plots will be saved. Default is current directory.')
 
-        parser.add_argument('--twin', nargs = '?',
-                help = 'Specify fraction of time over which the solution is nonlinearly saturated (0.0 -> 1.0). Default is 0.5.')
+        parser.add_argument('--twin', nargs = '*',
+                help = 'Specify time window over which the solution is nonlinearly saturated. '\
+                       'EITHER specify a single fraction (0 <= frac < 1) to select the window [tfinal*frac , tfinal]. '\
+                       'OR specify two fractions (0 <= frac1 < frac2 < 1) to select the window [tfinal*frac1 , tfinal*frac2]. '\
+                       'Default is frac1 = 0.5, frac2 = 1.')
 
         parser.add_argument('-q', '--quick', action = 'store_true', default = False,
                 help = 'Quick mode: all parameters are set to values from my_quick_params.py file.')
