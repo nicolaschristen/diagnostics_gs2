@@ -422,7 +422,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
             title = '$\ln$'+title
             gplot.plot_1d(time,np.log(phi2_avg),'$t (a/v_{t})$',title)
         else:
-            gplot.plot_1d(time,phi2_avg,'$t (a/v_{t})$',title)
+            gplot.plot_1d(time,phi2_avg,'$t (a/v_{t})$',title, semilogy=True)
         # indicating area of saturation
         plt.xlim((time[0], time[-1]))
         plt.axvline(x=time_steady[0], color='grey', linestyle='-')
@@ -441,12 +441,23 @@ def plot_fluxes(ifile,run,mytime,mydict):
             ylims = [-0.75, 0.75]
             #label_ypos = [-0.35,0.5,0.2] # for old algo
             label_ypos = [-0.2,0.35,0.17] # for new algo
+
+        # Linear plot
         plot_flux_vs_t(islin,nspec,spec_names,mytime,pflx,title,ylims,label_ypos,avg_in_title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
+
+        # Semilogy plot
+        title = '$\\vert$' + title + '$\\vert$'
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,np.abs(pflx),title,ylims,label_ypos,avg_in_title,semilogy=True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
     print("-- plotting heat flux")
     if qflx is not None:
         title = '$Q/Q_{gB}$'
@@ -454,12 +465,23 @@ def plot_fluxes(ifile,run,mytime,mydict):
             ylims = [-0.1, 4.0]
             #label_ypos = [3.1,1.2,2.1] # for old algo
             label_ypos = [2.2,0.85,1.4] # for new algo
+        
+        # Linear plot
         plot_flux_vs_t(islin,nspec,spec_names,mytime,qflx,title,ylims,label_ypos,avg_in_title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
+        
+        # Semilogy plot
+        title = '$\\vert$' + title + '$\\vert$'
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,np.abs(qflx),title,ylims,label_ypos,avg_in_title,semilogy=True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
     print("-- plotting momentum flux")
     if vflx is not None:
         title = '$\Pi/\Pi_{gB}$'
@@ -469,12 +491,23 @@ def plot_fluxes(ifile,run,mytime,mydict):
             label_ypos = [1.25,0.25,3.0] # for old algo
         else:
             ylims = None
+
+        # Linear plot
         plot_flux_vs_t(islin,nspec,spec_names,mytime,vflx,title,ylims,label_ypos,avg_in_title)
         write_fluxes_vs_t = True
         tmp_pdfname = 'tmp'+str(tmp_pdf_id)
         gplot.save_plot(tmp_pdfname, run, ifile)
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
+        
+        # Semilogy plot
+        title = '$\\vert$' + title + '$\\vert$'
+        plot_flux_vs_t(islin,nspec,spec_names,mytime,np.abs(vflx),title,ylims,label_ypos,avg_in_title,semilogy=True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
     #if myout['es_energy_exchange_present']:
     #    title = 'energy exchange'
     #    gplot.plot_1d(mytime.time,self.xchange,"$t (v_t/a)$",title)
@@ -831,7 +864,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
     print('complete')
 
 
-def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None,avg_in_title=None,only_steady=False):
+def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_ypos=None,avg_in_title=None,only_steady=False,semilogy=False):
 
     fig=plt.figure(figsize=(12,8))
     if islin:
@@ -866,8 +899,12 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_
             crv, = plt.plot(tselect,np.log(flxselect[:,idx]),color=my_colorlist[idx],linewidth=3.0, \
                     linestyle=my_linestyle_list[idx])
         else:
-            crv, = plt.plot(tselect,flxselect[:,idx],color=my_colorlist[idx],linewidth=3.0, \
-                    linestyle=my_linestyle_list[idx])
+            if semilogy:
+                crv, = plt.semilogy(tselect,flxselect[:,idx],color=my_colorlist[idx],linewidth=3.0, \
+                        linestyle=my_linestyle_list[idx])
+            else:
+                crv, = plt.plot(tselect,flxselect[:,idx],color=my_colorlist[idx],linewidth=3.0, \
+                        linestyle=my_linestyle_list[idx])
         my_curves.append(crv)
     
     # plot time-averages
@@ -920,6 +957,8 @@ def plot_flux_vs_t(islin,nspec,spec_names,mytime,flx,ylabel,ylims=None,my_label_
 
     if only_steady:
         legloc = 'best'
+    elif semilogy:
+        legloc = 'lower right'
     else:
         legloc = 'upper left'
     my_legend = plt.legend(my_curves,my_labels,frameon=True,fancybox=False,framealpha=1.0,loc=legloc)

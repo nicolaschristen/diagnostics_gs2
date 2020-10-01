@@ -5,8 +5,8 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 import pyfilm
 import pickle
-from scipy.optimize import leastsq
 from math import pi
+from scipy import interpolate
 
 
 
@@ -22,14 +22,28 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
     # Plot snapshots of fields in real space?
     plot_snap = True
 
+    # Time index for plots at specific time
+    it_snap = -1
+
     # Plot zonal quantities in real space?
     plot_zonal = True
+
+    # Where should kx be cut to get smoother zonal quantities?
+    kxcut = 1.0
+
+    # Which zonal quantity should be fitted with splines?
+    to_fit = 'field' # 'field'/'flow'/'shear'
+
+    # Factor to smooth out spline fit of zonal quantities
+    smoothfac = 500
     
     # Make movies in real space?
     make_movies = True
-
-    # Time index for plots at specific time
-    it_snap = -1
+    make_mov_phi = True
+    make_mov_densi = False
+    make_mov_dense = False
+    make_mov_tempi = False
+    make_mov_tempe = False
     
     # ^^^ USER PARAMETERS ^^^
 
@@ -251,104 +265,271 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
     # Zonal flow shear #
     ####################
 
+
+
     if plot_zonal:
+
+
 
         # Theta index of outboard midplane
         ig_mid = mygrids.ntheta//2
 
 
 
-        # Compute zonal field in real space
+        # Store spectra for field, flow, and shear
 
+        # Only consider kx>0, since phi[-kx] = conj(phi[kx])
+        kxpos = mygrids.kx_gs2[:mygrids.nxmid]
+        phizonal_avg = 1j*np.zeros(mygrids.nxmid) # need an array of complex numbers
+        for ix in range(mygrids.nxmid):
+            ft = np.squeeze(phi_all_t[:,0,ix])
+            phizonal_avg_real = mytime.timeavg(np.real(ft))
+            phizonal_avg_imag = mytime.timeavg(np.imag(ft))
+            phizonal_avg[ix] = phizonal_avg_real + 1j*phizonal_avg_imag
+
+        # Spectrum of zonal field
+        field_spectrum = np.abs(phizonal_avg)**2
+
+        # Spectrum of zonal flow
+        flow_spectrum = kxpos**2 * np.abs(phizonal_avg)**2
+
+        # Spectrum of zonal shear
+        shear_spectrum = kxpos**4 * np.abs(phizonal_avg)**2
+
+
+
+        # For |kx| < kxcut, get grids and associated phi
+
+        ikxcut = 0
+        while mygrids.kx_gs2[ikxcut] < kxcut:
+            ikxcut += 1
+        ikxcut -= 1
+        kx_gs2_cut = np.concatenate((mygrids.kx_gs2[:ikxcut+1], mygrids.kx_gs2[-ikxcut:]))
+        phi_all_t_cut = np.concatenate((phi_all_t[:,:,:ikxcut+1], phi_all_t[:,:,-ikxcut:]),axis=2)
+        nxcut = kx_gs2_cut.size
+        nxmid_cut = nxcut//2+1
+        xgrid_fft_cut = 2*pi*np.fft.fftfreq(nxcut,kx_gs2_cut[1])
+        xgrid_cut = np.concatenate((xgrid_fft_cut[nxmid_cut:],xgrid_fft_cut[:nxmid_cut]))
+
+
+
+
+
+        #---------------#
+        #  zonal field  #
+        #---------------#
+
+
+        # Full field
+
+        # First, FFT at every time step
         field_zonal = np.zeros((mytime.ntime_steady, mygrids.nx))
-        it_g = 0
-        for it in range(mytime.it_min, mytime.it_max):
-            field_vs_kx = np.squeeze(phi_all_t[it,0,:])
-            field_zonal[it_g,:] = np.real(np.fft.ifft(field_vs_kx))
-            it_g += 1
+        it_steady = 0
+        for it in range(mytime.it_min,mytime.it_max):
+            ft = np.squeeze(phi_all_t[it,0,:])
+            field_zonal[it_steady,:] = np.real(np.fft.ifft(ft)) * mygrids.nx
 
-        # Average over time
+        # Then average over time
         field_zonal_avg = np.zeros(mygrids.nx)
         for ix in range(mygrids.nx):
-            ft = np.squeeze(field_zonal[:,ix])
-            field_zonal_avg[ix] = mytime.timeavg( ft,
-                                                  use_ft_full = True)
-        # Reorder to have growing x axis
+            field_zonal_avg[ix] = mytime.timeavg(np.squeeze(field_zonal[:,ix]), use_ft_full=True)
+
+        # Finally, reorder to have growing x axis
         field_zonal_avg = np.concatenate((field_zonal_avg[mygrids.nxmid:],\
                                           field_zonal_avg[:mygrids.nxmid]))
 
 
 
-        # Compute zonal flow in real space
+        # Keeping only |kx| < kxcut
 
+        field_zonal_cut = np.zeros((mytime.ntime_steady, nxcut))
+        it_steady = 0
+        for it in range(mytime.it_min,mytime.it_max):
+            ft = np.squeeze(phi_all_t_cut[it,0,:])
+            field_zonal_cut[it_steady,:] = np.real(np.fft.ifft(ft)) * nxcut
+
+        field_zonal_avg_cut = np.zeros(nxcut)
+        for ix in range(nxcut):
+            field_zonal_avg_cut[ix] = mytime.timeavg(np.squeeze(field_zonal_cut[:,ix]), use_ft_full=True)
+
+        field_zonal_avg_cut = np.concatenate((field_zonal_avg_cut[nxmid_cut:],\
+                                             field_zonal_avg_cut[:nxmid_cut]))
+
+
+
+        # Fitting the full x-profile with splines
+
+        if to_fit == 'field':
+            spl_smooth = np.max(field_zonal_avg)/smoothfac
+            splinerep = interpolate.splrep(mygrids.xgrid, field_zonal_avg, s=spl_smooth)
+            field_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep)
+            label_field_fit = 'spline fit'
+
+
+
+
+
+        #--------------#
+        #  zonal flow  #
+        #--------------#
+
+
+        # Full field
+
+        # First, FFT at every time step
         flow_zonal = np.zeros((mytime.ntime_steady, mygrids.nx))
-        it_g = 0
-        for it in range(mytime.it_min, mytime.it_max):
-            field_vs_kx = -1j * mygrids.kx_gs2 * np.squeeze(phi_all_t[it,0,:])
-            flow_zonal[it_g,:] = np.real(np.fft.ifft(field_vs_kx))
-            it_g += 1
+        it_steady = 0
+        for it in range(mytime.it_min,mytime.it_max):
+            ft = -1j * mygrids.kx_gs2 * np.squeeze(phi_all_t[it,0,:])
+            flow_zonal[it_steady,:] = np.real(np.fft.ifft(ft)) * mygrids.nx
 
-        # Average over time
+        # Then average over time
         flow_zonal_avg = np.zeros(mygrids.nx)
         for ix in range(mygrids.nx):
-            ft = np.squeeze(flow_zonal[:,ix])
-            flow_zonal_avg[ix] = mytime.timeavg( ft,
-                                                  use_ft_full = True)
-        # Reorder to have growing x axis
+            flow_zonal_avg[ix] = mytime.timeavg(np.squeeze(flow_zonal[:,ix]), use_ft_full=True)
+
+        # Finally, reorder to have growing x axis
         flow_zonal_avg = np.concatenate((flow_zonal_avg[mygrids.nxmid:],\
-                                         flow_zonal_avg[:mygrids.nxmid]))
+                                          flow_zonal_avg[:mygrids.nxmid]))
 
 
 
-        # Compute zonal flow shear in real space
+
+        # Keeping only |kx| < kxcut
+
+        flow_zonal_cut = np.zeros((mytime.ntime_steady, nxcut))
+        it_steady = 0
+        for it in range(mytime.it_min,mytime.it_max):
+            ft = -1j * kx_gs2_cut * np.squeeze(phi_all_t_cut[it,0,:])
+            flow_zonal_cut[it_steady,:] = np.real(np.fft.ifft(ft)) * nxcut
+
+        flow_zonal_avg_cut = np.zeros(nxcut)
+        for ix in range(nxcut):
+            flow_zonal_avg_cut[ix] = mytime.timeavg(np.squeeze(flow_zonal_cut[:,ix]), use_ft_full=True)
+
+        flow_zonal_avg_cut = np.concatenate((flow_zonal_avg_cut[nxmid_cut:],\
+                                             flow_zonal_avg_cut[:nxmid_cut]))
+
+
+
+        # Fitting the full x-profile with splines
+
+        # Either take a derivative from the fitted field
+        if to_fit == 'field':
+            flow_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep, der=1)
+            label_flow_fit = 'd/dx of fitted field'
+        # Or if the flow is smooth enough, fit the flow itself
+        elif to_fit == 'flow':
+            spl_smooth = np.max(flow_zonal_avg)/smoothfac
+            splinerep = interpolate.splrep(mygrids.xgrid, flow_zonal_avg, s=spl_smooth)
+            flow_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep)
+            label_flow_fit = 'spline fit'
+
+
+
+
+
+        #---------------#
+        #  zonal shear  #
+        #---------------#
+
 
         # Factor to get gamma_Z [vthi/a]
-        fac = -0.5 * myin['theta_grid_parameters']['rhoc'] \
-                / (myin['theta_grid_parameters']['Rmaj']*myin['theta_grid_parameters']['qinp']) \
-                * myout['gds22'][ig_mid] / myin['theta_grid_parameters']['shat']**2 \
-                * myout['gds2'][ig_mid]**0.5
+        fac = 0.5 \
+                * myout['gds2'][ig_mid]**-0.5 \
+                * (myout['gds22'][ig_mid]*myout['gds2'][ig_mid] - myout['gds21'][ig_mid]**2) \
+                * (myin['theta_grid_parameters']['rhoc']/myin['theta_grid_parameters']['shat'])**2
 
-        # Fit zonal flow with sine to get derivative
-        optfunc = lambda x: x[0]*np.sin(x[1]*mygrids.xgrid+x[2]) - flow_zonal_avg
-        guess = [ np.max(flow_zonal_avg), \
-                  2*pi/(2*np.max(mygrids.xgrid)), \
-                  0]
-        A,omeg,phase = leastsq(optfunc, guess)[0]
-        flow_fit = A*np.sin(omeg*mygrids.xgrid+phase)
 
-        g_zonal = np.zeros((mytime.ntime_steady, mygrids.nx))
-        it_g = 0
-        for it in range(mytime.it_min, mytime.it_max):
-            field_vs_kx = mygrids.kx_gs2**2 * np.squeeze(phi_all_t[it,0,:])
-            g_zonal[it_g,:] = fac * np.real(np.fft.ifft(field_vs_kx))
-            it_g += 1
+        # Full field
 
-        # Average over time
-        g_zonal_avg = np.zeros(mygrids.nx)
+        # First, FFT at every time step
+        shear_zonal = np.zeros((mytime.ntime_steady, mygrids.nx))
+        it_steady = 0
+        for it in range(mytime.it_min,mytime.it_max):
+            ft = mygrids.kx_gs2**2 * np.squeeze(phi_all_t[it,0,:])
+            shear_zonal[it_steady,:] = fac * np.real(np.fft.ifft(ft)) * mygrids.nx
+
+        # Then average over time
+        shear_zonal_avg = np.zeros(mygrids.nx)
         for ix in range(mygrids.nx):
-            ft = np.squeeze(g_zonal[:,ix])
-            g_zonal_avg[ix] = mytime.timeavg( ft,
-                                              use_ft_full = True)
-        # Reorder to have growing x axis
-        g_zonal_avg = np.concatenate((g_zonal_avg[mygrids.nxmid:],\
-                                      g_zonal_avg[:mygrids.nxmid]))
+            shear_zonal_avg[ix] = mytime.timeavg(np.squeeze(shear_zonal[:,ix]), use_ft_full=True)
 
-        # NDCTEST
-        print(fac)
-        g_zonal_avg = fac * deriv_c(mygrids.xgrid,flow_fit)
+        # Finally, reorder to have growing x axis
+        shear_zonal_avg = np.concatenate((shear_zonal_avg[mygrids.nxmid:],\
+                                          shear_zonal_avg[:mygrids.nxmid]))
 
+
+
+        # Keeping only |kx| < kxcut
+
+        shear_zonal_cut = np.zeros((mytime.ntime_steady, nxcut))
+        it_steady = 0
+        for it in range(mytime.it_min,mytime.it_max):
+            ft = kx_gs2_cut**2 * np.squeeze(phi_all_t_cut[it,0,:])
+            shear_zonal_cut[it_steady,:] = fac * np.real(np.fft.ifft(ft)) * nxcut
+
+        shear_zonal_avg_cut = np.zeros(nxcut)
+        for ix in range(nxcut):
+            shear_zonal_avg_cut[ix] = mytime.timeavg(np.squeeze(shear_zonal_cut[:,ix]), use_ft_full=True)
+
+        shear_zonal_avg_cut = np.concatenate((shear_zonal_avg_cut[nxmid_cut:],\
+                                              shear_zonal_avg_cut[:nxmid_cut]))
+
+
+
+        # Fitting the full x-profile with splines
+
+        # Either take the second derivative from the fitted field
+        if to_fit == 'field':
+            shear_zonal_avg_fit = fac * interpolate.splev(mygrids.xgrid, splinerep, der=2)
+            label_shear_fit = 'd^2/dx^2 of fitted field'
+        # Or take a derivative from the fitted flow
+        elif to_fit == 'flow':
+            shear_zonal_avg_fit = fac * interpolate.splev(mygrids.xgrid, splinerep, der=1)
+            label_shear_fit = 'd/dx of fitted flow'
+        # Or if the shear is smooth enough, fit the shear itself
+        elif to_fit == 'shear':
+            spl_smooth = np.max(shear_zonal_avg)/smoothfac
+            splinerep = interpolate.splrep(mygrids.xgrid, shear_zonal_avg, s=spl_smooth)
+            shear_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep)
+            label_shear_fit = 'spline fit'
         
 
-        # Plotting
+
+
+
+        #------------#
+        #  Plotting  #
+        #------------#
+
 
         tmp_pdf_id = 1
         pdflist = []
         tmp_pdf_id_fromSum = 1
         pdflist_fromSum = []
 
+        plt.semilogy(kxpos, field_spectrum, linewidth=2)
+        plt.axvline(x=kxcut, color='k', linestyle='-')
+        plt.xlabel('$\\rho_i k_x$')
+        ylab = '$\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
+        plt.ylabel(ylab)
+        plt.grid(True)
+
+        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+        plt.cla()
+        plt.clf()
+
         plt.plot(mygrids.xgrid, field_zonal_avg, linewidth=2)
+        lcut, = plt.plot(xgrid_cut, field_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
+        if to_fit == 'field':
+            lfit, = plt.plot(mygrids.xgrid, field_zonal_avg_fit, linewidth=2, color='r', label=label_field_fit)
+        plt.legend()
         plt.xlabel('$x/\\rho_i$')
-        ylab = '$\\langle\\varphi_{Z}\\rangle_{turb}$'\
+        ylab = '$\\langle\\varphi_{Z}\\rangle_{t}$'\
                ' [$\\rho_{\\star T_i/e}$]'
         plt.ylabel(ylab)
         plt.grid(True)
@@ -360,12 +541,10 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         plt.cla()
         plt.clf()
 
-        plt.plot(mygrids.xgrid, flow_zonal_avg, linewidth=2, label=None)
-        lfit, = plt.plot(mygrids.xgrid, flow_fit, linewidth=2, color='r', label='fit')
-        plt.legend()
-        plt.xlabel('$x/\\rho_i$')
-        ylab = '$\\langle V_{Z}\\rangle_{turb}$'\
-               ' [$v_{th}$]'
+        plt.semilogy(kxpos, flow_spectrum, linewidth=2)
+        plt.axvline(x=kxcut, color='k', linestyle='-')
+        plt.xlabel('$\\rho_i k_x$')
+        ylab = '$k_x^2\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
         plt.ylabel(ylab)
         plt.grid(True)
 
@@ -376,9 +555,44 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         plt.cla()
         plt.clf()
 
-        plt.plot(mygrids.xgrid, g_zonal_avg, linewidth=2)
+        plt.plot(mygrids.xgrid, flow_zonal_avg, linewidth=2, label=None)
+        lcut, = plt.plot(xgrid_cut, flow_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
+        if to_fit == 'field' or to_fit == 'flow':
+            lfit, = plt.plot(mygrids.xgrid, flow_zonal_avg_fit, linewidth=2, color='r', label=label_flow_fit)
+        plt.legend()
         plt.xlabel('$x/\\rho_i$')
-        ylab = '$\\langle\\gamma_{Z}\\rangle_{turb}$'\
+        ylab = '$-\\sum_{k_x}ik_x\\langle\\hat{\\varphi}_{Z}\\rangle_{t} e^{ik_x x}$'\
+               ' [$T_i/(ea)$]'
+        plt.ylabel(ylab)
+        plt.grid(True)
+
+        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+        plt.cla()
+        plt.clf()
+
+        plt.semilogy(kxpos, shear_spectrum, linewidth=2)
+        plt.axvline(x=kxcut, color='k', linestyle='-')
+        plt.xlabel('$\\rho_i k_x$')
+        ylab = '$k_x^4\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
+        plt.ylabel(ylab)
+        plt.grid(True)
+
+        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+        plt.cla()
+        plt.clf()
+
+        plt.plot(mygrids.xgrid, shear_zonal_avg, linewidth=2, label=None)
+        lcut, = plt.plot(xgrid_cut, shear_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
+        lfit, = plt.plot(mygrids.xgrid, shear_zonal_avg_fit, linewidth=2, color='r', label=label_shear_fit)
+        plt.legend()
+        plt.xlabel('$x/\\rho_i$')
+        ylab = '$\\langle\\gamma_{Z}\\rangle_{t}$'\
                ' [$v_{th}/a$]'
         plt.ylabel(ylab)
         plt.grid(True)
@@ -393,7 +607,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         merged_pdfname = 'zonal_real_space'
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-        to_add = { 'g_zonal':g_zonal_avg,
+        to_add = { 'shear_zonal':shear_zonal_avg,
                    'field_zonal':field_zonal_avg,
                    'flow_zonal':flow_zonal_avg,
                    'time':mytime.time,
@@ -434,49 +648,59 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                 kxs_now = None
 
             # Potential
-            xxx, xxx, field_tmp = gfft.fft_gs2( phi_all_t[it, ...],
-                                                mygrids.nx, mygrids.ny, mygrids.ky, 
-                                                kx_shift = kxs_now,
-                                                x = mygrids.xgrid_fft )
-            for ix in range(mygrids.nx):
-                for iy in range(ny_full):
-                    phi_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
+            if make_mov_phi:
+
+                xxx, xxx, field_tmp = gfft.fft_gs2( phi_all_t[it, ...],
+                                                    mygrids.nx, mygrids.ny, mygrids.ky, 
+                                                    kx_shift = kxs_now,
+                                                    x = mygrids.xgrid_fft )
+                for ix in range(mygrids.nx):
+                    for iy in range(ny_full):
+                        phi_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
 
             # Ion density
-            xxx, xxx, field_tmp = gfft.fft_gs2( densi_all_t[it, ...],
-                                                mygrids.nx, mygrids.ny, mygrids.ky, 
-                                                kx_shift = kxs_now,
-                                                x = mygrids.xgrid_fft )
-            for ix in range(mygrids.nx):
-                for iy in range(ny_full):
-                    densi_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
+            if make_mov_densi:
+
+                xxx, xxx, field_tmp = gfft.fft_gs2( densi_all_t[it, ...],
+                                                    mygrids.nx, mygrids.ny, mygrids.ky, 
+                                                    kx_shift = kxs_now,
+                                                    x = mygrids.xgrid_fft )
+                for ix in range(mygrids.nx):
+                    for iy in range(ny_full):
+                        densi_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
 
             # Electron density
-            xxx, xxx, field_tmp = gfft.fft_gs2( dense_all_t[it, ...],
-                                                mygrids.nx, mygrids.ny, mygrids.ky, 
-                                                kx_shift = kxs_now,
-                                                x = mygrids.xgrid_fft )
-            for ix in range(mygrids.nx):
-                for iy in range(ny_full):
-                    dense_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
+            if make_mov_dense:
+
+                xxx, xxx, field_tmp = gfft.fft_gs2( dense_all_t[it, ...],
+                                                    mygrids.nx, mygrids.ny, mygrids.ky, 
+                                                    kx_shift = kxs_now,
+                                                    x = mygrids.xgrid_fft )
+                for ix in range(mygrids.nx):
+                    for iy in range(ny_full):
+                        dense_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
 
             # Ion temperature
-            xxx, xxx, field_tmp = gfft.fft_gs2( tempi_all_t[it, ...],
-                                                mygrids.nx, mygrids.ny, mygrids.ky, 
-                                                kx_shift = kxs_now,
-                                                x = mygrids.xgrid_fft )
-            for ix in range(mygrids.nx):
-                for iy in range(ny_full):
-                    tempi_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
+            if make_mov_tempi:
+
+                xxx, xxx, field_tmp = gfft.fft_gs2( tempi_all_t[it, ...],
+                                                    mygrids.nx, mygrids.ny, mygrids.ky, 
+                                                    kx_shift = kxs_now,
+                                                    x = mygrids.xgrid_fft )
+                for ix in range(mygrids.nx):
+                    for iy in range(ny_full):
+                        tempi_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
 
             # Electron temperature
-            xxx, xxx, field_tmp = gfft.fft_gs2( tempe_all_t[it, ...],
-                                                mygrids.nx, mygrids.ny, mygrids.ky, 
-                                                kx_shift = kxs_now,
-                                                x = mygrids.xgrid_fft )
-            for ix in range(mygrids.nx):
-                for iy in range(ny_full):
-                    tempe_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
+            if make_mov_tempe:
+
+                xxx, xxx, field_tmp = gfft.fft_gs2( tempe_all_t[it, ...],
+                                                    mygrids.nx, mygrids.ny, mygrids.ky, 
+                                                    kx_shift = kxs_now,
+                                                    x = mygrids.xgrid_fft )
+                for ix in range(mygrids.nx):
+                    for iy in range(ny_full):
+                        tempe_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
 
 
 
@@ -497,84 +721,105 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         # Create movies
 
         # Make movie of potential
-        plt.rc('font', size=18)
-        opts['title'] = ['$\\varphi$ [$\\rho_{{\\star}} T_i/e$]'\
-                         '  at  '\
-                         '$t={:.2f}$'.format(mytime.time[it])\
-                         +' [$a/v_{th}$]'\
-                         for it in range(mytime.it_min, mytime.it_max+1)]
-        opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_phi'
-        pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, phi_full_fft,
-                                   plot_options = plt_opts,
-                                   options = opts)
-        plt.rc('font', size=30)
+        if make_mov_phi:
+
+            plt.rc('font', size=18)
+            opts['title'] = ['$\\varphi$ [$\\rho_{{\\star}} T_i/e$]'\
+                             '  at  '\
+                             '$t={:.2f}$'.format(mytime.time[it])\
+                             +' [$a/v_{th}$]'\
+                             for it in range(mytime.it_min, mytime.it_max+1)]
+            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_phi'
+            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, phi_full_fft,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            plt.rc('font', size=30)
 
         # Make movie of ion density
-        plt.rc('font', size=18)
-        opts['title'] = ['$\\delta n_i$ [$\\rho_{{\\star}} n_i$]'\
-                         '  at  '\
-                         '$t={:.2f}$'.format(mytime.time[it])\
-                         +' [$a/v_{th}$]'\
-                         for it in range(mytime.it_min, mytime.it_max+1)]
-        opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_densi'
-        pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, densi_full_fft,
-                                   plot_options = plt_opts,
-                                   options = opts)
-        plt.rc('font', size=30)
+        if make_mov_densi:
+
+            plt.rc('font', size=18)
+            opts['title'] = ['$\\delta n_i$ [$\\rho_{{\\star}} n_i$]'\
+                             '  at  '\
+                             '$t={:.2f}$'.format(mytime.time[it])\
+                             +' [$a/v_{th}$]'\
+                             for it in range(mytime.it_min, mytime.it_max+1)]
+            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_densi'
+            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, densi_full_fft,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            plt.rc('font', size=30)
 
         # Make movie of electron density
-        plt.rc('font', size=18)
-        opts['title'] = ['$\\delta n_e$ [$\\rho_{{\\star}} n_i$]'\
-                         '  at  '\
-                         '$t={:.2f}$'.format(mytime.time[it])\
-                         +' [$a/v_{th}$]'\
-                         for it in range(mytime.it_min, mytime.it_max+1)]
-        opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_dense'
-        pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, dense_full_fft,
-                                   plot_options = plt_opts,
-                                   options = opts)
-        plt.rc('font', size=30)
+        if make_mov_dense:
+
+            plt.rc('font', size=18)
+            opts['title'] = ['$\\delta n_e$ [$\\rho_{{\\star}} n_i$]'\
+                             '  at  '\
+                             '$t={:.2f}$'.format(mytime.time[it])\
+                             +' [$a/v_{th}$]'\
+                             for it in range(mytime.it_min, mytime.it_max+1)]
+            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_dense'
+            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, dense_full_fft,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            plt.rc('font', size=30)
 
         # Make movie of ion temperature
-        plt.rc('font', size=18)
-        opts['title'] = ['$\\delta T_i$ [$\\rho_{{\\star}} T_i$]'\
-                         '  at  '\
-                         '$t={:.2f}$'.format(mytime.time[it])\
-                         +' [$a/v_{th}$]'\
-                         for it in range(mytime.it_min, mytime.it_max+1)]
-        opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempi'
-        pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempi_full_fft,
-                                   plot_options = plt_opts,
-                                   options = opts)
-        plt.rc('font', size=30)
+        if make_mov_tempi:
+
+            plt.rc('font', size=18)
+            opts['title'] = ['$\\delta T_i$ [$\\rho_{{\\star}} T_i$]'\
+                             '  at  '\
+                             '$t={:.2f}$'.format(mytime.time[it])\
+                             +' [$a/v_{th}$]'\
+                             for it in range(mytime.it_min, mytime.it_max+1)]
+            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempi'
+            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempi_full_fft,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            plt.rc('font', size=30)
 
         # Make movie of electron temperature
-        plt.rc('font', size=18)
-        opts['title'] = ['$\\delta T_e$ [$\\rho_{{\\star}} T_i$]'\
-                         '  at  '\
-                         '$t={:.2f}$'.format(mytime.time[it])\
-                         +' [$a/v_{th}$]'\
-                         for it in range(mytime.it_min, mytime.it_max+1)]
-        opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempe'
-        pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempe_full_fft,
-                                   plot_options = plt_opts,
-                                   options = opts)
-        plt.rc('font', size=30)
+        if make_mov_tempe:
+
+            plt.rc('font', size=18)
+            opts['title'] = ['$\\delta T_e$ [$\\rho_{{\\star}} T_i$]'\
+                             '  at  '\
+                             '$t={:.2f}$'.format(mytime.time[it])\
+                             +' [$a/v_{th}$]'\
+                             for it in range(mytime.it_min, mytime.it_max+1)]
+            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempe'
+            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempe_full_fft,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            plt.rc('font', size=30)
 
 
 
 
         # Update dict
 
-        to_add = { 'phi_full_fft':phi_full_fft,
-                   'densi_full_fft':densi_full_fft,
-                   'dense_full_fft':dense_full_fft,
-                   'tempi_full_fft':tempi_full_fft,
-                   'tempe_full_fft':tempe_full_fft,
-                   'time':mytime.time_steady,
+        to_add = { 'time':mytime.time_steady,
                    'xgrid':mygrids.xgrid,
                    'ygrid':mygrids.ygrid }
         mydict.update(to_add)
+        if make_mov_phi:
+            to_add = {'phi_full_fft':phi_full_fft}
+            mydict.update(to_add)
+        if make_mov_densi:
+            to_add = {'densi_full_fft':densi_full_fft}
+            mydict.update(to_add)
+        if make_mov_dense:
+            to_add = {'dense_full_fft':dense_full_fft}
+            mydict.update(to_add)
+        if make_mov_tempi:
+            to_add = {'tempi_full_fft':tempi_full_fft}
+            mydict.update(to_add)
+        if make_mov_tempe:
+            to_add = {'tempe_full_fft':tempe_full_fft}
+            mydict.update(to_add)
+
 
 
 

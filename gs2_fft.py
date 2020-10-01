@@ -56,6 +56,9 @@ def fft_gs2(fld, nx, ny, ky, kx_shift = None, x = None):
     # Then re-arrange field to have growing x axis
     nxmid = nx//2 + 1
     fld_full_fftxy = np.concatenate((fld_full_fftxy[..., nxmid:],fld_full_fftxy[..., :nxmid]),axis=1)
+
+    # np.fft.ifft returns 1/n * sum(phik*exp(...)) -> undo this normalisation
+    fld_full_fftxy = fld_full_fftxy * nx * ny_full
     
     return ky_full, fld_full, fld_full_fftxy
 

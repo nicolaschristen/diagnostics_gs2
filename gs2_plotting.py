@@ -132,10 +132,13 @@ def nearNeighb_interp_1d(x,y,xout):
 
 
 
-def plot_1d(x,y,xlab,title='',ylab=''):
+def plot_1d(x,y,xlab,title='',ylab='', semilogy=False):
 
     fig = plt.figure(figsize=(12,8))
-    plt.plot(x,y)
+    if semilogy:
+        plt.semilogy(x,y)
+    else:
+        plt.plot(x,y)
     plt.xlabel(xlab)
     if len(ylab) > 0:
         plt.ylabel(ylab)
