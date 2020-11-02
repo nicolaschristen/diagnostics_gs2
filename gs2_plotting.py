@@ -51,7 +51,11 @@ def RdBu_centered(minVal, maxVal, center=0.0):
             cdict['red'].append([item, r1, r2])
             cdict['green'].append([item, g1, g2])
             cdict['blue'].append([item, b1, b2])
-    return mcolors.LinearSegmentedColormap('CustomMap', cdict)
+
+    cmp = mcolors.LinearSegmentedColormap('CustomMap', cdict)
+    cmp.set_bad(color='g')
+
+    return cmp
 
 def save_plot(pdfname, run, ifile = None):
 
@@ -96,14 +100,23 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
 
 def set_plot_defaults():
 
+    GK_SYSTEM = os.getenv('GK_SYSTEM')
+
     # setup some plot defaults
-    plt.rc('text', usetex=False) # False for ARCHER, True for MARCONI
-    plt.rc('font', family='serif')
-    plt.rc('font', size=30)
-    rcParams.update({'figure.autolayout': True})
-    rcParams.update({'legend.fontsize': 20, 'legend.handlelength': 4})
-    rcParams.update({'legend.frameon': False})
-    #rcParams.update({'animation.ffmpeg_path':'/marconi/home/userexternal/nchriste/codes/ffmpeg'}) # for HPC use only
+    if GK_SYSTEM == 'archer':
+        plt.rc('text', usetex=False)
+        plt.rc('font', family='serif')
+        plt.rc('font', size=20)
+        rcParams.update({'figure.autolayout': True})
+        rcParams.update({'legend.fontsize': 20, 'legend.handlelength': 2})
+        rcParams.update({'legend.frameon': False})
+    else:
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
+        plt.rc('font', size=30)
+        rcParams.update({'figure.autolayout': True})
+        rcParams.update({'legend.fontsize': 20, 'legend.handlelength': 2})
+        rcParams.update({'legend.frameon': False})
 
 
 
@@ -146,7 +159,8 @@ def plot_1d(x,y,xlab,title='',ylab='', semilogy=False):
         plt.title(title)
     return fig
 
-def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor=False,x_is_2pi=False, z_ticks=None, z_ticks_labels=None):
+def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor=False,
+        x_is_2pi=False, z_ticks=None, z_ticks_labels=None, zlabel=None, y_ticks=None, y_ticklabels=None, y_tickfontsize=None):
 
     fig = plt.figure(figsize=(12,8))
     x,y = np.meshgrid(xin,yin)
@@ -169,7 +183,16 @@ def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor
                interpolation='nearest', origin='lower', aspect='auto',
                norm=color_norm)
     plt.axis([x.min(), x.max(), y.min()-dy/2, y.max()+dy/2])
-    plt.yticks(fontsize=28)
+    ax = plt.gca()
+    if y_tickfontsize is None:
+        plt.yticks(fontsize=28)
+    else:
+        plt.yticks(fontsize=y_tickfontsize)
+    if y_ticks is not None:
+        ax.set_yticks(y_ticks)
+    if y_ticklabels is not None:
+        ax.set_yticklabels(y_ticklabels)
+
     plt.xticks(fontsize=28)
     if x_is_2pi:
         plt.xticks([-pi,-pi/2,0,pi/2,pi],['$-\\pi$','$-\\pi/2$','$0$','$\\pi/2$','$\\pi$'],
@@ -188,13 +211,23 @@ def plot_2d(z,xin,yin,zmin,zmax,xlab='',ylab='',title='',cmp='RdBu',use_logcolor
     plt.xlabel(xlab, fontsize=32)
     plt.ylabel(ylab, fontsize=32)
     plt.title(title, fontsize=32)
+    if zlabel is not None:
+        cbar.set_label(zlabel, rotation=270, labelpad=50, fontsize=30)
+
     return fig
 
 # Input:
 # x = x[iy][ix]
 # y = y[iy]
 # z = z[iy][ix]
-def plot_2d_uneven_xgrid(x, y, z, xmin, xmax, cbarmin, cbarmax, xlabel, ylabel, title, x_is_twopi=True, ngrid_fine = 1001, clrmap='RdBu_c', zticks=None, zticks_labels=None):
+def plot_2d_uneven_xgrid(
+        x, y, z,
+        xmin, xmax,
+        cbarmin, cbarmax,
+        xlabel, ylabel, title,
+        x_is_twopi=True, ngrid_fine = 1001, clrmap='RdBu_c',
+        zticks=None, zticks_labels=None, zlabel=None,
+        yticks=None, yticklabels=None, ytickfontsize=None):
 
     # Here we assume that the scan uses a fixed set of ky.
     ny = y.size
@@ -208,7 +241,9 @@ def plot_2d_uneven_xgrid(x, y, z, xmin, xmax, cbarmin, cbarmax, xlabel, ylabel, 
     for iy in range(ny):
         z_fine[iy,:] = nearNeighb_interp_1d(x[iy],z[iy],x_fine)
 
-    plot_2d(z_fine, x_fine, y, cbarmin, cbarmax, xlabel, ylabel, title, cmp=clrmap, x_is_2pi=x_is_twopi, z_ticks=zticks, z_ticks_labels=zticks_labels)
+    plot_2d(z_fine, x_fine, y, cbarmin, cbarmax, xlabel, ylabel, title,
+            cmp=clrmap, x_is_2pi=x_is_twopi, z_ticks=zticks, z_ticks_labels=zticks_labels, zlabel=zlabel,
+            y_ticks=yticks, y_ticklabels=yticklabels, y_tickfontsize=ytickfontsize)
 
 def movie_2d(z,xin,yin,zmin,zmax,nframes,outfile,xlab='',ylab='',title='',step=1,cmp='RdBu'):
 
@@ -288,3 +323,5 @@ def legend_matlab(my_legend=None):
     frame.set_edgecolor('black')
     frame.set_linewidth(0.5)
     frame.set_alpha(1)
+
+    return legend

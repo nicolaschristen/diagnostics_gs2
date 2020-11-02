@@ -10,7 +10,8 @@ import copy
 
 # TODO: add 'your_task' to the array.
 tasks_choices = ['fluxes', 'zonal', 'tcorr', 'flowtest', 'floquet', \
-        'linrange','fluxes_stitch','potential', 'fields_real_space']
+        'linrange','fluxes_stitch','potential', 'fields_real_space', \
+        'fluxes_compare']
 
 # Fom command-line arguments, get info about this analysis run (filenames, tasks to complete ...)
 run = grunpar.runobj(tasks_choices)
@@ -35,21 +36,47 @@ mytxt = []
 for ifile in range(len(run.fnames)):
 
     # .txt file in which the user can print stuff out
+    txtpres = False
     txtname = run.out_dir + 'info_' + run.fnames[ifile] + '.txt'
-    mytxt = open(txtname, 'w')
+    try:
+        mytxt = open(txtname, 'w')
+        txtpres = True
+    except:
+        print('Warning: associated text file cannot be found.')
+        mytxt = None
     
     if not run.only_plot:
         # Get input parameters for this GS2 simulation from .in file
-        myin = gdata.get_input(ifile, run)
+        try:
+            myin = gdata.get_input(ifile, run)
+        except:
+            print('Warning: cannot find corresponding input file.')
+            myin = None
         # Get output from corresponding .out.nc file
-        myout = gdata.get_output(ifile, run)
+        try:
+            myout = gdata.get_output(ifile, run)
+        except:
+            print('Warning: cannot find corresponding output file.')
+            myout = None
 
         # Extract grids from output
-        mygrids = ggrids.gridobj(myout, myin)
+        try:
+            mygrids = ggrids.gridobj(myout, myin)
+        except:
+            print('Warning: cannot create associated grid object.')
+            mygrids = None
         # Extract time from output
-        mytime = gtime.timeobj(myout, run.twin)
+        try:
+            mytime = gtime.timeobj(myout, run)
+        except:
+            print('Warning: cannot create associated time object.')
+            mytime = None
         # Extract fields from output
-        myfields = gfields.fieldobj(myout, mygrids, mytime)
+        try:
+            myfields = gfields.fieldobj(myout, mygrids, mytime)
+        except:
+            print('Warning: cannot create associated field object.')
+            myfields = None
 
     # Loop over all tasks that have been requested by user
     for itask in range(len(run.tasks)):
@@ -60,7 +87,7 @@ for ifile in range(len(run.fnames)):
         gtasks.complete_task_single(ifile, task_name, run, myin, myout, mygrids, mytime, myfields, mytxt,
                 full_space[ifile][task_name])
 
-    if not run.only_plot:
+    if txtpres and not run.only_plot:
         mytxt.close()
 
 # Complete part of tasks that require a set of file,

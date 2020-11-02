@@ -3,6 +3,7 @@ from matplotlib import rcParams
 import numpy as np
 import pickle
 import copy as cp
+from math import pi
 
 import gs2_plotting as gplot
 from plot_phi2_vs_time import plot_phi2_ky_vs_t
@@ -56,14 +57,29 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             phi2_kxky = np.concatenate((myout['phi2_by_mode'][:,:,nxmid:],myout['phi2_by_mode'][:,:,:nxmid]),axis=2)
             mydim = (mygrids.ny,mygrids.nx)
             phi2_kxky_tavg = np.zeros(mydim, dtype=float)
+            phi2_kxky_nrm = np.zeros((mytime.ntime,ny,nx), dtype=float)
+            phi2_kxky_tauwinavg = np.zeros((mytime.ntauwin,ny,nx))
+            phi2_kxky_nrm_tauwinavg = np.zeros((mytime.ntauwin,ny,nx))
+            phi2_kxky_tauwinsig = np.zeros((mytime.ntauwin,ny,nx))
+            phi2_kxky_nrm_tauwinsig = np.zeros((mytime.ntauwin,ny,nx))
             for ik in range(ny):
                 for it in range(nx):
                     phi2_kxky_tavg[ik,it] = mytime.timeavg(phi2_kxky[:,ik,it])
+                    phi2_kxky_nrm[:,ik,it] = phi2_kxky[:,ik,it] / phi2_kxky_tavg[ik,it]
+                    phi2_kxky_tauwinavg[:,ik,it] = mytime.tauwin_avg(phi2_kxky[:,ik,it])
+                    phi2_kxky_nrm_tauwinavg[:,ik,it] = phi2_kxky_tauwinavg[:,ik,it] / phi2_kxky_tavg[ik,it]
+                    phi2_kxky_tauwinsig[:,ik,it] = mytime.tauwin_sigma(phi2_kxky[:,ik,it], phi2_kxky_tauwinavg[:,ik,it])
+                    phi2_kxky_nrm_tauwinsig[:,ik,it] = phi2_kxky_tauwinsig[:,ik,it] / phi2_kxky_tavg[ik,it]
         else:
             mydim = (mytime.ntime,mygrids.ny,mygrids.nx)
             phi2_kxky = np.zeros(mydim, dtype=float)
+            phi2_kxky_nrm = np.zeros(mydim, dtype=float)
             mydim = (mygrids.ny,mygrids.nx)
             phi2_kxky_tavg = np.zeros(mydim, dtype=float)
+            phi2_kxky_tauwinavg = np.zeros((mytime.ntauwin,ny,nx))
+            phi2_kxky_tauwinsig = np.zeros((mytime.ntauwin,ny,nx))
+            phi2_kxky_nrm_tauwinavg = np.zeros((mytime.ntauwin,ny,nx))
+            phi2_kxky_nrm_tauwinsig = np.zeros((mytime.ntauwin,ny,nx))
 
         if myout['es_part_flux_present']:
             pflx = myout['es_part_flux']
@@ -163,16 +179,20 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
  
         # Save computed quantities
         datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
-        mydict = {'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,
+        mydict = {
+                'pflx':pflx,'qflx':qflx,'vflx':vflx,'xchange':xchange,
                 'pflx_kxky':pflx_kxky,'qflx_kxky':qflx_kxky,'vflx_kxky':vflx_kxky,
-                'pflx_kxky_tavg':pflx_kxky_tavg,
-                'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,'pflx_vpth_tavg':pflx_vpth_tavg,
-                'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,'pioq':pioq,'nvpa':nvpa,
-                'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,'islin':islin,'nspec':nspec,'spec_names':spec_names,
+                'pflx_kxky_tavg':pflx_kxky_tavg,'qflx_kxky_tavg':qflx_kxky_tavg,'vflx_kxky_tavg':vflx_kxky_tavg,
+                'pflx_vpth_tavg':pflx_vpth_tavg,'qflx_vpth_tavg':qflx_vpth_tavg,'vflx_vpth_tavg':vflx_vpth_tavg,
+                'pioq':pioq,
+                'nvpa':nvpa,'ntheta':ntheta,'nx':nx,'ny':ny,'nxmid':nxmid,
                 'naky':naky,'kx':kx,'ky':ky,'theta':theta,'theta0':theta0,'jtwist':jtwist,
                 'time':time,'time_steady':time_steady,'it_min':it_min,'it_max':it_max,
-                'phi_bytheta_tfinal':phi_bytheta_tfinal, 'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,'has_flowshear':has_flowshear,
-                'phi2_kxky_tavg':phi2_kxky_tavg,'phi2_kxky':phi2_kxky}
+                'phi_bytheta_tfinal':phi_bytheta_tfinal, 'phi2_avg':phi2_avg,'phi2_by_ky':phi2_by_ky,
+                'phi2_kxky_tavg':phi2_kxky_tavg,'phi2_kxky':phi2_kxky,'phi2_kxky_nrm':phi2_kxky_nrm,
+                'phi2_kxky_tauwinavg':phi2_kxky_tauwinavg, 'phi2_kxky_tauwinsig':phi2_kxky_tauwinsig,
+                'phi2_kxky_nrm_tauwinavg':phi2_kxky_nrm_tauwinavg, 'phi2_kxky_nrm_tauwinsig':phi2_kxky_nrm_tauwinsig,
+                'islin':islin,'nspec':nspec,'spec_names':spec_names,'has_flowshear':has_flowshear}
         with open(datfile_name,'wb') as datfile:
             pickle.dump(mydict,datfile)
 
@@ -202,8 +222,215 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
             mygrids = pickle.load(datfile)
     
     if not run.no_plot and not stitching: # plot fluxes for this single file
-            
+        
         plot_fluxes(ifile,run,mytime,mydict)
+
+def multi_task(run):
+
+    nfile = len(run.fnames)
+
+    fluxes = [{} for ifile in range(nfile)]
+    times = [{} for ifile in range(nfile)]
+    print('Running MULTI')
+
+    for ifile in range(nfile):
+
+        datfile_name = run.out_dir + run.fnames[ifile] + '.fluxes.dat'
+        with open(datfile_name,'rb') as datfile:
+            fluxes[ifile] = pickle.load(datfile)
+
+        datfile_name = run.out_dir + run.fnames[ifile] + '.time.dat'
+        with open(datfile_name,'rb') as datfile:
+            times[ifile] = pickle.load(datfile)
+
+    # Plotting energy spectra vs kx and ky
+    plot_energy_spectra(run, fluxes)
+
+    # Plotting phi2 vs theta-theta0 at final time,
+    # for ky~0.5 and ky~1.0
+    kyplt = [0.5, 1.0]
+    tt0plt = [0, pi]
+    plot_phi2_vs_bloon(run, times, fluxes, kyplt, tt0plt)
+
+    # Plotting time traces of phi2 for all modes
+    fldname = 'phi2_kxky_nrm'
+    zttl_nrm = '$\\langle\\vert\\hat{\\varphi}\\vert^2\\rangle_{\\theta, t}$'
+    zttl = '$\\langle\\vert\\hat{\\varphi}\\vert^2\\rangle_\\theta$ / ' + zttl_nrm
+    pltname = 'phi2all'
+    zmin = 0.1
+    zmax = 10.0
+    plot_allmodes_vs_t(run, times, fluxes, fldname, zttl, pltname, zmin=zmin, zmax=zmax)
+
+    # Plotting time traces of tauwinavg(phi2) for all modes
+    fldname = 'phi2_kxky_nrm_tauwinavg'
+    zttl_nrm = '$\\langle\\vert\\hat{\\varphi}\\vert^2\\rangle_{\\theta, t}$'
+    zttl = '$\\overline{\\langle\\vert\\hat{\\varphi}\\vert^2\\rangle_\\theta}$ / ' + zttl_nrm
+    pltname = 'phi2all_tauwinavg'
+    zmin = 0.5
+    zmax = 2.0
+    plot_allmodes_vs_t(run, times, fluxes, fldname, zttl, pltname, zmin=zmin, zmax=zmax, tauwindow=True)
+
+    # Plotting time traces of sigma(phi2) for all modes
+    fldname = 'phi2_kxky_nrm_tauwinsig'
+    zttl_nrm = '$\\langle\\vert\\hat{\\varphi}\\vert^2\\rangle_{\\theta, t}$'
+    zttl = '$\\sigma (\\langle\\vert\\hat{\\varphi}\\vert^2\\rangle_\\theta )$ / ' + zttl_nrm
+    pltname = 'phi2all_tauwinsig'
+    zmin = 0.2
+    zmax = 2.0
+    plot_allmodes_vs_t(run, times, fluxes, fldname, zttl, pltname, zmin=zmin, zmax=zmax, tauwindow=True)
+
+
+    # Plotting fluxes vs time
+    for ispec in range(len(fluxes[0]['spec_names'])):
+
+        specname = fluxes[0]['spec_names'][ispec]
+        if specname == 'ion':
+            speclab = 'i'
+        elif specname == 'electron':
+            speclab = 'e'
+
+        plt.figure()
+        tmp_pdf_id = 1
+        pdflist = []
+        labs = []
+
+        # Particle flux vs t, linear scale
+        for ifile in range(nfile):
+            plt.plot(times[ifile].time, fluxes[ifile]['pflx'][:,ispec])
+            labs.append(run.flabels[ifile])
+        plt.xlabel('$t$ [$a/v_th$]')
+        plt.ylabel('$\Gamma_'+speclab+'/\Gamma_{gB}$')
+        leg = plt.legend(labs,
+                         prop={'size': 10},
+                         ncol=2,
+                         frameon=True,
+                         fancybox=False,
+                         framealpha=1.0,
+                         handlelength=1)
+        plt.grid(True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+        # Particle flux vs t, semilogy scale
+        for ifile in range(nfile):
+            plt.semilogy(times[ifile].time, fluxes[ifile]['pflx'][:,ispec])
+            labs.append(run.flabels[ifile])
+        plt.xlabel('$t$ [$a/v_th$]')
+        plt.ylabel('$\Gamma_'+speclab+'/\Gamma_{gB}$')
+        leg = plt.legend(labs,
+                         prop={'size': 10},
+                         ncol=2,
+                         frameon=True,
+                         fancybox=False,
+                         framealpha=1.0,
+                         handlelength=1)
+        plt.grid(True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+        # Heat flux vs t, linear scale
+        for ifile in range(nfile):
+            plt.plot(times[ifile].time, fluxes[ifile]['qflx'][:,ispec])
+            labs.append(run.flabels[ifile])
+        plt.xlabel('$t$ [$a/v_th$]')
+        plt.ylabel('$Q_'+speclab+'/Q_{gB}$')
+        leg = plt.legend(labs,
+                         prop={'size': 10},
+                         ncol=2,
+                         frameon=True,
+                         fancybox=False,
+                         framealpha=1.0,
+                         handlelength=1)
+        plt.grid(True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+        # Heat flux vs t, semilogy scale
+        for ifile in range(nfile):
+            plt.semilogy(times[ifile].time, fluxes[ifile]['qflx'][:,ispec])
+            labs.append(run.flabels[ifile])
+        plt.xlabel('$t$ [$a/v_th$]')
+        plt.ylabel('$Q_'+speclab+'/Q_{gB}$')
+        leg = plt.legend(labs,
+                         prop={'size': 10},
+                         ncol=2,
+                         frameon=True,
+                         fancybox=False,
+                         framealpha=1.0,
+                         handlelength=1)
+        plt.grid(True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+        # Momentum flux vs t, linear scale
+        for ifile in range(nfile):
+            plt.plot(times[ifile].time, fluxes[ifile]['vflx'][:,ispec])
+            labs.append(run.flabels[ifile])
+        plt.xlabel('$t$ [$a/v_th$]')
+        plt.ylabel('$\Pi_'+speclab+'/\Pi_{gB}$')
+        leg = plt.legend(labs,
+                         prop={'size': 10},
+                         ncol=2,
+                         frameon=True,
+                         fancybox=False,
+                         framealpha=1.0,
+                         handlelength=1)
+        plt.grid(True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+        # Momentum flux vs t, semilogy scale
+        for ifile in range(nfile):
+            plt.semilogy(times[ifile].time, np.abs(fluxes[ifile]['vflx'][:,ispec]))
+            labs.append(run.flabels[ifile])
+        plt.xlabel('$t$ [$a/v_th$]')
+        plt.ylabel('$\\vert\Pi_'+speclab+'\\vert/\Pi_{gB}$')
+        leg = plt.legend(labs,
+                         prop={'size': 10},
+                         ncol=2,
+                         frameon=True,
+                         fancybox=False,
+                         framealpha=1.0,
+                         handlelength=1)
+        plt.grid(True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+        # Ratio of momentum to heat flux vs t
+        for ifile in range(nfile):
+            itmin = times[ifile].it_min
+            itmax = times[ifile].it_max
+            plt.plot(times[ifile].time_steady, fluxes[ifile]['pioq'][itmin:itmax,ispec])
+            labs.append(run.flabels[ifile])
+        plt.xlabel('$t$ [$a/v_th$]')
+        plt.ylabel('$\Pi_'+speclab+'/Q_'+speclab+'$')
+        leg = plt.legend(labs,
+                         prop={'size': 10},
+                         ncol=2,
+                         frameon=True,
+                         fancybox=False,
+                         framealpha=1.0,
+                         handlelength=1)
+        plt.grid(True)
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+        merged_pdfname = 'fluxes_' + specname + '_vs_t_' + run.scan_name
+        gplot.merge_pdfs(pdflist, merged_pdfname, run)
 
 def stitching_fluxes(run):
 
@@ -234,6 +461,7 @@ def stitching_fluxes(run):
     islin = full_fluxes[0]['islin']
     has_flowshear = full_fluxes[0]['has_flowshear']
     twin = full_time[0].twin
+    taumax = full_time[0].taumax
     nspec = full_fluxes[0]['nspec']
     spec_names = full_fluxes[0]['spec_names']
     nx = full_fluxes[0]['nx']
@@ -316,6 +544,15 @@ def stitching_fluxes(run):
         stitch_my_time.it_max += 1
     stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
     stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
+    stitch_my_time.taumax = taumax
+    stitch_my_time.ntauwin = int(stitch_my_time.time[-1]//(0.5*stitch_my_time.taumax)) - 1
+    stitch_my_time.t_tauwinavg = stitch_my_time.tauwin_avg(stitch_my_time.time)
+
+    stitch_phi2_kxky_nrm = np.zeros((Nt_tot,ny,nx))
+    stitch_phi2_kxky_tauwinavg = np.zeros((stitch_my_time.ntauwin,ny,nx))
+    stitch_phi2_kxky_nrm_tauwinavg = np.zeros((stitch_my_time.ntauwin,ny,nx))
+    stitch_phi2_kxky_tauwinsig = np.zeros((stitch_my_time.ntauwin,ny,nx))
+    stitch_phi2_kxky_nrm_tauwinsig = np.zeros((stitch_my_time.ntauwin,ny,nx))
 
     # Computing time averaged versions of stitched fluxes vs t
     for ispec in range(nspec):
@@ -326,6 +563,11 @@ def stitching_fluxes(run):
     for ik in range(ny):
         for it in range(nx):
             stitch_phi2_kxky_tavg[ik,it] = stitch_my_time.timeavg(stitch_phi2_kxky[:,ik,it])
+            stitch_phi2_kxky_nrm[:,ik,it] = stitch_phi2_kxky[:,ik,it] / stitch_phi2_kxky_tavg[ik,it]
+            stitch_phi2_kxky_tauwinavg[:,ik,it] = stitch_my_time.tauwin_avg(stitch_phi2_kxky[:,ik,it])
+            stitch_phi2_kxky_nrm_tauwinavg[:,ik,it] = stitch_phi2_kxky_tauwinavg[:,ik,it] / stitch_phi2_kxky_tavg[ik,it]
+            stitch_phi2_kxky_tauwinsig[:,ik,it] = stitch_my_time.tauwin_sigma(stitch_phi2_kxky[:,ik,it], stitch_phi2_kxky_tauwinavg[:,ik,it])
+            stitch_phi2_kxky_nrm_tauwinsig[:,ik,it] = stitch_phi2_kxky_tauwinsig[:,ik,it] / stitch_phi2_kxky_tavg[ik,it]
             for ispec in range(nspec):
                 stitch_pflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_pflx_kxky[:,ispec,ik,it])
                 stitch_qflx_kxky_tavg[ispec,ik,it] = stitch_my_time.timeavg(stitch_qflx_kxky[:,ispec,ik,it])
@@ -337,8 +579,10 @@ def stitching_fluxes(run):
             'naky':naky,'kx':kx,'ky':ky,'jtwist':jtwist,'theta':theta,'theta0':theta0,
             'phi_bytheta_tfinal':phi_bytheta_tfinal,'phi2_avg':stitch_phi2_avg,'phi2_by_ky':stitch_phi2_by_ky,
             'pflx_kxky_tavg':stitch_pflx_kxky_tavg,'qflx_kxky_tavg':stitch_qflx_kxky_tavg,
-            'vflx_kxky_tavg':stitch_vflx_kxky_tavg,'phi2_kxky_tavg':stitch_phi2_kxky_tavg,
-            'phi2_kxky':stitch_phi2_kxky,
+            'vflx_kxky_tavg':stitch_vflx_kxky_tavg,
+            'phi2_kxky_tavg':stitch_phi2_kxky_tavg,'phi2_kxky':stitch_phi2_kxky,'phi2_kxky_nrm':stitch_phi2_kxky_nrm,
+            'phi2_kxky_tauwinavg':stitch_phi2_kxky_tauwinavg, 'phi2_kxky_tauwinsig':stitch_phi2_kxky_tauwinsig,
+            'phi2_kxky_nrm_tauwinavg':stitch_phi2_kxky_nrm_tauwinavg, 'phi2_kxky_nrm_tauwinsig':stitch_phi2_kxky_nrm_tauwinsig,
             'pflx_tavg':stitch_pflx_tavg,'qflx_tavg':stitch_qflx_tavg,
             'vflx_tavg':stitch_vflx_tavg}
     datfile_name = run.out_dir + run.scan_name + '.fluxes.dat'
@@ -721,19 +965,22 @@ def plot_fluxes(ifile,run,mytime,mydict):
     pdflist = []
 
     ## Plot energy spectrum kx*<phi2>_{t,theta,ky} vs kx
-    energy_dens_x = np.squeeze(kx*np.sum(phi2_kxky_tavg[1:,:],axis=0))
-    plt.loglog(kx, energy_dens_x, color=gplot.myblue, linewidth=3.0)
+    energy_dens_x = np.squeeze(np.abs(kx)*np.sum(phi2_kxky_tavg[1:,:],axis=0))
+    plt.semilogy(kx, energy_dens_x, color=gplot.myblue, linewidth=3.0, marker='o')
     [xmin,xmax] = plt.gca().get_xlim()
-    xvec = np.linspace(xmin,xmax)
+    xvecpos = np.linspace(xmax/4,xmax)
+    xvecneg = np.linspace(xmin,xmin/4)
     [ymin,ymax] = plt.gca().get_ylim()
     yvec = np.linspace(ymin,ymax)
-    fit = (xvec/kx[-1])**(-7.0/3.0) * energy_dens_x[-1]
-    plt.loglog(xvec, fit, color='k', linewidth=1.5, label='$(\\bar{k}_x\\rho_i)^{-7/3}$')
+    fitpos = (xvecpos/kx[-1])**(-7.0/3.0) * energy_dens_x[-1]
+    fitneg = np.abs((xvecneg/kx[0]))**(-7.0/3.0) * energy_dens_x[0]
+    plt.semilogy(xvecpos, fitpos, color='k', linewidth=1.5, label='$(\\bar{k}_x\\rho_i)^{-7/3}$')
+    plt.semilogy(xvecneg, fitneg, color='k', linewidth=1.5, label=None)
     plt.xlim((xmin,xmax))
     plt.ylim((ymin,ymax))
     plt.grid(True)
     plt.xlabel('$\\bar{k}_{x}\\rho_i$')
-    plt.ylabel('$\\sum_{k_y\\neq 0} \\bar{k}_x\\rho_i\\langle \\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
+    plt.ylabel('$\\sum_{k_y\\neq 0} \\vert\\bar{k}_x\\vert\\rho_i\\langle \\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
     legend = plt.legend(frameon = True, fancybox = False)
     frame = legend.get_frame()
     frame.set_facecolor('white')
@@ -748,13 +995,13 @@ def plot_fluxes(ifile,run,mytime,mydict):
     ## Plot energy spectrum ky*<phi2>_{t,theta,kx} vs ky
     energy_dens_y = np.squeeze(ky*np.sum(phi2_kxky_tavg,axis=1))
     iky_energymax = np.argmax(energy_dens_y)
-    plt.loglog(ky, energy_dens_y, color=gplot.myblue, linewidth=2.0)
+    plt.semilogy(ky, energy_dens_y, color=gplot.myblue, linewidth=3.0, marker='o')
     [xmin,xmax] = plt.gca().get_xlim()
-    xvec = np.linspace(xmin,xmax)
+    xvec = np.linspace(xmax/4,xmax)
     [ymin,ymax] = plt.gca().get_ylim()
     yvec = np.linspace(ymin,ymax)
     fit = (xvec/ky[-1])**(-7.0/3.0) * energy_dens_y[-1]
-    plt.loglog(xvec, fit, color='k', linewidth=1.5, label='$(k_y\\rho_i)^{-7/3}$')
+    plt.semilogy(xvec, fit, color='k', linewidth=1.5, label='$(k_y\\rho_i)^{-7/3}$')
     plt.xlim((xmin,xmax))
     plt.ylim((ymin,ymax))
     plt.grid(True)
@@ -840,7 +1087,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
         tmp_pdf_id = 1
         pdflist = []
 
-        for dmid in range(jtwist*iky):
+        for dmid in range(min(jtwist*iky, int(nx//2))):
 
             # Get chain of (theta-theta0) and associated phi2.
             bloonang, phi2bloon = get_bloon(theta,theta0,phi2_bytheta_tfinal,iky,dmid,jtwist)
@@ -1060,3 +1307,324 @@ def get_bloon(theta,theta0,phi2_bytheta_tfinal,iky,dmid,jtwist):
             phi2bloon.append(phi2_bytheta_tfinal[iky,ilink,itheta])
 
     return bloonang, phi2bloon
+
+def plot_allmodes_vs_t(run, time, flux, fldname, zttl, pltname=None, ifile=None, tauwindow=False, zmin=0.1, zmax=10, cmp='RdBu_c_one'):
+
+    if pltname is None:
+        pltname = fldname
+
+    multi = ifile is None
+
+    if multi:
+        nrun = len(time)
+    else:
+        nrun = 1
+
+    fig = plt.figure()
+    tmp_pdf_id = 1
+    pdflist = []
+
+    for irun in range(nrun):
+
+        if multi:
+            flx = flux[irun]
+            tm = time[irun]
+            ttl = run.flabels[irun]
+        else:
+            flx = flux
+            tm = time
+            ttl = ''
+
+        nx = flx['nx']
+        kx = flx['kx']
+        ny = flx['ny']
+        ky = flx['ky']
+        
+        if tauwindow:
+            nt = tm.ntauwin
+            t = tm.t_tauwinavg
+        else:
+            nt = tm.ntime
+            t = tm.time
+
+        gap = 10
+
+        nrows = (nx+gap)*ny
+        fld = np.zeros((nrows,nt))
+        yax = np.zeros(nrows)
+        ylab = ['$(0.0,'+str(round(ky[iy],2))+')$' for iy in range(ny)]
+        yaxtick = [(nx+gap)*iy+(nx+1)//2 for iy in range(ny)]
+        for iy in range(ny):
+            for ix in range(nx):
+                imode = iy*(nx+gap) + ix
+                yax[imode] = imode
+                fld[imode,:] = flx[fldname][:,iy,ix]
+            for iskip in range(gap):
+                imode = iy*(nx+gap) + nx + iskip
+                yax[imode] = imode
+                fld[imode,:] = np.nan*np.ones(nt)
+
+        if cmp == 'RdBu_c_one':
+            if (zmax-1) > 5*(1-zmin):
+                zticks = [zmin,1.0,(zmax-1)/3+1,2*(zmax-1)/3+1,zmax]
+            else:
+                zticks = [zmin,(1.0-zmin)/2+zmin,1.0,(zmax-1)/2+1,zmax]
+        else:
+            zticks = [(zmax-zmin)/5*i+zmin for i in range(6)]
+
+        # Adapt time array for plot_2d_uneven_xgrid:
+        t_by_ky = np.zeros((nrows, nt))
+        for iy in range(nrows):
+            t_by_ky[iy,:] = t
+        gplot.plot_2d_uneven_xgrid(
+                      t_by_ky, yax, fld,
+                      t[0], t[-1],
+                      zmin, zmax,
+                      '$t$ [$a/v_{th}$]', '$(\\bar{k}_x,k_y)$', ttl,
+                      x_is_twopi = False, ngrid_fine = 2*nt+1, clrmap = cmp,
+                      zticks = zticks, zlabel = zttl,
+                      yticks = yaxtick, yticklabels = ylab, ytickfontsize = 15)
+
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        if multi:
+            gplot.save_plot(tmp_pdfname, run)
+        else:
+            gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id = tmp_pdf_id+1
+
+    if multi:
+        merged_pdfname = pltname + '_vs_t_' + run.scan_name
+        gplot.merge_pdfs(pdflist, merged_pdfname, run)
+    else:
+        merged_pdfname = pltname + '_vs_t_' + run.fnames[ifile]
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+    return fig
+
+
+
+def plot_phi2_vs_bloon(run, time, flux, kyplt, tt0plt, ifile=None):
+
+    multi = ifile is None
+
+    if multi:
+        nrun = len(time)
+    else:
+        nrun = 1
+
+    fig = plt.figure()
+    tmp_pdf_id = 1
+    pdflist = []
+
+    for ky_wish in kyplt:
+
+        for tt0_wish in tt0plt:
+
+            create_phi2_vs_bloon(multi, nrun, run, time, flux, plt.plot, ky_wish, tt0_wish)
+
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            if multi:
+                gplot.save_plot(tmp_pdfname, run)
+            else:
+                gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+
+            create_phi2_vs_bloon(multi, nrun, run, time, flux, plt.semilogy, ky_wish, tt0_wish)
+
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            if multi:
+                gplot.save_plot(tmp_pdfname, run)
+            else:
+                gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+
+    if multi:
+        merged_pdfname = 'phi2_vs_bloon_' + run.scan_name
+        gplot.merge_pdfs(pdflist, merged_pdfname, run)
+    else:
+        merged_pdfname =  'phi2_vs_bloon_' + run.fnames[ifile]
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+    return fig
+
+def create_phi2_vs_bloon(multi, nrun, run, time, flux, pltfunc, ky_wish, tt0_wish):
+
+    labs = []
+
+    for irun in range(nrun):
+
+        if multi:
+            flx = flux[irun]
+            tm = time[irun]
+            lab = run.flabels[irun]
+        else:
+            flx = flux
+            tm = time
+            lab = None
+
+        jtwist = flx['jtwist']
+        theta = flx['theta']
+        theta0 = flx['theta0']
+        phi2 = np.abs(flx['phi_bytheta_tfinal'])**2
+        ky = flx['ky']
+        
+        ikynear, kynear = find_nearest(ky, ky_wish)
+
+        # min|kx| / dkx in the chain
+        nx = theta0.shape[1]
+        dmid = int(round(jtwist*ikynear*tt0_wish/(2*pi)))
+        dmid = min(int(nx//2), dmid)
+        tt0near = 2*pi*dmid/(jtwist*ikynear)
+
+        bloonang, phi2bloon = get_bloon(theta, theta0, phi2, ikynear, dmid, jtwist)
+        phi2bloon = phi2bloon / np.amax(phi2bloon)
+
+        pltfunc(bloonang, phi2bloon)
+
+        if multi:
+            lab = run.flabels[irun]
+        else:
+            lab = None
+        labs.append(lab)
+
+    plt.title('$k_y \\simeq ' + str(round(ky_wish,2)) + \
+            ', \\min\\vert \\theta_0\\vert \\simeq ' + str(round(abs(tt0_wish),2)) + '$')
+    plt.grid(True)
+    plt.xlabel('$\\theta-\\theta_0$')
+    plt.ylabel('$\\vert\\varphi\\vert^2\ /\ \\max\\vert\\varphi\\vert^2$')
+    leg = plt.legend(labs,
+                     prop={'size': 8},
+                     ncol=1,
+                     frameon=True,
+                     fancybox=False,
+                     framealpha=1.0,
+                     handlelength=1)
+
+
+def find_nearest(array, value):
+
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+
+    return idx, array[idx]
+
+
+
+def plot_energy_spectra(run, flux, ifile=None):
+
+    multi = ifile is None
+
+    if multi:
+        nrun = len(flux)
+    else:
+        nrun = 1
+
+    def create_energy_spectra(vs):
+
+        xmin = np.nan
+        xmax = np.nan
+        ymin = np.nan
+        ymax = np.nan
+
+        for irun in range(nrun):
+
+            if multi:
+                flx = flux[irun]
+                lab = run.flabels[irun]
+                fitlab = None
+            else:
+                flx = flux
+                lab = None
+                if vs == 'kx':
+                    fitlab = '$(\\bar{k}_x\\rho_i)^{-7/3}$'
+                else:
+                    fitlab = '$(k_y\\rho_i)^{-7/3}$'
+
+            if vs == 'kx':
+                
+                k = flx['kx']
+                dk = abs(k[1]-k[0])
+                energy_dens = 1.0/dk * np.squeeze(np.abs(k)*np.sum(flx['phi2_kxky_tavg'][1:,:],axis=0))
+                fit_both = True
+                xlab = '$\\bar{k}_{x}\\rho_i$'
+                ylab = '$\\frac{1}{\\Delta k_x}\\sum_{k_y\\neq 0} \\vert\\bar{k}_x\\vert\\rho_i\\langle \\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$'
+
+            elif vs == 'ky':
+                
+                k = flx['ky']
+                dk = abs(k[1]-k[0])
+                energy_dens = 1.0/dk * np.squeeze(np.abs(k)*np.sum(flx['phi2_kxky_tavg'],axis=1))
+                fit_both = False
+                xlab = '$k_{y}\\rho_i$'
+                ylab = '$\\frac{1}{\\Delta k_y}\\sum_{k_x} k_y\\rho_i\\langle \\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$'
+
+            plt.semilogy(k, energy_dens, marker='o', label=lab, markersize=3)
+
+            [this_xmin, this_xmax] = plt.gca().get_xlim()
+            if not (xmin < this_xmin): xmin = this_xmin
+            if not (xmax > this_xmax): xmax = this_xmax
+
+            [this_ymin, this_ymax] = plt.gca().get_ylim()
+            if not (ymin < this_ymin): ymin = this_ymin
+            if not (ymax > this_ymax): ymax = this_ymax
+
+            if irun == nrun-1:
+
+                xvec = np.linspace(xmax/10,3*xmax)
+                fit = (xvec/k[-1])**(-7.0/3.0) * energy_dens[-1]
+                plt.semilogy(xvec, fit, color='k', linewidth=1.5, label=fitlab, linestyle='--')
+
+                if fit_both:
+
+                    xvec = np.linspace(3*xmin,xmin/10)
+                    fit = np.abs((xvec/k[0]))**(-7.0/3.0) * energy_dens[0]
+                    plt.semilogy(xvec, fit, color='k', linewidth=1.5, label=fitlab, linestyle='--')
+
+        plt.xlim((xmin,xmax))
+        plt.ylim((ymin,ymax))
+        plt.grid(True)
+        plt.xlabel(xlab)
+        plt.ylabel(ylab, fontsize=15)
+
+        plt.legend(prop={'size': 8},
+                   ncol=1,
+                   frameon=True,
+                   fancybox=False,
+                   framealpha=1.0,
+                   handlelength=1)
+
+    fig = plt.figure()
+    tmp_pdf_id = 1
+    pdflist = []
+
+    create_energy_spectra('kx')
+
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    if multi:
+        gplot.save_plot(tmp_pdfname, run)
+    else:
+        gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id = tmp_pdf_id+1
+
+    create_energy_spectra('ky')
+
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    if multi:
+        gplot.save_plot(tmp_pdfname, run)
+    else:
+        gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id = tmp_pdf_id+1
+
+    if multi:
+        merged_pdfname = 'energy_spectra_' + run.scan_name
+        gplot.merge_pdfs(pdflist, merged_pdfname, run)
+    else:
+        merged_pdfname = 'energy_spectra_' + run.fnames[ifile]
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+    return fig

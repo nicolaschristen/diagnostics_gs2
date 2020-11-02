@@ -17,6 +17,8 @@ class runobj:
         self.twin = [0.5, 1.0]
         self.no_plot = False
         self.only_plot = False
+        self.flabels = []
+        self.taumax = []
 
         # Modify attributes according to command-line arguments.
         self.set_parameters(tasks_choices)
@@ -67,6 +69,18 @@ class runobj:
         
         if args.only_plot: self.only_plot = True
 
+        if args.flabels:
+            self.flabels = args.flabels
+            if len(self.flabels) != len(self.fnames):
+                sys.exit("Number of file names and associated labels should match.")
+        else:
+            self.flabels = self.fnames
+
+        if args.taumax:
+            self.taumax = float(args.taumax)
+        else:
+            self.taumax = None
+
 
     def get_commandline(self, tasks_choices):
 
@@ -100,7 +114,13 @@ class runobj:
                 help = 'Saving output from tasks to my_file.my_task.mat, without plotting (useful on HPC).')
 
         parser.add_argument('-p', '--only_plot', action = 'store_true', default = False,
-                help = 'Output from tasks has already been saved to my_file.my_task.mat files, so no reading from NETCFD files required and only need to plot.')
+                help = 'Output from tasks has already been saved to my_file.my_task.mat files, so no reading from NETCDF files required and only need to plot.')
+
+        parser.add_argument('-l', '--flabels', nargs = '*',
+                help = 'Labels associated with every file.')
+        
+        parser.add_argument('--taumax', nargs = '?',
+                help = 'Time scale larger than the correlation time of the turbulence, but ideally smaller than simulation time.')
         
         args = parser.parse_args()
         

@@ -116,7 +116,7 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 
 def complete_task_scan(task, run, full_space):
 
-    if (task in ('basic','fluxes','zonal','tcorr')):
+    if (task in ('basic','zonal','tcorr')):
         
         return
 
@@ -131,3 +131,7 @@ def complete_task_scan(task, run, full_space):
     if (task == 'fluxes_stitch'):
        
         fluxes.stitching_fluxes(run)
+
+    if (task == 'fluxes_compare'):
+
+        fluxes.multi_task(run)
