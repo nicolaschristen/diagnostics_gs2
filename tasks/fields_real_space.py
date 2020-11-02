@@ -7,11 +7,14 @@ import pyfilm
 import pickle
 from math import pi
 from scipy import interpolate
+from matplotlib import rcParams
+from matplotlib import rcdefaults
+import matplotlib.animation as anim
+from scipy.integrate import simps
 
 
 
 def my_task_single(ifile, run, myin, myout, mygrids, mytime):
-
 
 
 
@@ -35,15 +38,27 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
     to_fit = 'field' # 'field'/'flow'/'shear'
 
     # Factor to smooth out spline fit of zonal quantities
-    smoothfac = 500
+    smoothfac = 2
     
     # Make movies in real space?
     make_movies = True
     make_mov_phi = True
-    make_mov_densi = False
-    make_mov_dense = False
-    make_mov_tempi = False
-    make_mov_tempe = False
+    make_mov_densi = True
+    make_mov_dense = True
+    make_mov_tempi = True
+    make_mov_tempe = True
+    make_mov_zonal = False
+    make_mov_yavg = False
+
+    # Pyfilm bug: creating a 1D movie after having called plt.savefig
+    # will produce glitches in axis labels.
+    # To avoid this: override plotting preferences.
+    if make_movies and make_mov_zonal:
+        if not plot_zonal:
+            plot_zonal = True
+        save_plots = False
+    else:
+        save_plots = True
     
     # ^^^ USER PARAMETERS ^^^
 
@@ -151,94 +166,95 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
 
         # Plotting
+        if save_plots:
 
-        tmp_pdf_id = 1
-        pdflist = []
-        tmp_pdf_id_fromSum = 1
-        pdflist_fromSum = []
+            tmp_pdf_id = 1
+            pdflist = []
+            tmp_pdf_id_fromSum = 1
+            pdflist_fromSum = []
 
-        ttl = '$\\varphi$ [$\\rho_{{\\star}} T_i/e$]'\
-              '  at  '\
-              '$t={:.2f}$'.format(mytime.time[it_snap])
-        ttl += ' [$a/v_{{th}}$]'
-        gplot.plot_2d( phi_snap_fft, mygrids.xgrid, mygrids.ygrid,
-                      np.amin(phi_snap_fft), np.amax(phi_snap_fft),
-                      xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
-                      title = ttl,
-                      cmp = 'RdBu_c' )
+            ttl = '$\\varphi$ [$\\rho_{{\\star}} T_i/e$]'\
+                  '  at  '\
+                  '$t={:.2f}$'.format(mytime.time[it_snap])
+            ttl += ' [$a/v_{{th}}$]'
+            gplot.plot_2d( phi_snap_fft, mygrids.xgrid, mygrids.ygrid,
+                          np.amin(phi_snap_fft), np.amax(phi_snap_fft),
+                          xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
+                          title = ttl,
+                          cmp = 'RdBu_c' )
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
 
-        ttl = '$\\delta n_i$ [$\\rho_{{\\star}} n_i$]'\
-              '  at  '\
-              '$t={:.2f}$'.format(mytime.time[it_snap])
-        ttl += ' [$a/v_{{th}}$]'
-        gplot.plot_2d( densi_snap_fft, mygrids.xgrid, mygrids.ygrid,
-                      np.amin(densi_snap_fft), np.amax(densi_snap_fft),
-                      xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
-                      title = ttl,
-                      cmp = 'RdBu_c' )
+            ttl = '$\\delta n_i$ [$\\rho_{{\\star}} n_i$]'\
+                  '  at  '\
+                  '$t={:.2f}$'.format(mytime.time[it_snap])
+            ttl += ' [$a/v_{{th}}$]'
+            gplot.plot_2d( densi_snap_fft, mygrids.xgrid, mygrids.ygrid,
+                          np.amin(densi_snap_fft), np.amax(densi_snap_fft),
+                          xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
+                          title = ttl,
+                          cmp = 'RdBu_c' )
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
 
-        ttl = '$\\delta n_e$ [$\\rho_{{\\star}} n_i$]'\
-              '  at  '\
-              '$t={:.2f}$'.format(mytime.time[it_snap])
-        ttl += ' [$a/v_{{th}}$]'
-        gplot.plot_2d( dense_snap_fft, mygrids.xgrid, mygrids.ygrid,
-                      np.amin(dense_snap_fft), np.amax(dense_snap_fft),
-                      xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
-                      title = ttl,
-                      cmp = 'RdBu_c' )
+            ttl = '$\\delta n_e$ [$\\rho_{{\\star}} n_i$]'\
+                  '  at  '\
+                  '$t={:.2f}$'.format(mytime.time[it_snap])
+            ttl += ' [$a/v_{{th}}$]'
+            gplot.plot_2d( dense_snap_fft, mygrids.xgrid, mygrids.ygrid,
+                          np.amin(dense_snap_fft), np.amax(dense_snap_fft),
+                          xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
+                          title = ttl,
+                          cmp = 'RdBu_c' )
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
 
-        ttl = '$\\delta T_i$ [$\\rho_{{\\star}} T_i$]'\
-              '  at  '\
-              '$t={:.2f}$'.format(mytime.time[it_snap])
-        ttl += ' [$a/v_{{th}}$]'
-        gplot.plot_2d( tempi_snap_fft, mygrids.xgrid, mygrids.ygrid,
-                      np.amin(tempi_snap_fft), np.amax(tempi_snap_fft),
-                      xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
-                      title = ttl,
-                      cmp = 'RdBu_c' )
+            ttl = '$\\delta T_i$ [$\\rho_{{\\star}} T_i$]'\
+                  '  at  '\
+                  '$t={:.2f}$'.format(mytime.time[it_snap])
+            ttl += ' [$a/v_{{th}}$]'
+            gplot.plot_2d( tempi_snap_fft, mygrids.xgrid, mygrids.ygrid,
+                          np.amin(tempi_snap_fft), np.amax(tempi_snap_fft),
+                          xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
+                          title = ttl,
+                          cmp = 'RdBu_c' )
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
 
-        ttl = '$\\delta T_e$ [$\\rho_{{\\star}} T_i$]'\
-              '  at  '\
-              '$t={:.2f}$'.format(mytime.time[it_snap])
-        ttl += ' [$a/v_{{th}}$]'
-        gplot.plot_2d( tempe_snap_fft, mygrids.xgrid, mygrids.ygrid,
-                      np.amin(tempe_snap_fft), np.amax(tempe_snap_fft),
-                      xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
-                      title = ttl,
-                      cmp = 'RdBu_c' )
+            ttl = '$\\delta T_e$ [$\\rho_{{\\star}} T_i$]'\
+                  '  at  '\
+                  '$t={:.2f}$'.format(mytime.time[it_snap])
+            ttl += ' [$a/v_{{th}}$]'
+            gplot.plot_2d( tempe_snap_fft, mygrids.xgrid, mygrids.ygrid,
+                          np.amin(tempe_snap_fft), np.amax(tempe_snap_fft),
+                          xlab = '$x/\\rho_i$', ylab = '$y/\\rho_i$',
+                          title = ttl,
+                          cmp = 'RdBu_c' )
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
-
-
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
 
 
-        # Merge pdfs and save
-        
-        merged_pdfname = 'fields_snap_real_space'
-        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+
+            # Merge pdfs and save
+            
+            merged_pdfname = 'fields_snap_real_space'
+            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
 
 
@@ -328,6 +344,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         for it in range(mytime.it_min,mytime.it_max):
             ft = np.squeeze(phi_all_t[it,0,:])
             field_zonal[it_steady,:] = np.real(np.fft.ifft(ft)) * mygrids.nx
+            it_steady += 1
 
         # Then average over time
         field_zonal_avg = np.zeros(mygrids.nx)
@@ -335,6 +352,8 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
             field_zonal_avg[ix] = mytime.timeavg(np.squeeze(field_zonal[:,ix]), use_ft_full=True)
 
         # Finally, reorder to have growing x axis
+        field_zonal = np.concatenate((field_zonal[:,mygrids.nxmid:],\
+                                      field_zonal[:,:mygrids.nxmid]),axis=1)
         field_zonal_avg = np.concatenate((field_zonal_avg[mygrids.nxmid:],\
                                           field_zonal_avg[:mygrids.nxmid]))
 
@@ -347,11 +366,14 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         for it in range(mytime.it_min,mytime.it_max):
             ft = np.squeeze(phi_all_t_cut[it,0,:])
             field_zonal_cut[it_steady,:] = np.real(np.fft.ifft(ft)) * nxcut
+            it_steady += 1
 
         field_zonal_avg_cut = np.zeros(nxcut)
         for ix in range(nxcut):
             field_zonal_avg_cut[ix] = mytime.timeavg(np.squeeze(field_zonal_cut[:,ix]), use_ft_full=True)
 
+        field_zonal_cut = np.concatenate((field_zonal_cut[:,mygrids.nxmid:],\
+                                          field_zonal_cut[:,:mygrids.nxmid]),axis=1)
         field_zonal_avg_cut = np.concatenate((field_zonal_avg_cut[nxmid_cut:],\
                                              field_zonal_avg_cut[:nxmid_cut]))
 
@@ -360,9 +382,23 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         # Fitting the full x-profile with splines
 
         if to_fit == 'field':
+
+            # Every time step
+            field_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.nx))
+            splinerep_field = []
+            it_steady = 0
+            for it in range(mytime.it_min,mytime.it_max):
+                ft = np.squeeze(field_zonal[it_steady,:])
+                spl_smooth = np.max(ft)/smoothfac
+                splinerep_field.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
+                field_zonal_fit[it_steady,:] = interpolate.splev(mygrids.xgrid, splinerep_field[-1])
+                it_steady += 1
+
+            # Time-average
             spl_smooth = np.max(field_zonal_avg)/smoothfac
-            splinerep = interpolate.splrep(mygrids.xgrid, field_zonal_avg, s=spl_smooth)
-            field_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep)
+            splinerep_field_avg = interpolate.splrep(mygrids.xgrid, field_zonal_avg, s=spl_smooth)
+            field_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep_field_avg)
+
             label_field_fit = 'spline fit'
 
 
@@ -382,6 +418,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         for it in range(mytime.it_min,mytime.it_max):
             ft = -1j * mygrids.kx_gs2 * np.squeeze(phi_all_t[it,0,:])
             flow_zonal[it_steady,:] = np.real(np.fft.ifft(ft)) * mygrids.nx
+            it_steady += 1
 
         # Then average over time
         flow_zonal_avg = np.zeros(mygrids.nx)
@@ -389,6 +426,8 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
             flow_zonal_avg[ix] = mytime.timeavg(np.squeeze(flow_zonal[:,ix]), use_ft_full=True)
 
         # Finally, reorder to have growing x axis
+        flow_zonal = np.concatenate((flow_zonal[:,mygrids.nxmid:],\
+                                     flow_zonal[:,:mygrids.nxmid]),axis=1)
         flow_zonal_avg = np.concatenate((flow_zonal_avg[mygrids.nxmid:],\
                                           flow_zonal_avg[:mygrids.nxmid]))
 
@@ -402,11 +441,14 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         for it in range(mytime.it_min,mytime.it_max):
             ft = -1j * kx_gs2_cut * np.squeeze(phi_all_t_cut[it,0,:])
             flow_zonal_cut[it_steady,:] = np.real(np.fft.ifft(ft)) * nxcut
+            it_steady += 1
 
         flow_zonal_avg_cut = np.zeros(nxcut)
         for ix in range(nxcut):
             flow_zonal_avg_cut[ix] = mytime.timeavg(np.squeeze(flow_zonal_cut[:,ix]), use_ft_full=True)
 
+        flow_zonal_cut = np.concatenate((flow_zonal_cut[:,mygrids.nxmid:],\
+                                         flow_zonal_cut[:,:mygrids.nxmid]),axis=1)
         flow_zonal_avg_cut = np.concatenate((flow_zonal_avg_cut[nxmid_cut:],\
                                              flow_zonal_avg_cut[:nxmid_cut]))
 
@@ -416,13 +458,37 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
         # Either take a derivative from the fitted field
         if to_fit == 'field':
-            flow_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep, der=1)
+
+            # Every time step
+            flow_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.nx))
+            it_steady = 0
+            for it in range(mytime.it_min,mytime.it_max):
+                flow_zonal_fit[it_steady,:] = interpolate.splev(mygrids.xgrid, splinerep_field[it_steady], der=1)
+                it_steady += 1
+
+            # Time-average
+            flow_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep_field_avg, der=1)
             label_flow_fit = 'd/dx of fitted field'
+
         # Or if the flow is smooth enough, fit the flow itself
         elif to_fit == 'flow':
+
+            # Every time step
+            flow_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.nx))
+            splinerep_flow = []
+            it_steady = 0
+            for it in range(mytime.it_min,mytime.it_max):
+                ft = np.squeeze(flow_zonal[it_steady,:])
+                spl_smooth = np.max(ft)/smoothfac
+                splinerep_flow.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
+                flow_zonal_fit[it_steady,:] = interpolate.splev(mygrids.xgrid, splinerep_flow[-1])
+                it_steady += 1
+
+            # Time-average
             spl_smooth = np.max(flow_zonal_avg)/smoothfac
-            splinerep = interpolate.splrep(mygrids.xgrid, flow_zonal_avg, s=spl_smooth)
-            flow_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep)
+            splinerep_flow_avg = interpolate.splrep(mygrids.xgrid, flow_zonal_avg, s=spl_smooth)
+            flow_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep_flow_avg)
+
             label_flow_fit = 'spline fit'
 
 
@@ -449,6 +515,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         for it in range(mytime.it_min,mytime.it_max):
             ft = mygrids.kx_gs2**2 * np.squeeze(phi_all_t[it,0,:])
             shear_zonal[it_steady,:] = fac * np.real(np.fft.ifft(ft)) * mygrids.nx
+            it_steady += 1
 
         # Then average over time
         shear_zonal_avg = np.zeros(mygrids.nx)
@@ -456,6 +523,8 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
             shear_zonal_avg[ix] = mytime.timeavg(np.squeeze(shear_zonal[:,ix]), use_ft_full=True)
 
         # Finally, reorder to have growing x axis
+        shear_zonal = np.concatenate((shear_zonal[:,mygrids.nxmid:],\
+                                      shear_zonal[:,:mygrids.nxmid]),axis=1)
         shear_zonal_avg = np.concatenate((shear_zonal_avg[mygrids.nxmid:],\
                                           shear_zonal_avg[:mygrids.nxmid]))
 
@@ -468,11 +537,14 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         for it in range(mytime.it_min,mytime.it_max):
             ft = kx_gs2_cut**2 * np.squeeze(phi_all_t_cut[it,0,:])
             shear_zonal_cut[it_steady,:] = fac * np.real(np.fft.ifft(ft)) * nxcut
+            it_steady += 1
 
         shear_zonal_avg_cut = np.zeros(nxcut)
         for ix in range(nxcut):
             shear_zonal_avg_cut[ix] = mytime.timeavg(np.squeeze(shear_zonal_cut[:,ix]), use_ft_full=True)
 
+        shear_zonal_cut = np.concatenate((shear_zonal_cut[:,mygrids.nxmid:],\
+                                          shear_zonal_cut[:,:mygrids.nxmid]),axis=1)
         shear_zonal_avg_cut = np.concatenate((shear_zonal_avg_cut[nxmid_cut:],\
                                               shear_zonal_avg_cut[:nxmid_cut]))
 
@@ -482,19 +554,64 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
         # Either take the second derivative from the fitted field
         if to_fit == 'field':
-            shear_zonal_avg_fit = fac * interpolate.splev(mygrids.xgrid, splinerep, der=2)
+
+            # Every time step
+            shear_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.nx))
+            it_steady = 0
+            for it in range(mytime.it_min,mytime.it_max):
+                shear_zonal_fit[it_steady,:] = fac * interpolate.splev(mygrids.xgrid, splinerep_field[it_steady], der=2)
+                it_steady += 1
+
+            # Time-average
+            shear_zonal_avg_fit = fac * interpolate.splev(mygrids.xgrid, splinerep_field_avg, der=2)
+
             label_shear_fit = 'd^2/dx^2 of fitted field'
+
         # Or take a derivative from the fitted flow
         elif to_fit == 'flow':
-            shear_zonal_avg_fit = fac * interpolate.splev(mygrids.xgrid, splinerep, der=1)
+
+            # Every time step
+            shear_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.nx))
+            it_steady = 0
+            for it in range(mytime.it_min,mytime.it_max):
+                shear_zonal_fit[it_steady,:] = fac * interpolate.splev(mygrids.xgrid, splinerep_flow[it_steady], der=1)
+                it_steady += 1
+
+            # Time-average
+            shear_zonal_avg_fit = fac * interpolate.splev(mygrids.xgrid, splinerep_flow_avg, der=1)
+
             label_shear_fit = 'd/dx of fitted flow'
+
         # Or if the shear is smooth enough, fit the shear itself
         elif to_fit == 'shear':
+
+            # Every time step
+            shear_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.nx))
+            splinerep_shear = []
+            it_steady = 0
+            for it in range(mytime.it_min,mytime.it_max):
+                ft = np.squeeze(shear_zonal[it_steady,:])
+                spl_smooth = np.max(ft)/smoothfac
+                splinerep_shear.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
+                shear_zonal_fit[it_steady,:] = interpolate.splev(mygrids.xgrid, splinerep_shear[-1])
+                it_steady += 1
+
+            # Time-average
             spl_smooth = np.max(shear_zonal_avg)/smoothfac
-            splinerep = interpolate.splrep(mygrids.xgrid, shear_zonal_avg, s=spl_smooth)
-            shear_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep)
+            splinerep_shear_avg = interpolate.splrep(mygrids.xgrid, shear_zonal_avg, s=spl_smooth)
+            shear_zonal_avg_fit = interpolate.splev(mygrids.xgrid, splinerep_shear_avg)
+
             label_shear_fit = 'spline fit'
-        
+
+        if flow_shear:
+
+            gexb = myin['dist_fn_knobs']['g_exb']
+            sheartot_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.nx))
+            it_steady = 0
+            for it in range(mytime.it_min,mytime.it_max):
+                for ix in range(mygrids.xgrid.size):
+                    sheartot_zonal_fit[it_steady,ix] = shear_zonal_fit[it_steady,ix] + gexb
+                it_steady += 1
 
 
 
@@ -503,118 +620,189 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         #  Plotting  #
         #------------#
 
+        if save_plots:
 
-        tmp_pdf_id = 1
-        pdflist = []
-        tmp_pdf_id_fromSum = 1
-        pdflist_fromSum = []
+            tmp_pdf_id = 1
+            pdflist = []
+            tmp_pdf_id_fromSum = 1
+            pdflist_fromSum = []
 
-        plt.semilogy(kxpos, field_spectrum, linewidth=2)
-        plt.axvline(x=kxcut, color='k', linestyle='-')
-        plt.xlabel('$\\rho_i k_x$')
-        ylab = '$\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
-        plt.ylabel(ylab)
-        plt.grid(True)
+            #
+            # Zonal field
+            #
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
-        plt.cla()
-        plt.clf()
+            plt.semilogy(kxpos, field_spectrum, linewidth=2)
+            plt.axvline(x=kxcut, color='k', linestyle='-')
+            plt.xlabel('$\\rho_i k_x$')
+            ylab = '$\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
+            plt.ylabel(ylab)
+            plt.grid(True)
 
-        plt.plot(mygrids.xgrid, field_zonal_avg, linewidth=2)
-        lcut, = plt.plot(xgrid_cut, field_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
-        if to_fit == 'field':
-            lfit, = plt.plot(mygrids.xgrid, field_zonal_avg_fit, linewidth=2, color='r', label=label_field_fit)
-        plt.legend()
-        plt.xlabel('$x/\\rho_i$')
-        ylab = '$\\langle\\varphi_{Z}\\rangle_{t}$'\
-               ' [$\\rho_{\\star T_i/e}$]'
-        plt.ylabel(ylab)
-        plt.grid(True)
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
-        plt.cla()
-        plt.clf()
+            plt.plot(mygrids.xgrid, field_zonal_avg, linewidth=2)
+            lcut, = plt.plot(xgrid_cut, field_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
+            if to_fit == 'field':
+                lfit, = plt.plot(mygrids.xgrid, field_zonal_avg_fit, linewidth=2, color='r', label=label_field_fit)
+            plt.legend()
+            plt.xlabel('$x/\\rho_i$')
+            plt.title('Averaged over time')
+            ylab = '$\\langle\\varphi_{Z}\\rangle_{t}$'\
+                   ' [$\\rho_{\\star T_i/e}$]'
+            plt.ylabel(ylab)
+            plt.grid(True)
 
-        plt.semilogy(kxpos, flow_spectrum, linewidth=2)
-        plt.axvline(x=kxcut, color='k', linestyle='-')
-        plt.xlabel('$\\rho_i k_x$')
-        ylab = '$k_x^2\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
-        plt.ylabel(ylab)
-        plt.grid(True)
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
-        plt.cla()
-        plt.clf()
+            plt.plot(mygrids.xgrid, field_zonal[0,:], linewidth=2)
+            if to_fit == 'field':
+                lfit, = plt.plot(mygrids.xgrid, field_zonal_fit[0,:], linewidth=2, color='r', label=label_field_fit)
+            plt.legend()
+            plt.xlabel('$x/\\rho_i$')
+            plt.title('Instantaneous')
+            ylab = '$\\varphi_{Z}$'\
+                   ' [$\\rho_{\\star T_i/e}$]'
+            plt.ylabel(ylab)
+            plt.grid(True)
 
-        plt.plot(mygrids.xgrid, flow_zonal_avg, linewidth=2, label=None)
-        lcut, = plt.plot(xgrid_cut, flow_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
-        if to_fit == 'field' or to_fit == 'flow':
-            lfit, = plt.plot(mygrids.xgrid, flow_zonal_avg_fit, linewidth=2, color='r', label=label_flow_fit)
-        plt.legend()
-        plt.xlabel('$x/\\rho_i$')
-        ylab = '$-\\sum_{k_x}ik_x\\langle\\hat{\\varphi}_{Z}\\rangle_{t} e^{ik_x x}$'\
-               ' [$T_i/(ea)$]'
-        plt.ylabel(ylab)
-        plt.grid(True)
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
-        plt.cla()
-        plt.clf()
+            #
+            # Zonal flow
+            #
 
-        plt.semilogy(kxpos, shear_spectrum, linewidth=2)
-        plt.axvline(x=kxcut, color='k', linestyle='-')
-        plt.xlabel('$\\rho_i k_x$')
-        ylab = '$k_x^4\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
-        plt.ylabel(ylab)
-        plt.grid(True)
+            plt.semilogy(kxpos, flow_spectrum, linewidth=2)
+            plt.axvline(x=kxcut, color='k', linestyle='-')
+            plt.xlabel('$\\rho_i k_x$')
+            ylab = '$k_x^2\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
+            plt.ylabel(ylab)
+            plt.grid(True)
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
-        plt.cla()
-        plt.clf()
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
 
-        plt.plot(mygrids.xgrid, shear_zonal_avg, linewidth=2, label=None)
-        lcut, = plt.plot(xgrid_cut, shear_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
-        lfit, = plt.plot(mygrids.xgrid, shear_zonal_avg_fit, linewidth=2, color='r', label=label_shear_fit)
-        plt.legend()
-        plt.xlabel('$x/\\rho_i$')
-        ylab = '$\\langle\\gamma_{Z}\\rangle_{t}$'\
-               ' [$v_{th}/a$]'
-        plt.ylabel(ylab)
-        plt.grid(True)
+            plt.plot(mygrids.xgrid, flow_zonal_avg, linewidth=2, label=None)
+            lcut, = plt.plot(xgrid_cut, flow_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
+            if to_fit == 'field' or to_fit == 'flow':
+                lfit, = plt.plot(mygrids.xgrid, flow_zonal_avg_fit, linewidth=2, color='r', label=label_flow_fit)
+            plt.legend()
+            plt.xlabel('$x/\\rho_i$')
+            plt.title('Time averaged')
+            ylab = '$-\\sum_{k_x}ik_x\\langle\\hat{\\varphi}_{Z}\\rangle_{t} e^{ik_x x}$'\
+                   ' [$T_i/(ea)$]'
+            plt.ylabel(ylab)
+            plt.grid(True)
 
-        tmp_pdfname = 'tmp' + str(tmp_pdf_id)
-        plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
-        pdflist.append(tmp_pdfname)
-        tmp_pdf_id = tmp_pdf_id+1
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
+
+            plt.plot(mygrids.xgrid, flow_zonal[0,:], linewidth=2)
+            if to_fit == 'field' or to_field == 'flow':
+                lfit, = plt.plot(mygrids.xgrid, flow_zonal_fit[0,:], linewidth=2, color='r', label=label_flow_fit)
+            plt.legend()
+            plt.xlabel('$x/\\rho_i$')
+            plt.title('Instantaneous')
+            ylab = '$-\\sum_{k_x}ik_x\\hat{\\varphi}_{Z} e^{ik_x x}$'\
+                   ' [$T_i/(ea)$]'
+            plt.ylabel(ylab)
+            plt.grid(True)
+
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
+
+            #
+            # Zonal shear
+            #
+
+            plt.semilogy(kxpos, shear_spectrum, linewidth=2)
+            plt.axvline(x=kxcut, color='k', linestyle='-')
+            plt.xlabel('$\\rho_i k_x$')
+            ylab = '$k_x^4\\langle\\vert\\hat{\\varphi}\\vert^2_{Z}\\rangle_{t}$'
+            plt.ylabel(ylab)
+            plt.grid(True)
+
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
+
+            plt.plot(mygrids.xgrid, shear_zonal_avg, linewidth=2, label=None)
+            lcut, = plt.plot(xgrid_cut, shear_zonal_avg_cut, linewidth=2, color='k', label='cut kx', linestyle='--')
+            lfit, = plt.plot(mygrids.xgrid, shear_zonal_avg_fit, linewidth=2, color='r', label=label_shear_fit)
+            plt.legend()
+            plt.xlabel('$x/\\rho_i$')
+            plt.title('Time averaged')
+            ylab = '$\\langle\\gamma_{Z}\\rangle_{t}$'\
+                   ' [$v_{th}/a$]'
+            plt.ylabel(ylab)
+            plt.grid(True)
+
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
+
+            plt.plot(mygrids.xgrid, shear_zonal[0,:], linewidth=2, label=None)
+            lfit, = plt.plot(mygrids.xgrid, shear_zonal_fit[0,:], linewidth=2, color='r', label=label_shear_fit)
+            plt.legend()
+            plt.xlabel('$x/\\rho_i$')
+            plt.title('Instantaneous')
+            ylab = '$\\gamma_{Z}$'\
+                   ' [$v_{th}/a$]'
+            plt.ylabel(ylab)
+            plt.grid(True)
+
+            tmp_pdfname = 'tmp' + str(tmp_pdf_id)
+            plt.savefig(run.out_dir+tmp_pdfname+'_'+run.fnames[ifile]+'.pdf')
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+            plt.cla()
+            plt.clf()
 
 
-        # Merge pdfs and save
-        merged_pdfname = 'zonal_real_space'
-        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+            # Merge pdfs and save
+            merged_pdfname = 'zonal_real_space'
+            gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-        to_add = { 'shear_zonal':shear_zonal_avg,
-                   'field_zonal':field_zonal_avg,
-                   'flow_zonal':flow_zonal_avg,
-                   'time':mytime.time,
-                   'it_snap':it_snap,
-                   'xgrid':mygrids.xgrid,
-                   'ygrid':mygrids.ygrid }
-        mydict.update(to_add)
+            to_add = { 'shear_zonal':shear_zonal_avg,
+                       'field_zonal':field_zonal_avg,
+                       'flow_zonal':flow_zonal_avg,
+                       'time':mytime.time,
+                       'it_snap':it_snap,
+                       'xgrid':mygrids.xgrid,
+                       'ygrid':mygrids.ygrid }
+            mydict.update(to_add)
 
 
 
@@ -625,6 +813,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
 
     if make_movies:
+
 
 
         # Inverse 2D FFT over selected time window
@@ -704,7 +893,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
 
 
-        # Options for movies
+        # Options for 2D movies
 
         plt_opts = {'cmap': mpl.cm.RdBu_r,
                     'extend': 'both'}
@@ -715,6 +904,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                 'cbar_tick_format': '%.1E',
                 'xlabel':'$x /\\rho_i$',
                 'ylabel':'$y /\\rho_i$',
+                'nprocs':20,
                 'film_dir': run.out_dir}
 
 
@@ -728,7 +918,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                              '  at  '\
                              '$t={:.2f}$'.format(mytime.time[it])\
                              +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max+1)]
+                             for it in range(mytime.it_min, mytime.it_max)]
             opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_phi'
             pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, phi_full_fft,
                                        plot_options = plt_opts,
@@ -743,7 +933,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                              '  at  '\
                              '$t={:.2f}$'.format(mytime.time[it])\
                              +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max+1)]
+                             for it in range(mytime.it_min, mytime.it_max)]
             opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_densi'
             pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, densi_full_fft,
                                        plot_options = plt_opts,
@@ -758,7 +948,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                              '  at  '\
                              '$t={:.2f}$'.format(mytime.time[it])\
                              +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max+1)]
+                             for it in range(mytime.it_min, mytime.it_max)]
             opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_dense'
             pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, dense_full_fft,
                                        plot_options = plt_opts,
@@ -773,7 +963,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                              '  at  '\
                              '$t={:.2f}$'.format(mytime.time[it])\
                              +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max+1)]
+                             for it in range(mytime.it_min, mytime.it_max)]
             opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempi'
             pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempi_full_fft,
                                        plot_options = plt_opts,
@@ -788,7 +978,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                              '  at  '\
                              '$t={:.2f}$'.format(mytime.time[it])\
                              +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max+1)]
+                             for it in range(mytime.it_min, mytime.it_max)]
             opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempe'
             pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempe_full_fft,
                                        plot_options = plt_opts,
@@ -819,6 +1009,159 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         if make_mov_tempe:
             to_add = {'tempe_full_fft':tempe_full_fft}
             mydict.update(to_add)
+
+
+
+
+        # Make 1D movies of y-averaged quantities
+        if make_mov_yavg:
+
+            # Options for 1D movies
+            plt_opts = {'marker': None,
+                        'linewidth': 2,
+                        'linestyle': '-'}
+
+            opts = {'xlabel':'$x /\\rho_i$',
+                    'title':['$t={:.2f}$'.format(mytime.time[it])\
+                             +' [$a/v_{th}$]'\
+                             for it in range(mytime.it_min, mytime.it_max)],
+                    'xlim':[np.amin(mygrids.xgrid),np.amax(mygrids.xgrid)],
+                    'film_dir': run.out_dir,
+                    'grid': True}
+
+            plt.rc('font', size=18)
+
+            # Compute y-averaged ion temperature and fit it with splines
+            it_steady = 0
+            tempi_yavg = np.zeros((mytime.ntime_steady,mygrids.nx))
+            tempi_yavg_fit = np.zeros((mytime.ntime_steady,mygrids.nx))
+            tprimi_yavg_fit = np.zeros((mytime.ntime_steady,mygrids.nx))
+            splinerep_tempi_yavg = []
+            fac = myin['theta_grid_parameters']['qinp']/(myin['theta_grid_parameters']['rhoc']*myout['drhodpsi'])
+            for it in range(mytime.it_min,mytime.it_max):
+                for ix in range(mygrids.nx):
+                    tempi_yavg[it_steady,ix] = simps(np.squeeze(tempi_full_fft[it_steady,ix,:]),mygrids.ygrid) \
+                            / (mygrids.ygrid[-1]-mygrids.ygrid[0])
+                ft = np.squeeze(tempi_yavg[it_steady,:])
+                spl_smooth = np.max(ft)/smoothfac
+                splinerep_tempi_yavg.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
+                tempi_yavg_fit[it_steady,:] = interpolate.splev(mygrids.xgrid, splinerep_tempi_yavg[-1])
+                tprimi_yavg_fit[it_steady,:] = -1*fac/tempi_yavg_fit[it_steady,:] * \
+                        interpolate.splev(mygrids.xgrid, splinerep_tempi_yavg[-1], der=1)
+                it_steady += 1
+
+
+            # Make a movie of it
+            opts['ylim'] = [np.amin(tempi_yavg),np.amax(tempi_yavg)]
+            opts['ylabel'] = '$\\langle\\delta T_i\\rangle_y$ [$\\rho_{{\\star}} T_i$]'
+            opts['file_name'] = run.fnames[ifile]+ '_tempi_yavg_vs_x'
+            plt_opts['color'] = gplot.mybluestd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tempi_yavg,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            # And one of its spline fit
+            opts['ylim'] = [np.amin(tempi_yavg_fit),np.amax(tempi_yavg_fit)]
+            opts['ylabel'] = '$\\langle\\delta T_i\\rangle_y$ [$\\rho_{{\\star}} T_i$]'
+            opts['file_name'] = run.fnames[ifile]+ '_tempi_yavg_spline_vs_x'
+            plt_opts['color'] = gplot.myredstd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tempi_yavg_fit,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            # And one of the derivative of its spline fit
+            opts['ylim'] = [-100,100]
+            opts['ylabel'] = '$-\\frac{1}{\\langle\\delta T_i\\rangle_y}\\frac{\\partial \\langle\\delta T_i\\rangle_y}{\\partial r_\\psi}$ [1/$\\rho_i$]'
+            opts['file_name'] = run.fnames[ifile]+ '_tprimi_yavg_spline_vs_x'
+            plt_opts['color'] = gplot.myredstd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tprimi_yavg_fit,
+                                       plot_options = plt_opts,
+                                       options = opts)
+
+            plt.rc('font', size=30)
+
+
+
+
+        # Make 1D movies of zonal quantities vs x
+        if make_mov_zonal:
+
+            # Options for 1D movies
+            plt_opts = {'marker': None,
+                        'linewidth': 2,
+                        'linestyle': '-'}
+
+            opts = {'xlabel':'$x /\\rho_i$',
+                    'title':['$t={:.2f}$'.format(mytime.time[it])\
+                             +' [$a/v_{th}$]'\
+                             for it in range(mytime.it_min, mytime.it_max)],
+                    'xlim':[np.amin(mygrids.xgrid),np.amax(mygrids.xgrid)],
+                    'film_dir': run.out_dir,
+                    'grid': True}
+
+            plt.rc('font', size=18)
+
+            # Movie of zonal field vs x
+            opts['ylim'] = [np.amin(field_zonal),np.amax(field_zonal)]
+            opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
+            opts['file_name'] = run.fnames[ifile]+ '_zonal_field_vs_x'
+            plt_opts['color'] = gplot.mybluestd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, field_zonal,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            # And of its spline fit
+            opts['ylim'] = [np.amin(field_zonal_fit),np.amax(field_zonal_fit)]
+            opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
+            opts['file_name'] = run.fnames[ifile]+ '_zonal_field_spline_vs_x'
+            plt_opts['color'] = gplot.myredstd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, field_zonal_fit,
+                                       plot_options = plt_opts,
+                                       options = opts)
+
+            # Movie of zonal flow vs x
+            opts['ylim'] = [np.amin(flow_zonal),np.amax(flow_zonal)]
+            opts['ylabel'] = '$-\\sum_{k_x}ik_x\\hat{\\varphi}_{Z} e^{ik_x x}$ [$T_i/(ea)$]'
+            opts['file_name'] = run.fnames[ifile]+ '_zonal_flow_vs_x'
+            plt_opts['color'] = gplot.mybluestd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, flow_zonal,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            # And of its spline fit
+            opts['ylim'] = [np.amin(flow_zonal_fit),np.amax(flow_zonal_fit)]
+            opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
+            opts['file_name'] = run.fnames[ifile]+ '_zonal_flow_spline_vs_x'
+            plt_opts['color'] = gplot.myredstd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, flow_zonal_fit,
+                                       plot_options = plt_opts,
+                                       options = opts)
+
+            # Movie of zonal shear vs x
+            opts['ylim'] = [np.amin(shear_zonal),np.amax(shear_zonal)]
+            opts['ylabel'] = '$\\gamma_{Z}$ [$v_{th}/a$]'
+            opts['file_name'] = run.fnames[ifile]+ '_zonal_shear_vs_x'
+            plt_opts['color'] = gplot.mybluestd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, shear_zonal,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            # Of its spline fit
+            opts['ylim'] = [np.amin(shear_zonal_fit),np.amax(shear_zonal_fit)]
+            opts['ylabel'] = '$\\gamma_{Z}$ [$v_{th}/a$]'
+            opts['file_name'] = run.fnames[ifile]+ '_zonal_shear_spline_vs_x'
+            plt_opts['color'] = gplot.myredstd
+            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, shear_zonal_fit,
+                                       plot_options = plt_opts,
+                                       options = opts)
+            # And of its spline fit + gexb
+            if flow_shear:
+                opts['ylim'] = [np.amin(sheartot_zonal_fit),np.amax(sheartot_zonal_fit)]
+                opts['ylabel'] = '$\\gamma_{Z}+\\gamma_E$ [$v_{th}/a$]'
+                opts['file_name'] = run.fnames[ifile]+ '_zonal_sheartot_spline_vs_x'
+                plt_opts['color'] = gplot.myredstd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid, sheartot_zonal_fit,
+                                           plot_options = plt_opts,
+                                           options = opts)
+
+            plt.rc('font', size=30)
+
+
 
 
 
