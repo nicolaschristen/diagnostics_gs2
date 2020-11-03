@@ -11,11 +11,29 @@ sys.path.insert(1, '/marconi/home/userexternal/nchriste/codes/diagnostics_gs2')
 
 import gs2_plotting as gplot
 
-tprimi_orig = 1.7392
-shat = 0.57383
+## rpsi = 0.51
+#~ tprimi_orig = 1.7392
+#~ shat = 0.57383
+
+## rpsi = 0.6
+#~ tprimi_orig = 1.8052
+#~ shat = 0.83467
+
+## rpsi = 0.7
+#~ tprimi_orig = 1.9706
+#~ shat = 1.2726
+
+## rpsi = 0.8
+tprimi_orig = 2.4461
+shat = 1.8761
+
 g_exbfac = 1.0
 
-fac_tprimi = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8]
+## rpsi = 0.51
+#~ fac_tprimi = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8]
+## rpsi = 0.6, 0.7, 0.8
+fac_tprimi = [0.8, 0.9, 1.0, 1.1, 1.2]
+
 ntprimi = len(fac_tprimi)
 tprimi = np.zeros(ntprimi)
 for itp in range(ntprimi):
@@ -23,19 +41,34 @@ for itp in range(ntprimi):
 
 if g_exbfac != 0.0:
 
-    ngexbsmall = 4
-    ngexbstd = 14
+    ## rpsi = 0.51
+    #~ ngexbsmall = 4
+    #~ ngexbstd = 14
+    #~ g_exb = np.array([-0.0157671, -0.0210228, -0.0262785, -0.0315342,
+           #~ -0.0367899 , -0.0420456 , -0.0473013 , -0.052557  , -0.0578127 ,
+           #~ -0.0630684 , -0.0683241 , -0.0788355 , -0.09197475, -0.105114  ,
+           #~ -0.11825325, -0.1313925 , -0.14453175, -0.157671])
 
-    g_exb = np.array([-0.0157671, -0.0210228, -0.0262785, -0.0315342,
-           -0.0367899 , -0.0420456 , -0.0473013 , -0.052557  , -0.0578127 ,
-           -0.0630684 , -0.0683241 , -0.0788355 , -0.09197475, -0.105114  ,
-           -0.11825325, -0.1313925 , -0.14453175, -0.157671])
+    ## rpsi = 0.6
+    #~ ngexbsmall = 0
+    #~ g_exb = np.array([-0.053262 , -0.0585882, -0.0639144, -0.0692406])
+    #~ ngexbstd = g_exb.size
+
+    ## rpsi = 0.7
+    #~ ngexbsmall = 0
+    #~ g_exb = np.array([-0.049255 , -0.0541805, -0.059106 , -0.0640315])
+    #~ ngexbstd = g_exb.size
+
+    ## rpsi = 0.8
+    ngexbsmall = 0
+    g_exb = np.array([-0.0453408, -0.0510084, -0.056676 , -0.0623436, -0.0680112, -0.0736788])
+    ngexbstd = g_exb.size
 
 else:
 
+    ## rpsi = 0.51
     ngexbsmall = 12
     ngexbstd = 0
-
     g_exb = np.array([-0.01313925, -0.0262785 , -0.03941775, -0.052557  , -0.06569625,
            -0.0788355 , -0.09197475, -0.105114  , -0.11825325, -0.1313925 ,
            -0.14453175, -0.157671])
@@ -93,10 +126,22 @@ x_grid = [[g_exb[igb] for igb in range(ngexb)] for itp in range(ntprimi)]
 
 # gamma_max
 
+## rpsi = 0.51
+#~ mycbarmin = -0.05
+#~ mycbarmax = 0.15
+## rpsi = 0.6
+#~ mycbarmin = -0.05
+#~ mycbarmax = 0.25
+## rpsi = 0.7
+#~ mycbarmin = -0.05
+#~ mycbarmax = 0.25
+## rpsi = 0.8
+mycbarmin = -0.05
+mycbarmax = 0.35
 z = [[gamma_max[itp,igb] for igb in range(ngexb)] for itp in range(ntprimi)]
 gplot.plot_2d_uneven_xgrid( x_grid, y_grid, z,
         xmin = min(g_exb), xmax = max(g_exb),
-        cbarmin = -0.05, cbarmax = 0.15,
+        cbarmin = mycbarmin, cbarmax = mycbarmax,
         xlabel = '$\\vert\\gamma_E\\vert$ [$v_{\\textrm{\\huge th}}/a$]',
         ylabel = '$a/L_{T_i}$',
         title = '$\\gamma_{\\textrm{\\huge max}}$ [$v_{\\textrm{\\huge th}}/a$]',
@@ -107,11 +152,24 @@ plt.savefig('gamma_max.pdf')
 # gamma_max * Tf
 
 if g_exbfac != 0.0:
+    
+    ## rpsi = 0.51
+    #~ mycbarmin = 0.0
+    #~ mycbarmax = 15.0
+    ## rpsi = 0.6
+    #~ mycbarmin = 0.9
+    #~ mycbarmax = 45.0
+    ## rpsi = 0.7
+    #~ mycbarmin = 0.9
+    #~ mycbarmax = 45.0
+    ## rpsi = 0.8
+    mycbarmin = 0.9
+    mycbarmax = 60.0
 
     z = [[gmax_Tf[itp,igb] for igb in range(ngexb)] for itp in range(ntprimi)]
     gplot.plot_2d_uneven_xgrid( x_grid, y_grid, z,
             xmin = min(g_exb), xmax = max(g_exb),
-            cbarmin = 0.0, cbarmax = 15.0,
+            cbarmin = mycbarmin, cbarmax = mycbarmax,
             xlabel = '$\\vert\\gamma_E\\vert$ [$v_{\\textrm{\\huge th}}/a$]',
             ylabel = '$a/L_{T_i}$',
             title = '$T_{\\textrm{\\huge F}}\\times\\gamma_{\\textrm{\\huge max}}$',
@@ -137,10 +195,23 @@ plt.savefig('ky_at_max_gammax.pdf')
 
 # gamma_avg
 
+## rpsi = 0.51
+#~ mycbarmin = -0.02
+#~ mycbarmax = 0.04
+## rpsi = 0.6
+#~ mycbarmin = -0.01
+#~ mycbarmax = 0.01
+## rpsi = 0.7
+#~ mycbarmin = -0.01
+#~ mycbarmax = 0.01
+## rpsi = 0.8
+mycbarmin = -0.0075
+mycbarmax = 0.005
+
 z = [[gamma_avg[itp,igb] for igb in range(ngexb)] for itp in range(ntprimi)]
 gplot.plot_2d_uneven_xgrid( x_grid, y_grid, z,
         xmin = min(g_exb), xmax = max(g_exb),
-        cbarmin = -0.02, cbarmax = 0.04,
+        cbarmin = mycbarmin, cbarmax = mycbarmax,
         xlabel = '$\\vert\\gamma_E\\vert$ [$v_{\\textrm{\\huge th}}/a$]',
         ylabel = '$a/L_{T_i}$',
         title = '$\\langle\\gamma\\rangle_t$ [$v_{\\textrm{\\huge th}}/a$]',
@@ -151,11 +222,24 @@ plt.savefig('gamma_avg.pdf')
 # gamma_avg * Tf
 
 if g_exbfac != 0.0:
+    
+    ## rpsi = 0.51
+    #~ mycbarmin = 0.0
+    #~ mycbarmax = 4.0
+    ## rpsi = 0.6
+    #~ mycbarmin = 0.0
+    #~ mycbarmax = 1.1
+    ## rpsi = 0.7
+    #~ mycbarmin = 0.0
+    #~ mycbarmax = 1.1
+    ## rpsi = 0.8
+    mycbarmin = 0.0
+    mycbarmax = 1.1
 
     z = [[gavg_Tf[itp,igb] for igb in range(ngexb)] for itp in range(ntprimi)]
     gplot.plot_2d_uneven_xgrid( x_grid, y_grid, z,
             xmin = min(g_exb), xmax = max(g_exb),
-            cbarmin = 0.0, cbarmax = 4.0,
+            cbarmin = mycbarmin, cbarmax = mycbarmax,
             xlabel = '$\\vert\\gamma_E\\vert$ [$v_{\\textrm{\\huge th}}/a$]',
             ylabel = '$a/L_{T_i}$',
             title = '$T_{\\textrm{\\huge F}}\\times\\langle\\gamma\\rangle_t$',
@@ -171,7 +255,7 @@ if g_exbfac != 0.0:
 z = [[ky_at_max_gamavg[itp,igb] for igb in range(ngexb)] for itp in range(ntprimi)]
 gplot.plot_2d_uneven_xgrid( x_grid, y_grid, z,
         xmin = min(g_exb), xmax = max(g_exb),
-        cbarmin = 0, cbarmax = 1.0,
+        cbarmin = 0, cbarmax = 1,
         xlabel = '$\\vert\\gamma_E\\vert$ [$v_{\\textrm{\\huge th}}/a$]',
         ylabel = '$a/L_{T_i}$',
         title = '$\\rho_ik_y$ of $\\max\\langle\\gamma\\rangle_t$',

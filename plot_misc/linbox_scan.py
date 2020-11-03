@@ -40,12 +40,21 @@ scan = {ONE:[],TWO:[]}
 # vvv USER PARAMETERS vvv
 
 # Import all parameters from paramfiles/myfile.py
-base_name = 'rpsi_0.8'  
-pf = __import__('scan_tprimi_linbox_gexb_vs_ky_theta0_ijp_950_rpsi_08')  
+base_name = 'rpsi_0.51'  
+pf = __import__('scan_tprimi_linbox_gexb_vs_ky_theta0_ijp_950_rpsi_051_gexb_+00')  
+
+# Floquet period NDC: need to incorporate this properly in linbox
+plot_vs_floq = True
+shat = 0.57383
+g_exb = -0.052557 # -0.0788355 ; -0.105114
+Tf = abs(2*pi*shat/g_exb)
 
 # Number of dimensions in the scan
 # e.g. vs (ky, R/LTi) -> ndim = TWO
 ndim = TWO
+
+# Does the scan have only a single ky ?
+scan_with_single_ky = False 
 
 # Define which dmid to use when plotting quant vs ky.
 # dmid is the number of dkx between kx=0 and the
@@ -56,13 +65,16 @@ dmid_for_plots_vs_ky = None
 
 # Save data for a scan in (tprimi,gexb)
 sav_for_tprimigexb_scan = False
-tprimi_orig = 1.7392
-fac_tprimi = 0.6
+tprimi_orig = 2.4461 # 1.7392, 1.8052 , 1.9706, 2.4461 , ...
+fac_tprimi = 1.2
 
 # Define first dimension of the scan
 firstdim_label = '$\\rho_i k_y$' # for plotting
 firstdim_var = 'ky' # name of variable to append to figure names
 firstdim = pf.ky # variable name in paramfiles/myfile.py
+#firstdim_label = '$N_{2\\pi}(k_y=1)$' # for plotting
+#firstdim_var = 'ntwopi' # name of variable to append to figure names
+#firstdim = (pf.nx-1)//3*pf.dkx/(pi*pf.shat) # variable name in paramfiles/myfile.py
 
 # Define second dimension of the scan
 if ndim == TWO:
@@ -93,14 +105,11 @@ elif ndim == ONE:
     seconddim_var = 'dummy'
     seconddim = np.array([0])
 
-# Does the scan have only a single ky ?
-scan_with_single_ky = False  
-
 # Apply limits to axis when plotting ?
-use_my_xlim = True
+use_my_xlim = False
 my_xlim = (0.0, None)  
 
-use_my_ylim = True
+use_my_ylim = False
 #### rpsi = 0.5, Batch 1 gexb
 #~ my_ylim_max = (0.0, 0.15)
 #~ my_ylim_max_gamoverksq = (0.0, 0.75)
@@ -140,31 +149,31 @@ use_my_ylim = True
 #~ my_ylim_max = (0.0, 0.30)
 #~ my_ylim_avg = (-0.06, 0.00)
 
-my_ylim_max = (0.0, 0.3)
-my_ylim_max_gamoverksq = (0.0, 0.75)
-my_ylim_avg = (-0.03, 0.02)
-my_ylim_avg_gamoverksq = (-0.1, 0.15)
+#~ my_ylim_max = (0.0, 0.3)
+#~ my_ylim_max_gamoverksq = (0.0, 0.75)
+#~ my_ylim_avg = (-0.03, 0.02)
+#~ my_ylim_avg_gamoverksq = (-0.1, 0.15)
 
 # For cases without flow shear (otherwise comment out):
-my_ylim_avg = my_ylim_max
+#~ my_ylim_avg = my_ylim_max
 
 # Fix colorbar limits ?
-fix_cbarlim = True
+fix_cbarlim = False
 # rpsi = 0.5
-#my_cbarmin = -0.20
-#my_cbarmax = 0.20
+#~ my_cbarmin = -0.20
+#~ my_cbarmax = 0.20
 # rpsi = 0.6
-my_cbarmin = -0.20
-my_cbarmax = 0.2
+#~ my_cbarmin = -0.20
+#~ my_cbarmax = 0.2
 # rpsi = 0.7
-#my_cbarmin = -0.30
-#my_cbarmax = 0.3
+#~ my_cbarmin = -0.30
+#~ my_cbarmax = 0.3
 # rpsi = 0.8
-#my_cbarmin = -0.25
-#my_cbarmax = 0.25
+my_cbarmin = -0.25
+my_cbarmax = 0.25
 # rpsi = 0.9
-#my_cbarmin = -0.30
-#my_cbarmax = 0.3
+#~ my_cbarmin = -0.30
+#~ my_cbarmax = 0.3
 
 # Original code was written for kyas second dim of scan (not first).
 # To restore this, set invert_dims = True
@@ -739,6 +748,61 @@ def main():
             frame.set_linewidth(0.5)
             frame.set_alpha(1)
             plt.savefig(pdfname)
+
+
+            if plot_vs_floq:
+
+                # <gamma>_t * Tf vs ky from sum(phi)
+
+                pdfname = 'postproc/linbox_gamma_avg_Tf_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+                plt.figure()
+                my_legend = []
+                plt.grid(True)
+                plt.xlabel(firstdim_label)
+                plt.ylabel('$T_F\\times\\langle\\gamma\\rangle_t$')
+                for ival in range(valdim):
+                    plt.plot(firstdim_vs_v2_ky[ival], [i*Tf for i in gamma_avg_fromSum_vs_v2_ky[ival]], linewidth=2.0, color=color_vs_v2_ky[ival])
+                    if ndim==TWO:
+                        my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
+                if use_my_ylim:
+                    plt.ylim(my_ylim_avg)
+                if use_my_xlim:
+                    plt.xlim(my_xlim)
+                if ndim==TWO:
+                    legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=13, ncol=3,
+                            handlelength=0.75, columnspacing=1.0)
+                frame = legend.get_frame()
+                frame.set_facecolor('white')
+                frame.set_edgecolor('black')
+                frame.set_linewidth(0.5)
+                frame.set_alpha(1)
+                plt.savefig(pdfname)
+
+                # gamma_max *Tf vs ky from sum(phi)
+
+                pdfname = 'postproc/linbox_gamma_max_Tf_fromSum_scan_'+firstdim_var+'_'+seconddim_var+'.pdf'
+                plt.figure()
+                my_legend = []
+                plt.grid(True)
+                plt.xlabel(firstdim_label)
+                plt.ylabel('$T_F\\times\\gamma_{\\textrm{\\large max}}$')
+                for ival in range(valdim):
+                    plt.plot(firstdim_vs_v2_ky[ival], [i*Tf for i in gamma_max_fromSum_vs_v2_ky[ival]], linewidth=2.0, color=color_vs_v2_ky[ival])
+                    if ndim==TWO:
+                        my_legend.append(seconddim_label + '$=' + str(round(seconddim[ival],3)) + '$')
+                if use_my_ylim:
+                    plt.ylim(my_ylim_max)
+                if use_my_xlim:
+                    plt.xlim(my_xlim)
+                if ndim==TWO:
+                    legend = plt.legend(my_legend, frameon = True, fancybox = False, fontsize=13, ncol=3,
+                            handlelength=0.75, columnspacing=1.0)
+                frame = legend.get_frame()
+                frame.set_facecolor('white')
+                frame.set_edgecolor('black')
+                frame.set_linewidth(0.5)
+                frame.set_alpha(1)
+                plt.savefig(pdfname)
 
         if ndim==TWO:
             try:
