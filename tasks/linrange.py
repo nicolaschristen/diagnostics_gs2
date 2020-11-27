@@ -272,7 +272,10 @@ def my_task_single(ifile, run, myin, myout, mytime):
         for iky in range(naky):
             plt.semilogy(t[0:it_stop],phi2[0:it_stop,iky,itt0],color=my_colors[iky])
             lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
-        gplot.legend_matlab(lgd)
+        leg = plt.legend(lgd,prop={'size': 12}, ncol=3,frameon=True,fancybox=False,framealpha=1.0)
+        leg.get_frame().set_facecolor('w')
+        leg.get_frame().set_edgecolor('k')
+        leg.get_frame().set_linewidth(1.0)
         plt.grid(True)
         plt.xlabel('$t\\ [a/v_{th}]$')
         plt.ylabel('$\\vert\\varphi\\vert^2$')
@@ -307,7 +310,10 @@ def my_task_single(ifile, run, myin, myout, mytime):
         for iky in range(naky):
             plt.plot(theta,phi2_bytheta[it_stop-1,iky,itt0,:],color=my_colors[iky])
             lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
-        gplot.legend_matlab(lgd)
+        leg = plt.legend(lgd,prop={'size': 12}, ncol=3,frameon=True,fancybox=False,framealpha=1.0)
+        leg.get_frame().set_facecolor('w')
+        leg.get_frame().set_edgecolor('k')
+        leg.get_frame().set_linewidth(1.0)
         plt.grid(True)
         plt.xlabel('$\\theta$')
         plt.ylabel('$\\vert\\varphi\\vert^2$')
@@ -339,7 +345,10 @@ def my_task_single(ifile, run, myin, myout, mytime):
         for iky in range(naky):
             plt.semilogy(theta,phi2_bytheta[it_stop-1,iky,itt0,:],color=my_colors[iky])
             lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
-        gplot.legend_matlab(lgd)
+        leg = plt.legend(lgd,prop={'size': 12}, ncol=3,frameon=True,fancybox=False,framealpha=1.0)
+        leg.get_frame().set_facecolor('w')
+        leg.get_frame().set_edgecolor('k')
+        leg.get_frame().set_linewidth(1.0)
         plt.grid(True)
         plt.xlabel('$\\theta$')
         plt.ylabel('$\\vert\\varphi\\vert^2$')
@@ -370,7 +379,10 @@ def my_task_single(ifile, run, myin, myout, mytime):
         for iky in range(naky):
             plt.loglog(theta,phi2_bytheta[it_stop-1,iky,itt0,:],color=my_colors[iky])
             lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
-        gplot.legend_matlab(lgd)
+        leg = plt.legend(lgd,prop={'size': 12}, ncol=3,frameon=True,fancybox=False,framealpha=1.0)
+        leg.get_frame().set_facecolor('w')
+        leg.get_frame().set_edgecolor('k')
+        leg.get_frame().set_linewidth(1.0)
         plt.grid(True)
         plt.xlabel('$\\theta$')
         plt.ylabel('$\\vert\\varphi\\vert^2$')
@@ -388,29 +400,26 @@ def my_task_single(ifile, run, myin, myout, mytime):
 
     # Plot dens^2 at tfinal vs theta for every ky, one plot per theta0
 
+    # First ions
+
     plt.figure(figsize=(12,8))
 
     tmp_pdf_id = 1
     pdflist = []
     if naky > 1:
         cmap = plt.get_cmap('nipy_spectral')
-        my_colors_ion = [cmap(i) for i in np.linspace(0,1,naky)]
-        my_colors_elec = [cmap(i) for i in np.linspace(0,1,naky)]
-        elec_line = '--'
+        my_colors = [cmap(i) for i in np.linspace(0,1,naky)]
     else:
-        my_colors_ion = [gplot.myblue]
-        my_colors_elec = [gplot.myred]
-        elec_line = '-'
+        my_colors = [gplot.myblue]
     for itt0 in range(ntt0):
         lgd = []
         for iky in range(naky):
-            # ion
-            plt.plot(theta,dens2[0,iky,itt0,:],color=my_colors_ion[iky])
-            lgd.append('ion $k_y=$'+gplot.str_ky(ky[iky]))
-            # electron
-            plt.plot(theta,dens2[1,iky,itt0,:],color=my_colors_elec[iky], linestyle=elec_line)
-            lgd.append('electron $k_y=$'+gplot.str_ky(ky[iky]))
-        gplot.legend_matlab(lgd)
+            plt.semilogy(theta,dens2[0,iky,itt0,:],color=my_colors[iky])
+            lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
+        leg = plt.legend(lgd,prop={'size': 12}, ncol=3,frameon=True,fancybox=False,framealpha=1.0)
+        leg.get_frame().set_facecolor('w')
+        leg.get_frame().set_edgecolor('k')
+        leg.get_frame().set_linewidth(1.0)
         plt.grid(True)
         plt.xlabel('$\\theta$')
         plt.ylabel('$\\vert\\delta n_{h}\\vert^2$')
@@ -421,10 +430,47 @@ def my_task_single(ifile, run, myin, myout, mytime):
         pdflist.append(tmp_pdfname)
         tmp_pdf_id = tmp_pdf_id+1
 
-    merged_pdfname = 'dens_vs_theta'
+    merged_pdfname = 'dens_vs_theta_ion'
     gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
     plt.clf()
     plt.cla()
+
+    # Then electrons
+
+    if myin['species_knobs']['nspec'] > 1:
+
+        plt.figure(figsize=(12,8))
+
+        tmp_pdf_id = 1
+        pdflist = []
+        if naky > 1:
+            cmap = plt.get_cmap('nipy_spectral')
+            my_colors = [cmap(i) for i in np.linspace(0,1,naky)]
+        else:
+            my_colors = [gplot.myblue]
+        for itt0 in range(ntt0):
+            lgd = []
+            for iky in range(naky):
+                plt.semilogy(theta,dens2[1,iky,itt0,:],color=my_colors[iky])
+                lgd.append('$k_y=$'+gplot.str_ky(ky[iky]))
+            leg = plt.legend(lgd,prop={'size': 12}, ncol=3,frameon=True,fancybox=False,framealpha=1.0)
+            leg.get_frame().set_facecolor('w')
+            leg.get_frame().set_edgecolor('k')
+            leg.get_frame().set_linewidth(1.0)
+            plt.grid(True)
+            plt.xlabel('$\\theta$')
+            plt.ylabel('$\\vert\\delta n_{h}\\vert^2$')
+            plt.title('$\\theta_0=$'+gplot.str_tt0(tt0[itt0]))
+            plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.2E'))
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id = tmp_pdf_id+1
+
+        merged_pdfname = 'dens_vs_theta_electrons'
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+        plt.clf()
+        plt.cla()
 
 
     # Plot TFloq*gamma vs ky, one plot per theta0
