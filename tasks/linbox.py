@@ -412,16 +412,6 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
 
     if g_exb != 0.0:
 
-    ## NDCTEST: start new
-
-        print(nt)
-        print(Nf)
-        print(it_Tfstart[0])
-        print(it_Tfend[0])
-        print(it_Tfstart[-1])
-        print(it_Tfend[-1])
-        print(skip_nTf)
-
         it_gamma_max = np.zeros(len(dmid_list))
         it_gamma_max_fromSum = np.zeros(len(dmid_list))
         gamma_max = np.zeros(len(dmid_list))
@@ -488,8 +478,6 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
 
                 # Average gamma_inst over all Tf intervals,
                 # except the ones we decided to skip
-                print(len(theta0_star_for_inst_by_dmid_Tf))
-                print(len(gamma_inst_by_dmid_Tf))
                 gamma_inst_by_dmid_Tf_refined = gplot.nearNeighb_interp_1d(theta0_star_for_inst_by_dmid_Tf, gamma_inst_by_dmid_Tf, tt0_fine)
                 gamma_inst_fromSum_by_dmid_Tf_refined = gplot.nearNeighb_interp_1d(theta0_star_for_inst_by_dmid_Tf, gamma_inst_fromSum_by_dmid_Tf, tt0_fine)
                 for i in range(ntt0_fine):
@@ -529,75 +517,8 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
             theta0_star_for_inst.append([])
         gamma_max = gamma_avg
         gamma_max_fromSum = gamma_avg_fromSum
-    ## NDCTEST: end new
 
 
-    ## NDCTEST: start orig
-    #    it_gamma_max = np.zeros(len(dmid_list))
-    #    it_gamma_max_fromSum = np.zeros(len(dmid_list))
-    #    gamma_max = np.zeros(len(dmid_list))
-    #    gamma_max_fromSum = np.zeros(len(dmid_list))
-    #    gamma_inst = []
-    #    gamma_inst_fromSum = []
-    #    theta0_star_for_inst = []
-    #    for idmid in range(len(dmid_list)):
-    #        # Start looking for derivatives one Floquet period before last time-step
-    #        it_start_last_floq = max(int(nt-1-Tf//(delt*nwrite)),0)
-    #        it_end_last_floq = nt-1
-    #        it_lastFloq = [it for it in range(it_start_last_floq, it_end_last_floq)]
-    #        gamma_inst_by_dmid = []
-    #        gamma_inst_fromSum_by_dmid = []
-    #        theta0_star_for_inst_by_dmid = []
-    #        for it in it_lastFloq:
-    #            # Factor of 0.5 because we fit phi^2
-    #            gamma_max_tmp = 0.5 * 1./(2*delt*nwrite) * \
-    #                    ( np.log(max_phi2bloon[idmid][it+1]) - np.log(max_phi2bloon[idmid][it-1]) )
-    #            gamma_max_fromSum_tmp = 0.5 * 1./(2*delt*nwrite) * \
-    #                    ( np.log(sum_phi2bloon[idmid][it+1]) - np.log(sum_phi2bloon[idmid][it-1]) )
-    #            # Fill instantaneous growthrate and corresponding theta0_star
-    #            gamma_inst_by_dmid.append(gamma_max_tmp)
-    #            gamma_inst_fromSum_by_dmid.append(gamma_max_fromSum_tmp)
-    #            # Update maximum growthrate if needed
-    #            # First from max(phi2)
-    #            if (gamma_max_tmp > gamma_max[idmid]):
-    #                it_gamma_max[idmid] = it
-    #                gamma_max[idmid] = gamma_max_tmp
-    #            # Then from sum(phi2)
-    #            if (gamma_max_fromSum_tmp > gamma_max_fromSum[idmid]):
-    #                it_gamma_max_fromSum[idmid] = it
-    #                gamma_max_fromSum[idmid] = gamma_max_fromSum_tmp
-    #            # Determine current theta0_star associated with this chain
-    #            tt0_tmp = theta0_star[it,itheta0_list[idmid]]
-    #            # Shift it to [-pi,+pi]
-    #            n = int(round(tt0_tmp/(2.0*pi)))
-    #            tt0_tmp -= 2*pi*n
-    #            theta0_star_for_inst_by_dmid.append(tt0_tmp)
-    #        # Get theta0_star in ascending order
-    #        idx_sort = np.argsort(theta0_star_for_inst_by_dmid)
-    #        theta0_star_for_inst_by_dmid = [theta0_star_for_inst_by_dmid[idx] for idx in idx_sort]
-    #        # Sort gamma_inst accordingly
-    #        gamma_inst_by_dmid = [gamma_inst_by_dmid[idx] for idx in idx_sort]
-    #        gamma_inst_fromSum_by_dmid = [gamma_inst_fromSum_by_dmid[idx] for idx in idx_sort]
-    #        # Append theta0_star and gamma_inst to full lists
-    #        theta0_star_for_inst.append(theta0_star_for_inst_by_dmid)
-    #        gamma_inst.append(gamma_inst_by_dmid)
-    #        gamma_inst_fromSum.append(gamma_inst_fromSum_by_dmid)
-
-    #    it_gamma_max = it_gamma_max.astype(int)
-    #    it_gamma_max_fromSum = it_gamma_max_fromSum.astype(int)
-    #    # At this point:
-    #    # fit_max(t) ~ phi2(tstart) * exp[2*gamma_max*(t-t_gamma_max)]
-    #else:
-    #    gamma_inst = []
-    #    gamma_inst_fromSum = []
-    #    theta0_star_for_inst = []
-    #    for idmid in range(len(dmid_list)):
-    #        gamma_inst.append([])
-    #        gamma_inst_fromSum.append([])
-    #        theta0_star_for_inst.append([])
-    #    gamma_max = gamma_avg
-    #    gamma_max_fromSum = gamma_avg_fromSum
-    ## NDCTEST: end orig
 
     
     # Save quantities to file for scan plots
