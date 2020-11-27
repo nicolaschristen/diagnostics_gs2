@@ -97,7 +97,7 @@ def merge_pdfs(in_namelist, out_name, run, ifile = None):
 def set_plot_defaults():
 
     # setup some plot defaults
-    plt.rc('text', usetex=True) # False for ARCHER, True for MARCONI
+    plt.rc('text', usetex=False) # False for ARCHER, True for MARCONI
     plt.rc('font', family='serif')
     plt.rc('font', size=30)
     rcParams.update({'figure.autolayout': True})
@@ -132,10 +132,13 @@ def nearNeighb_interp_1d(x,y,xout):
 
 
 
-def plot_1d(x,y,xlab,title='',ylab=''):
+def plot_1d(x,y,xlab,title='',ylab='',semilogy=False):
 
     fig = plt.figure(figsize=(12,8))
-    plt.plot(x,y)
+    if semilogy:
+        plt.semilogy(x,y)
+    else:
+        plt.plot(x,y)
     plt.xlabel(xlab)
     if len(ylab) > 0:
         plt.ylabel(ylab)

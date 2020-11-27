@@ -6,7 +6,7 @@ from math import ceil
 
 class timeobj:
 
-    def __init__(self, myout, twin):
+    def __init__(self, myout, run):
 
         print()
         print('calculating time grid...',end='')
@@ -15,20 +15,35 @@ class timeobj:
         self.ntime = self.time.size
 
         # get starting index for selected time window
-        self.twin = twin
-        tmin = self.time[-1]*twin[0]
+        self.twin = run.twin
+        tmin = self.time[-1]*self.twin[0]
         self.it_min = 0
         while self.time[self.it_min] < tmin:
             self.it_min += 1
-        tmax = self.time[-1]*twin[1]
+        tmax = self.time[-1]*self.twin[1]
         self.it_max = 0
         while self.time[self.it_max] < tmax and self.it_max < self.ntime-1:
             self.it_max += 1
+
+        self.time_steady = self.time[self.it_min:self.it_max]
+        # In cases of stitching, twin might not overlap with this present simulation,
+        # so we overwrite the steady time.
+        if self.time_steady.size == 0:
+            self.it_min = 0
+            self.it_max = self.ntime
+            self.time_steady = self.time[self.it_min:self.it_max]
+
+        self.ntime_steady = self.time_steady.size
         # get number of time points in steady-state interval
         self.it_interval = self.ntime - self.it_min
 
-        self.time_steady = self.time[self.it_min:self.it_max]
-        self.ntime_steady = self.time_steady.size
+        if run.taumax is None:
+            self.taumax = 0.1 * self.time[-1]
+        else:
+            self.taumax = run.taumax
+
+        self.ntauwin = max(int((self.time[-1]-self.time[0])//(0.5*self.taumax)) - 1, 0)
+        self.t_tauwinavg = self.tauwin_avg(self.time)
 
         # get set of frequencies sampled by data, assuming equal time steps
         self.frequency = 2*np.pi*np.fft.fftshift(
@@ -61,3 +76,49 @@ class timeobj:
             / (mytime[-1]-mytime[0])
 
         return favg
+
+
+    def tauwin_avg(self, f_vs_t):
+
+        intlolim = 0
+        intuplim = 0
+        f_tauwinavg = np.zeros(self.ntauwin, dtype=type(f_vs_t[0]))
+
+        for itauwin in range(self.ntauwin):
+
+            while (intuplim < self.ntime-1) and (self.time[intuplim] < self.time[intlolim]+self.taumax):
+                intuplim += 1
+
+            fwindow = f_vs_t[intlolim:intuplim]
+            twindow = self.time[intlolim:intuplim]
+            f_tauwinavg[itauwin] = simps(fwindow,x=twindow) \
+                / (twindow[-1]-twindow[0])
+
+            prev_tlolim = self.time[intlolim]
+            while (intuplim < self.ntime-1) and (self.time[intlolim] < prev_tlolim + 0.5*self.taumax):
+                intlolim += 1
+
+        return f_tauwinavg
+
+
+    def tauwin_sigma(self, f_vs_t, f_winavg):
+
+        intlolim = 0
+        intuplim = 0
+        f_tauwinsig = np.zeros(self.ntauwin, dtype=type(f_vs_t[0]))
+
+        for itauwin in range(self.ntauwin):
+
+            while (intuplim < self.ntime-1) and (self.time[intuplim] < self.time[intlolim]+self.taumax):
+                intuplim += 1
+
+            fwindow = (f_vs_t[intlolim:intuplim] - f_winavg[itauwin])**2
+            twindow = self.time[intlolim:intuplim]
+            f_tauwinsig[itauwin] = ( simps(fwindow,x=twindow) \
+                / (twindow[-1]-twindow[0]) ) ** 0.5
+
+            prev_tlolim = self.time[intlolim]
+            while (intuplim < self.ntime-1) and (self.time[intlolim] < prev_tlolim + 0.5*self.taumax):
+                intlolim += 1
+
+        return f_tauwinsig

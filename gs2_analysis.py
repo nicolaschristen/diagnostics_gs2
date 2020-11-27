@@ -9,8 +9,8 @@ import gs2_tasks as gtasks
 import copy
 
 # TODO: add 'your_task' to the array.
-tasks_choices = ['fluxes', 'zonal', 'tcorr', 'flowtest', 'floquet', 'linbox', \
-        'linrange','fluxes_stitch','potential', 'fields_real_space']
+tasks_choices = ['fluxes', 'nlbox', 'zonal', 'tcorr', 'flowtest', 'floquet', 'linbox', \
+        'linrange','fluxes_stitch', 'nlbox_stitch', 'potential', 'fields_real_space']
 
 # Fom command-line arguments, get info about this analysis run (filenames, tasks to complete ...)
 run = grunpar.runobj(tasks_choices)
@@ -47,7 +47,7 @@ for ifile in range(len(run.fnames)):
         # Extract grids from output
         mygrids = ggrids.gridobj(myout, myin)
         # Extract time from output
-        mytime = gtime.timeobj(myout, run.twin)
+        mytime = gtime.timeobj(myout, run)
         # Extract fields from output
         myfields = gfields.fieldobj(myout, mygrids, mytime)
 

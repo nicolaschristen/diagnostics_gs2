@@ -54,11 +54,11 @@ import fields_real_space
 
 def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfields, mytxt, task_space):
 
-    if (task == 'fluxes'):
+    if (task == 'fluxes' or task == 'nlbox'):
        
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
 
-    if (task == 'fluxes_stitch'):
+    if (task == 'fluxes_stitch' or task == 'nlbox_stitch'):
        
         stitching = True
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching)
@@ -128,6 +128,6 @@ def complete_task_scan(task, run, full_space):
 
         linbox.task_scan(run, full_space)
 
-    if (task == 'fluxes_stitch'):
+    if (task == 'fluxes_stitch' or task == 'nlbox_stitch'):
        
         fluxes.stitching_fluxes(run)
