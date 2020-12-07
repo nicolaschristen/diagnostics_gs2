@@ -103,7 +103,7 @@ def set_plot_defaults():
     GK_SYSTEM = os.getenv('GK_SYSTEM')
 
     # setup some plot defaults
-    if GK_SYSTEM == 'archer':
+    if GK_SYSTEM == 'archer' or GK_SYSTEM == 'jfrs':
         plt.rc('text', usetex=False)
         plt.rc('font', family='serif')
         plt.rc('font', size=20)
