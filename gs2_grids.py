@@ -41,9 +41,11 @@ class gridobj:
             # get real space grid in x
             self.xgrid_fft = 2*pi*np.fft.fftfreq(self.nx,self.kx_gs2[1])
             self.xgrid = np.concatenate((self.xgrid_fft[self.nxmid:],self.xgrid_fft[:self.nxmid]))
+            self.xgrid_fine = np.linspace(self.xgrid[0],self.xgrid[-1],10*self.nx)
         else:
             self.xgrid_fft = np.arange(1,dtype=float)
             self.xgrid = np.arange(1,dtype=float)
+            self.xgrid_fine = np.arange(1,dtype=float)
      
         if (self.ny > 1):
             # get real space grid in y
