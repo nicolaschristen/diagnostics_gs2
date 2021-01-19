@@ -457,11 +457,12 @@ def stitching_fluxes(run):
         if ifile > 0:
             Nt_tot -= 1 # removing duplicate at restart point
     
+    twin = run.twin
+
     # A lot of stuff is the same for all runs
+    taumax = full_time[0].taumax
     islin = full_fluxes[0]['islin']
     has_flowshear = full_fluxes[0]['has_flowshear']
-    twin = full_time[0].twin
-    taumax = full_time[0].taumax
     nspec = full_fluxes[0]['nspec']
     spec_names = full_fluxes[0]['spec_names']
     nx = full_fluxes[0]['nx']
@@ -544,6 +545,8 @@ def stitching_fluxes(run):
         stitch_my_time.it_max += 1
     stitch_my_time.time_steady = stitch_my_time.time[stitch_my_time.it_min:stitch_my_time.it_max]
     stitch_my_time.ntime_steady = stitch_my_time.time_steady.size
+    print(stitch_my_time.time_steady[0])
+    print(stitch_my_time.time_steady[-1])
     stitch_my_time.taumax = taumax
     stitch_my_time.ntauwin = int(stitch_my_time.time[-1]//(0.5*stitch_my_time.taumax)) - 1
     stitch_my_time.t_tauwinavg = stitch_my_time.tauwin_avg(stitch_my_time.time)
@@ -596,6 +599,8 @@ def stitching_fluxes(run):
 
     # Plotting the stitched fluxes
     ifile = None
+    print(stitch_my_time.time_steady[0])
+    print(stitch_my_time.time_steady[-1])
     plot_fluxes(ifile,run,stitch_my_time,stitch_flux_dict)
 
 def plot_fluxes(ifile,run,mytime,mydict):
@@ -1104,6 +1109,36 @@ def plot_fluxes(ifile,run,mytime,mydict):
             tmp_pdf_id += 1
 
         merged_pdfname = 'potential_vs_theta_theta0_iky_'+str(iky)
+        if ifile==None: # This is the case when we stitch fluxes together
+            merged_pdfname += '_'+run.scan_name
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+    # Same for linear scales
+    iky_to_plot = [1,iky_energymax,ny-1]
+    phi2_bytheta_tfinal = np.abs(phi_bytheta_tfinal)**2
+
+    for iky in iky_to_plot:
+
+        tmp_pdf_id = 1
+        pdflist = []
+
+        for dmid in range(min(jtwist*iky, int(nx//2))):
+
+            # Get chain of (theta-theta0) and associated phi2.
+            bloonang, phi2bloon = get_bloon(theta,theta0,phi2_bytheta_tfinal,iky,dmid,jtwist)
+
+            plt.plot(bloonang,phi2bloon,color=gplot.myblue,linewidth=3.0)
+            plt.grid(True)
+            plt.xlabel('$\\theta-\\theta_0$')
+            plt.ylabel('$\\vert\\varphi\\vert^2$')
+            plt.title('$k_y = '+str(round(ky[iky],2))+'$, $d_{mid} = '+str(dmid)+'$, at $t='+str(round(time[-1],3))+'$')
+
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id += 1
+
+        merged_pdfname = 'potential_vs_theta_theta0_linear_iky_'+str(iky)
         if ifile==None: # This is the case when we stitch fluxes together
             merged_pdfname += '_'+run.scan_name
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)

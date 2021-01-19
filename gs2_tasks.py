@@ -58,11 +58,6 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
        
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
 
-    if (task == 'fluxes_stitch'):
-       
-        stitching = True
-        fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching)
-
     if (task == 'zonal'):
 
         myzonal = zonal.zonalobj(mygrids, mytime, myfields)
