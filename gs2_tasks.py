@@ -15,6 +15,15 @@ import linrange
 import potential
 import boxballoon
 import fields_real_space
+import transfer
+import movie_phi_vs_kx_ky
+import movie_phizonal_vs_kx
+import phi_vs_theta
+import phi2zonal_vs_t
+import hyper_vs_kx_ky
+import phi_vs_theta_last_timestep
+import phi2zonal_vs_kx_last_timestep
+import compare_zonal_vs_x
 
 
 # Complete part of tasks that require a single in/out pair of files.
@@ -58,11 +67,6 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
        
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
 
-    if (task == 'fluxes_stitch'):
-       
-        stitching = True
-        fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching)
-
     if (task == 'zonal'):
 
         myzonal = zonal.zonalobj(mygrids, mytime, myfields)
@@ -97,6 +101,42 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
     if (task == 'fields_real_space'):
 
         fields_real_space.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'transfer'):
+
+        transfer.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'movie_phi_vs_kx_ky'):
+
+        movie_phi_vs_kx_ky.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'movie_phizonal_vs_kx'):
+
+        movie_phizonal_vs_kx.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'phi_vs_theta'):
+
+        phi_vs_theta.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'phi2zonal_vs_t'):
+
+        phi2zonal_vs_t.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'hyper_vs_kx_ky'):
+
+        hyper_vs_kx_ky.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'phi_vs_theta_last_timestep'):
+
+        phi_vs_theta_last_timestep.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'phi2zonal_vs_kx_last_timestep'):
+
+        phi2zonal_vs_kx_last_timestep.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+
+    if (task == 'compare_zonal_vs_x'):
+
+        compare_zonal_vs_x.my_task_single(ifile, run, myin, myout, mygrids, mytime)
 
 # Complete part of tasks that require the collection of in/out pairs (e.g. plotting a parameter scan).
 

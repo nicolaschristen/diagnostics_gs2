@@ -30,6 +30,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     
     # select chains
     dmid_list = []
+    iky = 1
 
     # Select t/tfinal for plot of phi vs ballooning angle
     tRatio_toPlot = [1.0]
@@ -41,7 +42,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     plot_phi_vs_tt0 = True
     plot_phi_vs_tt0_log = False
 
-    make_snaps = False
+    make_snaps = True
     itSnap_min = 0
     itSnap_max = -1
     itSnap_step = 10
@@ -78,7 +79,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
 
     kx_gs2 = myout['kx']
     # We only consider the first non-zero ky
-    ky = myout['ky'][1]
+    ky = myout['ky'][iky]
     dky = 1./myin['kt_grids_box_parameters']['y0']
     dkx = 2.*pi*abs(shat)*dky/jtwist
     nakx = kx_gs2.size
@@ -89,7 +90,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     
     # Number of t-steps before ExB re-map
     if g_exb != 0.0:
-        N_per_remap = max(1, abs(int(round(dkx/(g_exb*delt*dky)))))
+        N_per_remap = max(1, abs(int(round(dkx/(g_exb*delt*ky)))))
     else:
         N_per_remap = np.nan
     # Floquet period
@@ -104,12 +105,15 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
         Nf = np.nan
 
     # Read data from output
-    phi2_gs2 = np.squeeze(myout['phi2_by_mode'][:,1,:])
-    omega_gs2 = np.squeeze(myout['omega_average'][:,1,:,0]) # real frequency
+    phi2_gs2 = np.squeeze(myout['phi2_by_mode'][:,iky,:])
+    try:
+        omega_gs2 = np.squeeze(myout['omega_average'][:,iky,:,0]) # real frequency
+    except:
+        omega_gs2 = np.zeros(phi2_gs2.shape)
     phi_t_present = myout['phi_t_present']
     if phi_t_present:
         phi2_bytheta_gs2 = np.sum(np.power(myout['phi_t'],2), axis=4)
-        phi2_bytheta_gs2 = np.squeeze(phi2_bytheta_gs2[:,1,:,:])
+        phi2_bytheta_gs2 = np.squeeze(phi2_bytheta_gs2[:,iky,:,:])
     try:
         Qe = myout['es_heat_flux'][:,1]
         Qi = myout['es_heat_flux'][:,0]
@@ -137,7 +141,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     # Check if the chain has at least one connection.
     # If not, we will follow the right-most (g_exb>0)
     # or left-most (g_exb<0) chain until it falls off the grid.
-    if jtwist > nakx:
+    if iky*jtwist > nakx:
         if g_exb != 0:
             dmid_list = [int(np.sign(g_exb)*(nakx-1)/2)]
             nt = int((nakx-1) * np.floor(N_per_remap/nwrite))
@@ -236,8 +240,8 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
                 ikxprev = ikx0 - ikx_shift_old + dmid
 
                 while (ikx >= nakx): # moving from the right to first connected kx within the set in GS2
-                    ikx = ikx-jtwist
-                    ikxprev = ikxprev-jtwist
+                    ikx = ikx-iky*jtwist
+                    ikxprev = ikxprev-iky*jtwist
                 while (ikx >= 0):
                     ikx_members_now.append(ikx)
                     if ikxprev >= nakx:
@@ -246,14 +250,14 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
                         ikx_prevmembers_now.append(np.nan)
                     else:
                         ikx_prevmembers_now.append(ikxprev)
-                    ikx = ikx-jtwist
-                    ikxprev = ikxprev-jtwist
+                    ikx = ikx-iky*jtwist
+                    ikxprev = ikxprev-iky*jtwist
 
-                ikx = ikx0 - ikx_shift + dmid + jtwist
-                ikxprev = ikx0 - ikx_shift_old + dmid + jtwist
+                ikx = ikx0 - ikx_shift + dmid + iky*jtwist
+                ikxprev = ikx0 - ikx_shift_old + dmid + iky*jtwist
                 while (ikx < 0): # moving from the left to first connected kx within the set in GS2
-                    ikx = ikx+jtwist
-                    ikxprev = ikxprev+jtwist
+                    ikx = ikx+iky*jtwist
+                    ikxprev = ikxprev+iky*jtwist
                 while (ikx < nakx):
                     ikx_members_now.append(ikx)
                     if ikxprev >= nakx:
@@ -262,8 +266,8 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
                         ikx_prevmembers_now.append(np.nan)
                     else:
                         ikx_prevmembers_now.append(ikxprev)
-                    ikx = ikx+jtwist
-                    ikxprev = ikxprev+jtwist
+                    ikx = ikx+iky*jtwist
+                    ikxprev = ikxprev+iky*jtwist
 
                 # sort ikx of chain members at time it in left-to-right order (shat>0: descending, shat<0: ascending)
                 # sort time it-1 accordingly
@@ -413,14 +417,6 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
     if g_exb != 0.0:
 
     ## NDCTEST: start new
-
-        print(nt)
-        print(Nf)
-        print(it_Tfstart[0])
-        print(it_Tfend[0])
-        print(it_Tfstart[-1])
-        print(it_Tfend[-1])
-        print(skip_nTf)
 
         it_gamma_max = np.zeros(len(dmid_list))
         it_gamma_max_fromSum = np.zeros(len(dmid_list))
@@ -840,7 +836,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
                 # find global min and max of ballooning angle
                 bloonang_min = 0.
                 bloonang_max = 0.
-                for it in range(max_it_for_snap):
+                for it in range(itSnap_max):
                     if np.min(bloonang[idmid][it]) < bloonang_min:
                         bloonang_min = np.min(bloonang[idmid][it])
                     if np.max(bloonang[idmid][it]) > bloonang_max:
@@ -853,7 +849,7 @@ def my_task_single(ifile, run, myin, myout, mytime, task_space):
 
                 tmp_pdf_id = 1
                 pdflist = []
-                for it in range(0,max_it_for_snap,it_step_for_snap):
+                for it in range(0,itSnap_max,itSnap_step):
                     l1, = plt.plot(bloonang[idmid][it],phi2bloon[idmid][it], marker='o', color=gplot.myblue, \
                             markersize=5, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=3.0)
                     l1.set_label('$\\vert \\varphi \\vert ^2$')

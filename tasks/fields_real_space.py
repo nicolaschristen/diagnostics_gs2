@@ -41,7 +41,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
     smoothfac = 2
     
     # Make movies in real space?
-    make_movies = False
+    make_movies = True
     make_mov_phi = True
     make_mov_densi = False
     make_mov_dense = False
@@ -795,9 +795,12 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
             merged_pdfname = 'zonal_real_space'
             gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
-            to_add = { 'shear_zonal':shear_zonal_avg,
-                       'field_zonal':field_zonal_avg,
-                       'flow_zonal':flow_zonal_avg,
+            to_add = { 'shear_zonal_avg':shear_zonal_avg,
+                       'field_zonal_avg':field_zonal_avg,
+                       'flow_zonal_avg':flow_zonal_avg,
+                       'shear_zonal':shear_zonal,
+                       'field_zonal':field_zonal,
+                       'flow_zonal':flow_zonal,
                        'time':mytime.time,
                        'it_snap':it_snap,
                        'xgrid':mygrids.xgrid,

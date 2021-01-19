@@ -24,18 +24,25 @@ class timeobj:
         self.it_max = 0
         while self.time[self.it_max] < tmax and self.it_max < self.ntime-1:
             self.it_max += 1
+
+        self.time_steady = self.time[self.it_min:self.it_max]
+        # In cases of stitching, twin might not overlap with this present simulation,
+        # so we overwrite the steady time.
+        if self.time_steady.size == 0:
+            self.it_min = 0
+            self.it_max = self.ntime
+            self.time_steady = self.time[self.it_min:self.it_max]
+
+        self.ntime_steady = self.time_steady.size
         # get number of time points in steady-state interval
         self.it_interval = self.ntime - self.it_min
 
-        self.time_steady = self.time[self.it_min:self.it_max]
-        self.ntime_steady = self.time_steady.size
-
         if run.taumax is None:
-            self.taumax = 0.2 * (self.time_steady[-1]-self.time_steady[0])
+            self.taumax = 0.1 * self.time[-1]
         else:
             self.taumax = run.taumax
 
-        self.ntauwin = int((self.time[-1]-self.time[0])//(0.5*self.taumax)) - 1
+        self.ntauwin = max(int((self.time[-1]-self.time[0])//(0.5*self.taumax)) - 1, 0)
         self.t_tauwinavg = self.tauwin_avg(self.time)
 
         # get set of frequencies sampled by data, assuming equal time steps

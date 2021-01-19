@@ -70,7 +70,10 @@ out_varnames = [
         # and the fixed nearest neighbour kx in the shearing frame.
         # [ky]
         'kx_shift',
-        'kx_shift_over_time'
+        'kx_shift_over_time',
+        'drhodpsi',
+        'zonal_transfer',
+        'hypervisc_exp'
         ]
 
 def get_output(ifile, run):

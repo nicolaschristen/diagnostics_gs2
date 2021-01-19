@@ -11,7 +11,9 @@ import copy
 # TODO: add 'your_task' to the array.
 tasks_choices = ['fluxes', 'zonal', 'tcorr', 'flowtest', 'floquet', \
         'linrange','fluxes_stitch','potential', 'fields_real_space', \
-        'fluxes_compare']
+        'fluxes_compare', 'transfer', 'movie_phi_vs_kx_ky', 'movie_phizonal_vs_kx', \
+        'phi_vs_theta', 'phi2zonal_vs_t', 'hyper_vs_kx_ky', 'phi_vs_theta_last_timestep', \
+        'phi2zonal_vs_kx_last_timestep', 'compare_zonal_vs_x']
 
 # Fom command-line arguments, get info about this analysis run (filenames, tasks to complete ...)
 run = grunpar.runobj(tasks_choices)

@@ -227,6 +227,12 @@ def my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching=False)
 
 def multi_task(run):
 
+    # Set to True to plot simulations with different t[0]
+    # and remove their time offsets.
+    start_together = True
+
+    leg_fontsize = 8
+
     nfile = len(run.fnames)
 
     fluxes = [{} for ifile in range(nfile)]
@@ -243,8 +249,8 @@ def multi_task(run):
         with open(datfile_name,'rb') as datfile:
             times[ifile] = pickle.load(datfile)
 
-    # Plotting energy spectra vs kx and ky
-    plot_energy_spectra(run, fluxes)
+    # Plotting phi spectra vs kx and ky
+    plot_spectra(run, fluxes)
 
     # Plotting phi2 vs theta-theta0 at final time,
     # for ky~0.5 and ky~1.0
@@ -283,6 +289,12 @@ def multi_task(run):
     # Plotting fluxes vs time
     for ispec in range(len(fluxes[0]['spec_names'])):
 
+        time_offset = np.zeros(nfile)
+        for ifile in range(nfile):
+            time_offset[ifile] = times[ifile].time[0]
+            if start_together:
+                times[ifile].time -= time_offset[ifile]
+
         specname = fluxes[0]['spec_names'][ispec]
         if specname == 'ion':
             speclab = 'i'
@@ -301,7 +313,7 @@ def multi_task(run):
         plt.xlabel('$t$ [$a/v_th$]')
         plt.ylabel('$\Gamma_'+speclab+'/\Gamma_{gB}$')
         leg = plt.legend(labs,
-                         prop={'size': 10},
+                         prop={'size': leg_fontsize},
                          ncol=2,
                          frameon=True,
                          fancybox=False,
@@ -320,7 +332,7 @@ def multi_task(run):
         plt.xlabel('$t$ [$a/v_th$]')
         plt.ylabel('$\Gamma_'+speclab+'/\Gamma_{gB}$')
         leg = plt.legend(labs,
-                         prop={'size': 10},
+                         prop={'size': leg_fontsize},
                          ncol=2,
                          frameon=True,
                          fancybox=False,
@@ -339,7 +351,7 @@ def multi_task(run):
         plt.xlabel('$t$ [$a/v_th$]')
         plt.ylabel('$Q_'+speclab+'/Q_{gB}$')
         leg = plt.legend(labs,
-                         prop={'size': 10},
+                         prop={'size': leg_fontsize},
                          ncol=2,
                          frameon=True,
                          fancybox=False,
@@ -358,7 +370,7 @@ def multi_task(run):
         plt.xlabel('$t$ [$a/v_th$]')
         plt.ylabel('$Q_'+speclab+'/Q_{gB}$')
         leg = plt.legend(labs,
-                         prop={'size': 10},
+                         prop={'size': leg_fontsize},
                          ncol=2,
                          frameon=True,
                          fancybox=False,
@@ -377,7 +389,7 @@ def multi_task(run):
         plt.xlabel('$t$ [$a/v_th$]')
         plt.ylabel('$\Pi_'+speclab+'/\Pi_{gB}$')
         leg = plt.legend(labs,
-                         prop={'size': 10},
+                         prop={'size': leg_fontsize},
                          ncol=2,
                          frameon=True,
                          fancybox=False,
@@ -396,7 +408,7 @@ def multi_task(run):
         plt.xlabel('$t$ [$a/v_th$]')
         plt.ylabel('$\\vert\Pi_'+speclab+'\\vert/\Pi_{gB}$')
         leg = plt.legend(labs,
-                         prop={'size': 10},
+                         prop={'size': leg_fontsize},
                          ncol=2,
                          frameon=True,
                          fancybox=False,
@@ -417,7 +429,7 @@ def multi_task(run):
         plt.xlabel('$t$ [$a/v_th$]')
         plt.ylabel('$\Pi_'+speclab+'/Q_'+speclab+'$')
         leg = plt.legend(labs,
-                         prop={'size': 10},
+                         prop={'size': leg_fontsize},
                          ncol=2,
                          frameon=True,
                          fancybox=False,
@@ -431,6 +443,11 @@ def multi_task(run):
 
         merged_pdfname = 'fluxes_' + specname + '_vs_t_' + run.scan_name
         gplot.merge_pdfs(pdflist, merged_pdfname, run)
+
+        if start_together:
+            for ifile in range(nfile):
+                times[ifile].time += time_offset[ifile]
+
 
 def stitching_fluxes(run):
 
@@ -457,10 +474,11 @@ def stitching_fluxes(run):
         if ifile > 0:
             Nt_tot -= 1 # removing duplicate at restart point
     
+    twin = run.twin
+
     # A lot of stuff is the same for all runs
     islin = full_fluxes[0]['islin']
     has_flowshear = full_fluxes[0]['has_flowshear']
-    twin = full_time[0].twin
     taumax = full_time[0].taumax
     nspec = full_fluxes[0]['nspec']
     spec_names = full_fluxes[0]['spec_names']
@@ -621,6 +639,7 @@ def plot_fluxes(ifile,run,mytime,mydict):
 
     # k grids
     nx = mydict['nx']
+    nxmid = nx//2 + 1
     ny = mydict['ny']
     naky = mydict['naky']
     kx = mydict['kx']
@@ -1019,18 +1038,20 @@ def plot_fluxes(ifile,run,mytime,mydict):
     tmp_pdf_id += 1
 
     ## Plot phi2 averaged over t and theta, vs (kx,ky)
-    # First zonal mode
-    plt.semilogy(kx,phi2_kxky_tavg[0,:], marker='o', color=gplot.myblue, \
-            markersize=8, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=2.0)
-    plt.grid(True)
-    plt.xlabel('$\\bar{k}_{x}\\rho_i$')
-    plt.ylabel('$\\langle\\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
-    plt.title('$k_y\\rho_i = 0$')
-    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-    gplot.save_plot(tmp_pdfname, run, ifile)
-    pdflist.append(tmp_pdfname)
-    tmp_pdf_id += 1
-    # Then non-zonal modes
+    dkx = abs(kx[1]-kx[0])
+    for iky in range(naky):
+        plt.semilogy(kx,1/dkx*phi2_kxky_tavg[iky,:], marker='o', color=gplot.myblue, \
+                markersize=8, markerfacecolor=gplot.myblue, markeredgecolor=gplot.myblue, linewidth=2.0)
+        plt.grid(True)
+        plt.xlabel('$\\bar{k}_{x}\\rho_i$')
+        plt.ylabel('$\\frac{1}{\\Delta k_x}\\langle\\vert\\varphi\\vert ^2\\rangle_{t,\\theta}$')
+        plt.title('$k_y\\rho_i = $'+str(round(ky[iky],2)))
+        tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+        gplot.save_plot(tmp_pdfname, run, ifile)
+        pdflist.append(tmp_pdfname)
+        tmp_pdf_id += 1
+
+    # Then non-zonal modes on contour plot vs (kx,ky)
     plot_phi2_vs_kxky(kx,ky,phi2_kxky_tavg,has_flowshear)
     tmp_pdfname = 'tmp'+str(tmp_pdf_id)
     gplot.save_plot(tmp_pdfname, run, ifile)
@@ -1104,6 +1125,36 @@ def plot_fluxes(ifile,run,mytime,mydict):
             tmp_pdf_id += 1
 
         merged_pdfname = 'potential_vs_theta_theta0_iky_'+str(iky)
+        if ifile==None: # This is the case when we stitch fluxes together
+            merged_pdfname += '_'+run.scan_name
+        gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+    # With linear scale
+    iky_to_plot = [1,iky_energymax,ny-1]
+    phi2_bytheta_tfinal = np.abs(phi_bytheta_tfinal)**2
+
+    for iky in iky_to_plot:
+
+        tmp_pdf_id = 1
+        pdflist = []
+
+        for dmid in range(min(jtwist*iky, int(nx//2))):
+
+            # Get chain of (theta-theta0) and associated phi2.
+            bloonang, phi2bloon = get_bloon(theta,theta0,phi2_bytheta_tfinal,iky,dmid,jtwist)
+
+            plt.plot(bloonang,phi2bloon,color=gplot.myblue,linewidth=3.0)
+            plt.grid(True)
+            plt.xlabel('$\\theta-\\theta_0$')
+            plt.ylabel('$\\vert\\varphi\\vert^2$')
+            plt.title('$k_y = '+str(round(ky[iky],2))+'$, $d_{mid} = '+str(dmid)+'$, at $t='+str(round(time[-1],3))+'$')
+
+            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+            gplot.save_plot(tmp_pdfname, run, ifile)
+            pdflist.append(tmp_pdfname)
+            tmp_pdf_id += 1
+
+        merged_pdfname = 'potential_vs_theta_theta0_linear_iky_'+str(iky)
         if ifile==None: # This is the case when we stitch fluxes together
             merged_pdfname += '_'+run.scan_name
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
@@ -1513,7 +1564,9 @@ def find_nearest(array, value):
 
 
 
-def plot_energy_spectra(run, flux, ifile=None):
+def plot_spectra(run, flux, ifile=None):
+
+    leg_fontsize = 8
 
     multi = ifile is None
 
@@ -1589,7 +1642,44 @@ def plot_energy_spectra(run, flux, ifile=None):
         plt.xlabel(xlab)
         plt.ylabel(ylab, fontsize=15)
 
-        plt.legend(prop={'size': 8},
+        plt.legend(prop={'size': leg_fontsize},
+                   ncol=1,
+                   frameon=True,
+                   fancybox=False,
+                   framealpha=1.0,
+                   handlelength=1)
+
+    def create_zonal_spectrum(to_plot):
+
+        for irun in range(nrun):
+
+            if multi:
+                flx = flux[irun]
+                lab = run.flabels[irun]
+            else:
+                flx = flux
+                lab = None
+
+            if to_plot == 'field':
+                fac = 1
+            elif to_plot == 'flow':
+                fac = flx['kx']**2
+            elif to_plot == 'shear':
+                fac = flx['kx']**4
+
+            dkx = abs(flx['kx'][1]-flx['kx'][0])
+            plt.semilogy(flx['kx'],fac/dkx*flx['phi2_kxky_tavg'][0,:], marker='o', label=lab, markersize=3)
+
+        plt.grid(True)
+        plt.xlabel('$\\bar{k}_{x}\\rho_i$')
+        if to_plot == 'field':
+            ylab = '$\\frac{1}{\\Delta k_x}\\langle \\vert\\varphi_Z\\vert ^2\\rangle_{t,\\theta}$'
+        elif to_plot == 'flow':
+            ylab = '$\\frac{1}{\\Delta k_x}k_x^2\\langle \\vert\\varphi_Z\\vert ^2\\rangle_{t,\\theta}$'
+        elif to_plot == 'shear':
+            ylab = '$\\frac{1}{\\Delta k_x}k_x^4\\langle \\vert\\varphi_Z\\vert ^2\\rangle_{t,\\theta}$'
+        plt.ylabel(ylab)
+        plt.legend(prop={'size': leg_fontsize},
                    ncol=1,
                    frameon=True,
                    fancybox=False,
@@ -1620,11 +1710,41 @@ def plot_energy_spectra(run, flux, ifile=None):
     pdflist.append(tmp_pdfname)
     tmp_pdf_id = tmp_pdf_id+1
 
+    create_zonal_spectrum('field')
+
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
     if multi:
-        merged_pdfname = 'energy_spectra_' + run.scan_name
+        gplot.save_plot(tmp_pdfname, run)
+    else:
+        gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id = tmp_pdf_id+1
+
+    create_zonal_spectrum('flow')
+
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    if multi:
+        gplot.save_plot(tmp_pdfname, run)
+    else:
+        gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id = tmp_pdf_id+1
+
+    create_zonal_spectrum('shear')
+
+    tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+    if multi:
+        gplot.save_plot(tmp_pdfname, run)
+    else:
+        gplot.save_plot(tmp_pdfname, run, ifile)
+    pdflist.append(tmp_pdfname)
+    tmp_pdf_id = tmp_pdf_id+1
+
+    if multi:
+        merged_pdfname = 'spectra_' + run.scan_name
         gplot.merge_pdfs(pdflist, merged_pdfname, run)
     else:
-        merged_pdfname = 'energy_spectra_' + run.fnames[ifile]
+        merged_pdfname = 'spectra_' + run.fnames[ifile]
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
 
     return fig
