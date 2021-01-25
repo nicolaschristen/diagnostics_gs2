@@ -11,6 +11,7 @@ from matplotlib import rcParams
 from matplotlib import rcdefaults
 import matplotlib.animation as anim
 from scipy.integrate import simps
+from scipy.io import savemat
 
 
 
@@ -49,6 +50,9 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
     make_mov_tempe = False
     make_mov_zonal = True
     make_mov_yavg = True
+
+    # Save to check the influence of the ZM with Matlab?
+    save_for_zmcheck = True
 
     # Pyfilm bug: creating a 1D movie after having called plt.savefig
     # will produce glitches in axis labels.
@@ -340,10 +344,13 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
         # First, FFT at every time step
         field_zonal = np.zeros((mytime.ntime_steady, mygrids.nx))
+        tempi_zonal = np.zeros((mytime.ntime_steady, mygrids.nx))
         it_steady = 0
         for it in range(mytime.it_min,mytime.it_max):
             ft = np.squeeze(phi_all_t[it,0,:])
             field_zonal[it_steady,:] = np.real(np.fft.ifft(ft)) * mygrids.nx
+            ft = np.squeeze(tempi_all_t[it,0,:])
+            tempi_zonal[it_steady,:] = np.real(np.fft.ifft(ft)) * mygrids.nx
             it_steady += 1
 
         # Then average over time
@@ -354,6 +361,8 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         # Finally, reorder to have growing x axis
         field_zonal = np.concatenate((field_zonal[:,mygrids.nxmid:],\
                                       field_zonal[:,:mygrids.nxmid]),axis=1)
+        tempi_zonal = np.concatenate((tempi_zonal[:,mygrids.nxmid:],\
+                                      tempi_zonal[:,:mygrids.nxmid]),axis=1)
         field_zonal_avg = np.concatenate((field_zonal_avg[mygrids.nxmid:],\
                                           field_zonal_avg[:mygrids.nxmid]))
 
@@ -385,13 +394,19 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
 
             # Every time step
             field_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.xgrid_fine.size))
+            tempi_zonal_fit = np.zeros((mytime.ntime_steady, mygrids.xgrid_fine.size))
             splinerep_field = []
+            splinerep_tempi = []
             it_steady = 0
             for it in range(mytime.it_min,mytime.it_max):
                 ft = np.squeeze(field_zonal[it_steady,:])
                 spl_smooth = np.max(ft)/smoothfac
                 splinerep_field.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
                 field_zonal_fit[it_steady,:] = interpolate.splev(mygrids.xgrid_fine, splinerep_field[-1])
+                ft = np.squeeze(tempi_zonal[it_steady,:])
+                spl_smooth = np.max(ft)/smoothfac
+                splinerep_tempi.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
+                tempi_zonal_fit[it_steady,:] = interpolate.splev(mygrids.xgrid_fine, splinerep_tempi[-1])
                 it_steady += 1
 
             # Time-average
@@ -500,11 +515,15 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
         #---------------#
 
 
-        # Factor to get gamma_Z [vthi/a]
+        # Factor to get
+        # gamma_Z [vthi/a] = fac * d^2/dx^2 (phi_zonal_gs2)
+        #fac = 0.5 \
+        #        * myout['gds2'][ig_mid]**-0.5 \
+        #        * (myout['gds22'][ig_mid]*myout['gds2'][ig_mid] - myout['gds21'][ig_mid]**2) \
+        #        * (myin['theta_grid_parameters']['rhoc']/myin['theta_grid_parameters']['shat'])**2
         fac = 0.5 \
-                * myout['gds2'][ig_mid]**-0.5 \
-                * (myout['gds22'][ig_mid]*myout['gds2'][ig_mid] - myout['gds21'][ig_mid]**2) \
-                * (myin['theta_grid_parameters']['rhoc']/myin['theta_grid_parameters']['shat'])**2
+                / ( myout['bmag'][ig_mid]**2 * abs(myin['theta_grid_parameters']['shat']) ) \
+                * (myout['gds22'][ig_mid]*myout['gds2'][ig_mid] - myout['gds21'][ig_mid]**2)**0.5
 
 
         # Full field
@@ -815,7 +834,7 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
     ###############
 
 
-    if make_movies:
+    if make_movies or save_for_zmcheck:
 
 
 
@@ -894,309 +913,330 @@ def my_task_single(ifile, run, myin, myout, mygrids, mytime):
                     for iy in range(ny_full):
                         tempe_full_fft[itcut,ix,iy] = field_tmp[iy,ix]
 
+        if save_for_zmcheck:
 
+            # Factor to get
+            # tprimi_Z = -fac / tempi_zonal_gs2 * d/dx (tempi_zonal_gs2)
+            fac_tprimz = myin['theta_grid_parameters']['qinp']/(myin['theta_grid_parameters']['rhoc']*myout['drhodpsi'])
 
-        # Define the frame rate such that
-        # 1 second in the movie = 5 a/vthi
-        
-        avth_per_sec = 5
+            dic_zmcheck = {'time': mytime.time_steady,
+                   'xgrid': mygrids.xgrid,
+                   'xgrid_fine': mygrids.xgrid_fine,
+                   'ygrid': mygrids.ygrid,
+                   'phi': phi_full_fft,
+                   'tempi': tempi_full_fft,
+                   'phi_zonal_fit': field_zonal_fit,
+                   'tempi_zonal_fit': tempi_zonal_fit,
+                   'fac_gammaz': fac,
+                   'fac_tprimz': fac_tprimz,
+                   'g_exb': myin['dist_fn_knobs']['g_exb'],
+                   'tprimi': myin['species_parameters_1']['tprim']}
 
-        # Check whether delt changes during the selected time.
-        # If it does, display a warning message.
-        dt = mytime.time[mytime.it_min+1] - mytime.time[mytime.it_min]
-        dt_changed = False
-        for it in range(mytime.it_min, mytime.it_max-1):
-            if abs(dt - (mytime.time[it+1]-mytime.time[it])) > 1e-6:
-                dt_changed = True
-        if dt_changed:
-            print('\n\nWARNING: delt changes during the selected time window, movies might appear to accelerate.\n\n')
+            savemat(run.out_dir + run.fnames[ifile] + '_zmcheck.mat', dic_zmcheck)
 
-        fps = int(round( avth_per_sec / dt ))
+        if make_movies:
 
+            # Define the frame rate such that
+            # 1 second in the movie = 5 a/vthi
+            
+            avth_per_sec = 5
 
+            # Check whether delt changes during the selected time.
+            # If it does, display a warning message.
+            dt = mytime.time[mytime.it_min+1] - mytime.time[mytime.it_min]
+            dt_changed = False
+            for it in range(mytime.it_min, mytime.it_max-1):
+                if abs(dt - (mytime.time[it+1]-mytime.time[it])) > 1e-6:
+                    dt_changed = True
+            if dt_changed:
+                print('\n\nWARNING: delt changes during the selected time window, movies might appear to accelerate.\n\n')
 
-        # Options for 2D movies
-
-        plt_opts = {'cmap': mpl.cm.RdBu_r,
-                    'extend': 'both'}
-
-        opts = {'ncontours': 21,
-                'cbar_ticks': 5,
-                'cbar_label': '',
-                'cbar_tick_format': '%.1E',
-                'xlabel':'$x /\\rho_i$',
-                'ylabel':'$y /\\rho_i$',
-                'nprocs':20,
-                'film_dir': run.out_dir,
-                'fps': fps}
-
-
-        # Create movies
-
-        # Make movie of potential
-        if make_mov_phi:
-
-            plt.rc('font', size=18)
-            opts['title'] = ['$\\varphi$ [$\\rho_{{\\star}} T_i/e$]'\
-                             '  at  '\
-                             '$t={:.2f}$'.format(mytime.time[it])\
-                             +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max)]
-            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_phi'
-            opts['cbar_ticks'] = np.array([np.amin(phi_full_fft), np.amin(phi_full_fft)/2, 0.0, np.amax(phi_full_fft)/2, np.amax(phi_full_fft)])
-            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, phi_full_fft,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            plt.rc('font', size=30)
-
-        # Make movie of ion density
-        if make_mov_densi:
-
-            plt.rc('font', size=18)
-            opts['title'] = ['$\\delta n_i$ [$\\rho_{{\\star}} n_i$]'\
-                             '  at  '\
-                             '$t={:.2f}$'.format(mytime.time[it])\
-                             +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max)]
-            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_densi'
-            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, densi_full_fft,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            plt.rc('font', size=30)
-
-        # Make movie of electron density
-        if make_mov_dense:
-
-            plt.rc('font', size=18)
-            opts['title'] = ['$\\delta n_e$ [$\\rho_{{\\star}} n_i$]'\
-                             '  at  '\
-                             '$t={:.2f}$'.format(mytime.time[it])\
-                             +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max)]
-            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_dense'
-            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, dense_full_fft,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            plt.rc('font', size=30)
-
-        # Make movie of ion temperature
-        if make_mov_tempi:
-
-            plt.rc('font', size=18)
-            opts['title'] = ['$\\delta T_i$ [$\\rho_{{\\star}} T_i$]'\
-                             '  at  '\
-                             '$t={:.2f}$'.format(mytime.time[it])\
-                             +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max)]
-            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempi'
-            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempi_full_fft,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            plt.rc('font', size=30)
-
-        # Make movie of electron temperature
-        if make_mov_tempe:
-
-            plt.rc('font', size=18)
-            opts['title'] = ['$\\delta T_e$ [$\\rho_{{\\star}} T_i$]'\
-                             '  at  '\
-                             '$t={:.2f}$'.format(mytime.time[it])\
-                             +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max)]
-            opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempe'
-            pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempe_full_fft,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            plt.rc('font', size=30)
+            fps = int(round( avth_per_sec / dt ))
 
 
 
+            # Options for 2D movies
 
-        # Update dict
+            plt_opts = {'cmap': mpl.cm.RdBu_r,
+                        'extend': 'both'}
 
-        to_add = { 'time_steady':mytime.time_steady,
-                   'xgrid':mygrids.xgrid,
-                   'ygrid':mygrids.ygrid }
-        mydict.update(to_add)
-        if make_mov_phi:
-            to_add = {'phi_full_fft':phi_full_fft}
-            mydict.update(to_add)
-        if make_mov_densi:
-            to_add = {'densi_full_fft':densi_full_fft}
-            mydict.update(to_add)
-        if make_mov_dense:
-            to_add = {'dense_full_fft':dense_full_fft}
-            mydict.update(to_add)
-        if make_mov_tempi:
-            to_add = {'tempi_full_fft':tempi_full_fft}
-            mydict.update(to_add)
-        if make_mov_tempe:
-            to_add = {'tempe_full_fft':tempe_full_fft}
-            mydict.update(to_add)
-
-
-
-
-        # Make 1D movies of y-averaged quantities
-        if make_mov_yavg:
-
-            # Options for 1D movies
-            plt_opts = {'marker': None,
-                        'linewidth': 2,
-                        'linestyle': '-'}
-
-            opts = {'xlabel':'$x /\\rho_i$',
-                    'title':['$t={:.2f}$'.format(mytime.time[it])\
-                             +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max)],
-                    'xlim':[np.amin(mygrids.xgrid),np.amax(mygrids.xgrid)],
+            opts = {'ncontours': 21,
+                    'cbar_ticks': 5,
+                    'cbar_label': '',
+                    'cbar_tick_format': '%.1E',
+                    'xlabel':'$x /\\rho_i$',
+                    'ylabel':'$y /\\rho_i$',
+                    'nprocs':20,
                     'film_dir': run.out_dir,
-                    'grid': True,
                     'fps': fps}
 
-            plt.rc('font', size=18)
 
-            # Compute y-averaged ion temperature and fit it with splines
-            it_steady = 0
-            tempi_yavg = np.zeros((mytime.ntime_steady,mygrids.nx))
-            tempi_yavg_fit = np.zeros((mytime.ntime_steady,mygrids.nx))
-            tprimi_yavg_fit = np.zeros((mytime.ntime_steady,mygrids.nx))
-            splinerep_tempi_yavg = []
-            fac = myin['theta_grid_parameters']['qinp']/(myin['theta_grid_parameters']['rhoc']*myout['drhodpsi'])
-            for it in range(mytime.it_min,mytime.it_max):
-                for ix in range(mygrids.nx):
-                    tempi_yavg[it_steady,ix] = simps(np.squeeze(tempi_full_fft[it_steady,ix,:]),mygrids.ygrid) \
-                            / (mygrids.ygrid[-1]-mygrids.ygrid[0])
-                ft = np.squeeze(tempi_yavg[it_steady,:])
-                spl_smooth = np.max(ft)/smoothfac
-                splinerep_tempi_yavg.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
-                tempi_yavg_fit[it_steady,:] = interpolate.splev(mygrids.xgrid, splinerep_tempi_yavg[-1])
-                tprimi_yavg_fit[it_steady,:] = -1*fac/tempi_yavg_fit[it_steady,:] * \
-                        interpolate.splev(mygrids.xgrid, splinerep_tempi_yavg[-1], der=1)
-                it_steady += 1
+            # Create movies
+
+            # Make movie of potential
+            if make_mov_phi:
+
+                plt.rc('font', size=18)
+                opts['title'] = ['$\\varphi$ [$\\rho_{{\\star}} T_i/e$]'\
+                                 '  at  '\
+                                 '$t={:.2f}$'.format(mytime.time[it])\
+                                 +' [$a/v_{th}$]'\
+                                 for it in range(mytime.it_min, mytime.it_max)]
+                opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_phi'
+                opts['cbar_ticks'] = np.array([np.amin(phi_full_fft), np.amin(phi_full_fft)/2, 0.0, np.amax(phi_full_fft)/2, np.amax(phi_full_fft)])
+                pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, phi_full_fft,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                plt.rc('font', size=30)
+
+            # Make movie of ion density
+            if make_mov_densi:
+
+                plt.rc('font', size=18)
+                opts['title'] = ['$\\delta n_i$ [$\\rho_{{\\star}} n_i$]'\
+                                 '  at  '\
+                                 '$t={:.2f}$'.format(mytime.time[it])\
+                                 +' [$a/v_{th}$]'\
+                                 for it in range(mytime.it_min, mytime.it_max)]
+                opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_densi'
+                pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, densi_full_fft,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                plt.rc('font', size=30)
+
+            # Make movie of electron density
+            if make_mov_dense:
+
+                plt.rc('font', size=18)
+                opts['title'] = ['$\\delta n_e$ [$\\rho_{{\\star}} n_i$]'\
+                                 '  at  '\
+                                 '$t={:.2f}$'.format(mytime.time[it])\
+                                 +' [$a/v_{th}$]'\
+                                 for it in range(mytime.it_min, mytime.it_max)]
+                opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_dense'
+                pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, dense_full_fft,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                plt.rc('font', size=30)
+
+            # Make movie of ion temperature
+            if make_mov_tempi:
+
+                plt.rc('font', size=18)
+                opts['title'] = ['$\\delta T_i$ [$\\rho_{{\\star}} T_i$]'\
+                                 '  at  '\
+                                 '$t={:.2f}$'.format(mytime.time[it])\
+                                 +' [$a/v_{th}$]'\
+                                 for it in range(mytime.it_min, mytime.it_max)]
+                opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempi'
+                pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempi_full_fft,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                plt.rc('font', size=30)
+
+            # Make movie of electron temperature
+            if make_mov_tempe:
+
+                plt.rc('font', size=18)
+                opts['title'] = ['$\\delta T_e$ [$\\rho_{{\\star}} T_i$]'\
+                                 '  at  '\
+                                 '$t={:.2f}$'.format(mytime.time[it])\
+                                 +' [$a/v_{th}$]'\
+                                 for it in range(mytime.it_min, mytime.it_max)]
+                opts['file_name'] = run.fnames[ifile]+ '_fields_real_space_tempe'
+                pyfilm.pyfilm.make_film_2d(mygrids.xgrid, mygrids.ygrid, tempe_full_fft,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                plt.rc('font', size=30)
 
 
-            # Make a movie of it
-            opts['ylim'] = [np.amin(tempi_yavg),np.amax(tempi_yavg)]
-            opts['ylabel'] = '$\\langle\\delta T_i\\rangle_y$ [$\\rho_{{\\star}} T_i$]'
-            opts['file_name'] = run.fnames[ifile]+ '_tempi_yavg_vs_x'
-            plt_opts['color'] = gplot.mybluestd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tempi_yavg,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            # And one of its spline fit
-            opts['ylim'] = [np.amin(tempi_yavg_fit),np.amax(tempi_yavg_fit)]
-            opts['ylabel'] = '$\\langle\\delta T_i\\rangle_y$ [$\\rho_{{\\star}} T_i$]'
-            opts['file_name'] = run.fnames[ifile]+ '_tempi_yavg_spline_vs_x'
-            plt_opts['color'] = gplot.myredstd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tempi_yavg_fit,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            # And one of the derivative of its spline fit
-            opts['ylim'] = [-100,100]
-            opts['ylabel'] = '$-\\frac{1}{\\langle\\delta T_i\\rangle_y}\\frac{\\partial \\langle\\delta T_i\\rangle_y}{\\partial r_\\psi}$ [1/$\\rho_i$]'
-            opts['file_name'] = run.fnames[ifile]+ '_tprimi_yavg_spline_vs_x'
-            plt_opts['color'] = gplot.myredstd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tprimi_yavg_fit,
-                                       plot_options = plt_opts,
-                                       options = opts)
 
-            plt.rc('font', size=30)
+
+            # Update dict
+
+            to_add = { 'time_steady':mytime.time_steady,
+                       'xgrid':mygrids.xgrid,
+                       'ygrid':mygrids.ygrid }
+            mydict.update(to_add)
+            if make_mov_phi:
+                to_add = {'phi_full_fft':phi_full_fft}
+                mydict.update(to_add)
+            if make_mov_densi:
+                to_add = {'densi_full_fft':densi_full_fft}
+                mydict.update(to_add)
+            if make_mov_dense:
+                to_add = {'dense_full_fft':dense_full_fft}
+                mydict.update(to_add)
+            if make_mov_tempi:
+                to_add = {'tempi_full_fft':tempi_full_fft}
+                mydict.update(to_add)
+            if make_mov_tempe:
+                to_add = {'tempe_full_fft':tempe_full_fft}
+                mydict.update(to_add)
 
 
 
 
-        # Make 1D movies of zonal quantities vs x
-        if make_mov_zonal:
+            # Make 1D movies of y-averaged quantities
+            if make_mov_yavg:
 
-            # Options for 1D movies
-            plt_opts = {'marker': None,
-                        'linewidth': 2,
-                        'linestyle': '-'}
+                # Options for 1D movies
+                plt_opts = {'marker': None,
+                            'linewidth': 2,
+                            'linestyle': '-'}
 
-            opts = {'xlabel':'$x /\\rho_i$',
-                    'title':['$t={:.2f}$'.format(mytime.time[it])\
-                             +' [$a/v_{th}$]'\
-                             for it in range(mytime.it_min, mytime.it_max)],
-                    'xlim':[np.amin(mygrids.xgrid),np.amax(mygrids.xgrid)],
-                    'film_dir': run.out_dir,
-                    'grid': True,
-                    'fps': fps}
+                opts = {'xlabel':'$x /\\rho_i$',
+                        'title':['$t={:.2f}$'.format(mytime.time[it])\
+                                 +' [$a/v_{th}$]'\
+                                 for it in range(mytime.it_min, mytime.it_max)],
+                        'xlim':[np.amin(mygrids.xgrid),np.amax(mygrids.xgrid)],
+                        'film_dir': run.out_dir,
+                        'grid': True,
+                        'fps': fps}
 
-            plt.rc('font', size=18)
+                plt.rc('font', size=18)
 
-            # NDCTEST
-            #x = np.linspace(0,2*pi)
-            #nt = 100
-            #y = np.zeros((nt,x.size))
-            #for it in range(nt):
-            #    y[it,:] = np.sin(x+pi/nt*it)
-            #print('Done')
-            #
-            #pyfilm.make_film_1d(x, y, options={'encoder':'ffmpeg','file_name':'test'})
-            # NDCTEST
+                # Compute y-averaged ion temperature and fit it with splines
+                it_steady = 0
+                tempi_yavg = np.zeros((mytime.ntime_steady,mygrids.nx))
+                tempi_yavg_fit = np.zeros((mytime.ntime_steady,mygrids.nx))
+                tprimi_yavg_fit = np.zeros((mytime.ntime_steady,mygrids.nx))
+                splinerep_tempi_yavg = []
+                fac = myin['theta_grid_parameters']['qinp']/(myin['theta_grid_parameters']['rhoc']*myout['drhodpsi'])
+                for it in range(mytime.it_min,mytime.it_max):
+                    for ix in range(mygrids.nx):
+                        tempi_yavg[it_steady,ix] = simps(np.squeeze(tempi_full_fft[it_steady,ix,:]),mygrids.ygrid) \
+                                / (mygrids.ygrid[-1]-mygrids.ygrid[0])
+                    ft = np.squeeze(tempi_yavg[it_steady,:])
+                    spl_smooth = np.max(ft)/smoothfac
+                    splinerep_tempi_yavg.append(interpolate.splrep(mygrids.xgrid, ft, s=spl_smooth))
+                    tempi_yavg_fit[it_steady,:] = interpolate.splev(mygrids.xgrid, splinerep_tempi_yavg[-1])
+                    tprimi_yavg_fit[it_steady,:] = -1*fac/tempi_yavg_fit[it_steady,:] * \
+                            interpolate.splev(mygrids.xgrid, splinerep_tempi_yavg[-1], der=1)
+                    it_steady += 1
 
-            # Movie of zonal field vs x
-            opts['ylim'] = [np.amin(field_zonal),np.amax(field_zonal)]
-            opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
-            opts['file_name'] = run.fnames[ifile]+ '_zonal_field_vs_x'
-            plt_opts['color'] = gplot.mybluestd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, field_zonal,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            # And of its spline fit
-            opts['ylim'] = [np.amin(field_zonal_fit),np.amax(field_zonal_fit)]
-            opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
-            opts['file_name'] = run.fnames[ifile]+ '_zonal_field_spline_vs_x'
-            plt_opts['color'] = gplot.myredstd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, field_zonal_fit,
-                                       plot_options = plt_opts,
-                                       options = opts)
 
-            # Movie of zonal flow vs x
-            opts['ylim'] = [np.amin(flow_zonal),np.amax(flow_zonal)]
-            opts['ylabel'] = '$-\\sum_{k_x}ik_x\\hat{\\varphi}_{Z} e^{ik_x x}$ [$T_i/(ea)$]'
-            opts['file_name'] = run.fnames[ifile]+ '_zonal_flow_vs_x'
-            plt_opts['color'] = gplot.mybluestd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, flow_zonal,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            # And of its spline fit
-            opts['ylim'] = [np.amin(flow_zonal_fit),np.amax(flow_zonal_fit)]
-            opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
-            opts['file_name'] = run.fnames[ifile]+ '_zonal_flow_spline_vs_x'
-            plt_opts['color'] = gplot.myredstd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, flow_zonal_fit,
-                                       plot_options = plt_opts,
-                                       options = opts)
-
-            # Movie of zonal shear vs x
-            opts['ylim'] = [np.amin(shear_zonal),np.amax(shear_zonal)]
-            opts['ylabel'] = '$\\gamma_{Z}$ [$v_{th}/a$]'
-            opts['file_name'] = run.fnames[ifile]+ '_zonal_shear_vs_x'
-            plt_opts['color'] = gplot.mybluestd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid, shear_zonal,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            # Of its spline fit
-            opts['ylim'] = [np.amin(shear_zonal_fit),np.amax(shear_zonal_fit)]
-            opts['ylabel'] = '$\\gamma_{Z}$ [$v_{th}/a$]'
-            opts['file_name'] = run.fnames[ifile]+ '_zonal_shear_spline_vs_x'
-            plt_opts['color'] = gplot.myredstd
-            pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, shear_zonal_fit,
-                                       plot_options = plt_opts,
-                                       options = opts)
-            # And of its spline fit + gexb
-            if flow_shear:
-                opts['ylim'] = [np.amin(sheartot_zonal_fit),np.amax(sheartot_zonal_fit)]
-                opts['ylabel'] = '$\\gamma_{Z}+\\gamma_E$ [$v_{th}/a$]'
-                opts['file_name'] = run.fnames[ifile]+ '_zonal_sheartot_spline_vs_x'
+                # Make a movie of it
+                opts['ylim'] = [np.amin(tempi_yavg),np.amax(tempi_yavg)]
+                opts['ylabel'] = '$\\langle\\delta T_i\\rangle_y$ [$\\rho_{{\\star}} T_i$]'
+                opts['file_name'] = run.fnames[ifile]+ '_tempi_yavg_vs_x'
+                plt_opts['color'] = gplot.mybluestd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tempi_yavg,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                # And one of its spline fit
+                opts['ylim'] = [np.amin(tempi_yavg_fit),np.amax(tempi_yavg_fit)]
+                opts['ylabel'] = '$\\langle\\delta T_i\\rangle_y$ [$\\rho_{{\\star}} T_i$]'
+                opts['file_name'] = run.fnames[ifile]+ '_tempi_yavg_spline_vs_x'
                 plt_opts['color'] = gplot.myredstd
-                pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, sheartot_zonal_fit,
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tempi_yavg_fit,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                # And one of the derivative of its spline fit
+                opts['ylim'] = [-100,100]
+                opts['ylabel'] = '$-\\frac{1}{\\langle\\delta T_i\\rangle_y}\\frac{\\partial \\langle\\delta T_i\\rangle_y}{\\partial r_\\psi}$ [1/$\\rho_i$]'
+                opts['file_name'] = run.fnames[ifile]+ '_tprimi_yavg_spline_vs_x'
+                plt_opts['color'] = gplot.myredstd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid, tprimi_yavg_fit,
                                            plot_options = plt_opts,
                                            options = opts)
 
-            plt.rc('font', size=30)
+                plt.rc('font', size=30)
+
+
+
+
+            # Make 1D movies of zonal quantities vs x
+            if make_mov_zonal:
+
+                # Options for 1D movies
+                plt_opts = {'marker': None,
+                            'linewidth': 2,
+                            'linestyle': '-'}
+
+                opts = {'xlabel':'$x /\\rho_i$',
+                        'title':['$t={:.2f}$'.format(mytime.time[it])\
+                                 +' [$a/v_{th}$]'\
+                                 for it in range(mytime.it_min, mytime.it_max)],
+                        'xlim':[np.amin(mygrids.xgrid),np.amax(mygrids.xgrid)],
+                        'film_dir': run.out_dir,
+                        'grid': True,
+                        'fps': fps}
+
+                plt.rc('font', size=18)
+
+                # NDCTEST
+                #x = np.linspace(0,2*pi)
+                #nt = 100
+                #y = np.zeros((nt,x.size))
+                #for it in range(nt):
+                #    y[it,:] = np.sin(x+pi/nt*it)
+                #print('Done')
+                #
+                #pyfilm.make_film_1d(x, y, options={'encoder':'ffmpeg','file_name':'test'})
+                # NDCTEST
+
+                # Movie of zonal field vs x
+                opts['ylim'] = [np.amin(field_zonal),np.amax(field_zonal)]
+                opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
+                opts['file_name'] = run.fnames[ifile]+ '_zonal_field_vs_x'
+                plt_opts['color'] = gplot.mybluestd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid, field_zonal,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                # And of its spline fit
+                opts['ylim'] = [np.amin(field_zonal_fit),np.amax(field_zonal_fit)]
+                opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
+                opts['file_name'] = run.fnames[ifile]+ '_zonal_field_spline_vs_x'
+                plt_opts['color'] = gplot.myredstd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, field_zonal_fit,
+                                           plot_options = plt_opts,
+                                           options = opts)
+
+                # Movie of zonal flow vs x
+                opts['ylim'] = [np.amin(flow_zonal),np.amax(flow_zonal)]
+                opts['ylabel'] = '$-\\sum_{k_x}ik_x\\hat{\\varphi}_{Z} e^{ik_x x}$ [$T_i/(ea)$]'
+                opts['file_name'] = run.fnames[ifile]+ '_zonal_flow_vs_x'
+                plt_opts['color'] = gplot.mybluestd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid, flow_zonal,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                # And of its spline fit
+                opts['ylim'] = [np.amin(flow_zonal_fit),np.amax(flow_zonal_fit)]
+                opts['ylabel'] = '$\\varphi_{{Z}}$ [$\\rho_{{\\star}} T_i/e$]'
+                opts['file_name'] = run.fnames[ifile]+ '_zonal_flow_spline_vs_x'
+                plt_opts['color'] = gplot.myredstd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, flow_zonal_fit,
+                                           plot_options = plt_opts,
+                                           options = opts)
+
+                # Movie of zonal shear vs x
+                opts['ylim'] = [np.amin(shear_zonal),np.amax(shear_zonal)]
+                opts['ylabel'] = '$\\gamma_{Z}$ [$v_{th}/a$]'
+                opts['file_name'] = run.fnames[ifile]+ '_zonal_shear_vs_x'
+                plt_opts['color'] = gplot.mybluestd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid, shear_zonal,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                # Of its spline fit
+                opts['ylim'] = [np.amin(shear_zonal_fit),np.amax(shear_zonal_fit)]
+                opts['ylabel'] = '$\\gamma_{Z}$ [$v_{th}/a$]'
+                opts['file_name'] = run.fnames[ifile]+ '_zonal_shear_spline_vs_x'
+                plt_opts['color'] = gplot.myredstd
+                pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, shear_zonal_fit,
+                                           plot_options = plt_opts,
+                                           options = opts)
+                # And of its spline fit + gexb
+                if flow_shear:
+                    opts['ylim'] = [np.amin(sheartot_zonal_fit),np.amax(sheartot_zonal_fit)]
+                    opts['ylabel'] = '$\\gamma_{Z}+\\gamma_E$ [$v_{th}/a$]'
+                    opts['file_name'] = run.fnames[ifile]+ '_zonal_sheartot_spline_vs_x'
+                    plt_opts['color'] = gplot.myredstd
+                    pyfilm.pyfilm.make_film_1d(mygrids.xgrid_fine, sheartot_zonal_fit,
+                                               plot_options = plt_opts,
+                                               options = opts)
+
+                plt.rc('font', size=30)
 
 
 
