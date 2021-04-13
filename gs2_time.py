@@ -13,7 +13,6 @@ class timeobj:
 
         self.time = np.copy(myout['t'])
         self.ntime = self.time.size
-
         # get starting index for steady-state
         self.twin = twin
         self.it_min = int(ceil((1.0-twin)*self.ntime))
@@ -37,8 +36,9 @@ class timeobj:
         print('complete')
 
 
-    def timeavg(self,ft):
-
-        favg = simps(ft[self.it_min:self.it_max],x=self.time_steady) \
+    def timeavg(self,ft,axis=0):
+        time_slice =  [slice(None)] * ft.ndim
+        time_slice[axis] = slice(self.it_min, self.it_max)
+        favg = simps(ft[time_slice],x=self.time_steady,axis=axis) \
             / (self.time[self.it_max-1]-self.time[self.it_min])
         return favg

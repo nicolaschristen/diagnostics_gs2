@@ -18,14 +18,14 @@ import gs2_plotting as gplot
 import imageio
 import os
 import sys
+from scipy.special import j0
 def my_task_single(ifile, run, myin, myout):    
 
     # User parameters
     dump_at_start = 0.3 # fraction of initial time to dump when fitting
     
     # Name for data file to be written to/read from.
-    datfile_name = run.out_dir + run.fnames[ifile] + '.boxballoon.dat'
-    print(datfile_name) 
+    datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.boxballoon.dat'
     # Compute and save growthrate
     if not run.only_plot:
 
@@ -62,6 +62,9 @@ def my_task_single(ifile, run, myin, myout):
         
         dky = 1./myin['kt_grids_box_parameters']['y0']
         dkx = 2.*pi*abs(shat)*dky/jtwist
+        
+        phi2_by_mode_gs2 = myout['phi2_by_mode']                # Potential squared [t,ky,kx]
+
         phi_gs2 = myout['phi']      # Potential [ky,kx,theta,ri]
         phi2_gs2 = np.sqrt(phi_gs2[:,:,:,0]**2 + phi_gs2[:,:,:,1]**2)   # Potential squared [ky,kx,theta]
         theta = myout['theta']
@@ -72,6 +75,7 @@ def my_task_single(ifile, run, myin, myout):
             theta0[i] = np.concatenate((theta0_gs2[i,ikx_min:],theta0_gs2[i,:ikx_min]))
         kx = np.concatenate((kx_gs2[ikx_min:],kx_gs2[:ikx_min]))
         phi2 = np.concatenate((phi2_gs2[:,ikx_min:,:], phi2_gs2[:,:ikx_min,:]), axis=1)
+        phi2_by_mode = np.concatenate((phi2_by_mode_gs2[:,:,ikx_min:], phi2_by_mode_gs2[:,:,:ikx_min]), axis=2)
         # Lines to trim array of NaNs from running a linear sim for too long.
         #for it in range(nt):
         #    for ikx in range(nakx):
@@ -92,6 +96,8 @@ def my_task_single(ifile, run, myin, myout):
         bloonkxs = []
         bloonkperps = []
         bloondrifts = []
+        gammas = []
+
         # Construct a ballooning chain for each ky (Excluding ky=0 where iky = 0, so there is no ballooning chain)
         for iky in range(1,naky):
             bloontheta.append([])
@@ -100,11 +106,10 @@ def my_task_single(ifile, run, myin, myout):
             bloonkxs.append([])
             bloonkperps.append([])
             bloondrifts.append([])
+            gammas.append([])
             # Can have several ballooning chains, each with different theta0.
-            # The number of ballooning chains is determined by iky*jtwist
-            it = 0
-            for itheta0 in range(iky*jtwist):
-                print(itheta0)
+            # The number of ballooning chains is iky*jtwist - 1. 
+            for itheta0 in range(iky*jtwist):           # (nb we excluded iky=0)
                 bloontheta[iky-1].append([])
                 bloonphi2[iky-1].append([])
                 bloonikxs[iky-1].append([])
@@ -116,26 +121,27 @@ def my_task_single(ifile, run, myin, myout):
                 Nmax = (nakx-(ikx0+1+itheta0))//(iky*jtwist)
                 # Make array of indices of kx that contribute to the chain.
                 ikxs = list(np.linspace(ikx0 + itheta0 + iky*jtwist*Nmin, ikx0 + itheta0 + iky*jtwist*Nmax, Nmax-Nmin+1, dtype = int))
+                # All parts of a ballooning chain grow at same rate once mode has formed.
+                gammas[iky-1].append(get_growthrate(t,phi2_by_mode,it_start,nt,iky,ikxs[0]))
                 kxs = kx[ikxs]
                 theta0s = theta0[iky,ikxs]
-                bloonikxs[iky-1][it].extend(ikxs)
-                bloonkxs[iky-1][it].extend(kxs)
+                bloonikxs[iky-1][itheta0].extend(ikxs)
+                bloonkxs[iky-1][itheta0].extend(kxs)
                 if shat>0.:
                     Ncounter = Nmax
                 else:
                     Ncounter = Nmin
                 for iikx in range(len(ikxs)):
-                    bloontheta[iky-1][it].append([])
-                    bloonphi2[iky-1][it].append([])
-                    bloonkperps[iky-1][it].append([])
-                    bloondrifts[iky-1][it].append([])
+                    bloontheta[iky-1][itheta0].append([])
+                    bloonphi2[iky-1][itheta0].append([])
+                    bloonkperps[iky-1][itheta0].append([])
+                    bloondrifts[iky-1][itheta0].append([])
                     for itheta in range(ntheta):
-                        bloontheta[iky-1][it][iikx].append( theta[itheta] + 2*pi*Ncounter)
-                        bloonphi2[iky-1][it][iikx].append( phi2[iky,ikxs[iikx],itheta] )
-                        bloonkperps[iky-1][it][iikx].append( ky[iky]**2 * (gds2[itheta] + 2*theta0s[iikx]*gds21[itheta] + theta0s[iikx]**2 * gds22[itheta]) )
-                        bloondrifts[iky-1][it][iikx].append( ky[iky] * (gbdrift[itheta] + cvdrift[itheta] + shat*theta0s[iikx]*(gbdrift0[itheta] + cvdrift0[itheta])) )
+                        bloontheta[iky-1][itheta0][iikx].append( theta[itheta] + 2*pi*Ncounter)
+                        bloonphi2[iky-1][itheta0][iikx].append( phi2[iky,ikxs[iikx],itheta] )
+                        bloonkperps[iky-1][itheta0][iikx].append( ky[iky] * np.sqrt((gds2[itheta] + 2*theta0s[iikx]*gds21[itheta] + theta0s[iikx]**2 * gds22[itheta])) )
+                        bloondrifts[iky-1][itheta0][iikx].append( ky[iky] * (gbdrift[itheta] + cvdrift[itheta] + shat*theta0s[iikx]*(gbdrift0[itheta] + cvdrift0[itheta])) )
                     Ncounter -= np.sign(shat)
-                it += 1  
         
         my_vars = {}
         my_vars['kx'] = kx
@@ -146,6 +152,7 @@ def my_task_single(ifile, run, myin, myout):
         my_vars['bloonkxs'] = bloonkxs
         my_vars['bloonkperps'] = bloonkperps
         my_vars['bloondrifts'] = bloondrifts
+        my_vars['gammas'] = gammas
         with open(datfile_name, 'wb') as outfile: # 'wb' stands for write bytes
             pickle.dump(my_vars,outfile)
 
@@ -156,7 +163,15 @@ def my_task_single(ifile, run, myin, myout):
 
     if not run.no_plot:
         plot(ifile, run, my_vars)
-     
+
+def get_growthrate(t,phi2,it_start,it_end,iky,ikx):
+    # OB 031018 ~ Growth rate is half of the gradient of log(phi2)  
+    popt, pcov = opt.curve_fit(lin_func, t[it_start:it_end], np.log(phi2[it_start:it_end,iky,ikx]))
+    return popt[0]/2
+
+def lin_func(x,a,b):
+    return a*x+b
+
 def plot(ifile, run, my_vars):
     bloontheta = my_vars['bloontheta']
     bloonphi2 = my_vars['bloonphi2']
@@ -166,56 +181,98 @@ def plot(ifile, run, my_vars):
     bloondrifts = my_vars['bloondrifts']
     kx = my_vars['kx'] 
     ky = my_vars['ky']
-
+    gammas = my_vars['gammas']
     tmp_pdf_id = 1
     pdflist = []
     if bloontheta is not None and bloonphi2 is not None:
         for iky in range(1,len(ky)):
             # Plot ballooning chain for each ky. Start with just a single ky for testing.
-            it = 0
-            if len(bloonikxs[iky-1]) > 1:
-                dbloonkx = bloonkxs[iky-1][it][1]-bloonkxs[iky-1][it][0]
-                dbloonikx = bloonikxs[iky-1][it][1]-bloonikxs[iky-1][it][0]
-                bloonkxs[iky-1][it].append(bloonkxs[iky-1][it][-1] + dbloonkx)
-                cmap = matplotlib.cm.get_cmap('nipy_spectral',len(bloonkxs[iky-1][it])-1)
-                print(bloonkxs[iky-1][it])
-                norm = matplotlib.colors.BoundaryNorm(np.array(bloonkxs[iky-1][it])-dbloonkx/2.0,len(bloonkxs[iky-1][it]))
-                sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
-                sm.set_array([])
-                # Make dummie mappable
-                dummy_cax = plt.scatter(bloonkxs[iky-1][it], bloonkxs[iky-1][it], c=bloonkxs[iky-1][it], cmap=cmap)
-                # Clear axis
-                plt.cla()
-                title = '$|\phi|^2$ for ballooning chain with $k_y={:1.2f}$'.format(ky[iky])
-                del bloonkxs[iky-1][it][-1]
-            else:
-                cmap = matplotlib.cm.get_cmap('nipy_spectral',2)
-                title = '$|\phi|^2$ for ballooning chain with $k_y={:1.2f}$'.format(ky[iky]) + ' and $k_x = {:1.2f}$'.format(bloonkxs[iky-1][it][0])
-            fig = plt.figure(figsize=(12,8))
-            for iikx in range(len(bloonikxs[iky-1][it])):
-                plt.gca().plot(bloontheta[iky-1][it][iikx], bloonphi2[iky-1][it][iikx]/np.max(np.max(bloonphi2[iky-1][it])), color = cmap(iikx))
-                plt.gca().plot(bloontheta[iky-1][it][iikx], bloonkperps[iky-1][it][iikx]/np.max(np.max(bloonkperps[iky-1][it])), color = cmap(iikx), linestyle='dashed')
-                plt.gca().plot(bloontheta[iky-1][it][iikx], bloondrifts[iky-1][it][iikx]/np.max(np.max(bloondrifts[iky-1][it])), color = cmap(iikx), linestyle=':')
-            plt.title(title)
-            plt.grid()
-            plt.xlabel('$\\theta$')
-            if len(bloonikxs[iky-1]) > 1:
-                cbar_ax = fig.add_axes([1.0, 0.1, 0.03, 0.8])
-                if len(bloonikxs[iky-1]) > 25:
-                    ticks = bloonkxs[iky-1][it][::2]
+            itheta0set = [0] # range(len(bloonkxs[iky-1]))
+            for itheta0 in itheta0set:
+                if len(bloonikxs[iky-1]) > 1:
+                    dbloonkx = bloonkxs[iky-1][itheta0][1]-bloonkxs[iky-1][itheta0][0]
+                    dbloonikx = bloonikxs[iky-1][itheta0][1]-bloonikxs[iky-1][itheta0][0]
+                    bloonkxs[iky-1][itheta0].append(bloonkxs[iky-1][itheta0][-1] + dbloonkx)
+                    cmap = matplotlib.cm.get_cmap('nipy_spectral',len(bloonkxs[iky-1][itheta0])-1)
+                    print(bloonkxs[iky-1][itheta0])
+                    norm = matplotlib.colors.BoundaryNorm(np.array(bloonkxs[iky-1][itheta0])-dbloonkx/2.0,len(bloonkxs[iky-1][itheta0]))
+                    sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
+                    sm.set_array([])
+                    # Make dummie mappable
+                    dummy_cax = plt.scatter(bloonkxs[iky-1][itheta0], bloonkxs[iky-1][itheta0], c=bloonkxs[iky-1][itheta0], cmap=cmap)
+                    # Clear axis
+                    plt.cla()
+                    title = '$|\phi|^2$ for ballooning chain with $k_y={:1.2f}$'.format(ky[iky])
+                    del bloonkxs[iky-1][itheta0][-1]
                 else:
-                    ticks = bloonkxs[iky-1][it]
-                skipxlabel = len(bloonkxs[iky-1]) // 10
-                if skipxlabel > 1:
-                    for label in plt.gca().xaxis.get_ticklabels()[::skipxlabel]:
-                        label.set_visible(False) 
-            
-                fig.colorbar(sm, cax = cbar_ax, ticks=ticks, format='%.1f', orientation='vertical')
-                cbar_ax.set_title('$k_x$')
-            tmp_pdfname = 'tmp'+str(tmp_pdf_id)
-            gplot.save_plot(tmp_pdfname, run, ifile)
-            pdflist.append(tmp_pdfname)
-            tmp_pdf_id = tmp_pdf_id+1
+                    cmap = matplotlib.cm.get_cmap('nipy_spectral',2)
+                    title = '$|\phi|^2$ for ballooning chain with $k_y={:1.2f}$'.format(ky[iky]) + ' and $k_x = {:1.2f}$'.format(bloonkxs[iky-1][it][0])
+                fig = plt.figure(figsize=(12,8))
+                for iikx in range(len(bloonikxs[iky-1][itheta0])):
+                    plt.gca().plot(bloontheta[iky-1][itheta0][iikx], bloonphi2[iky-1][itheta0][iikx]/np.max(np.max(bloonphi2[iky-1][itheta0])), color = cmap(iikx))
+                    plt.gca().plot(bloontheta[iky-1][itheta0][iikx], j0(bloonkperps[iky-1][itheta0][iikx]), color = cmap(iikx), linestyle='dashed')
+                    plt.gca().plot(bloontheta[iky-1][itheta0][iikx], bloondrifts[iky-1][itheta0][iikx]/np.max(np.max(bloondrifts[iky-1][itheta0])), color = cmap(iikx), linestyle=':')
+                plt.title(title)
+                plt.grid()
+                plt.xlabel('$\\theta$')
+                if len(bloonikxs[iky-1]) > 1:
+                    cbar_ax = fig.add_axes([1.0, 0.1, 0.03, 0.8])
+                    if len(bloonikxs[iky-1]) > 25:
+                        ticks = bloonkxs[iky-1][itheta0][::2]
+                    else:
+                        ticks = bloonkxs[iky-1][itheta0]
+                    skipxlabel = len(bloonkxs[iky-1]) // 10
+                    if skipxlabel > 1:
+                        for label in plt.gca().xaxis.get_ticklabels()[::skipxlabel]:
+                            label.set_visible(False) 
+                
+                    fig.colorbar(sm, cax = cbar_ax, ticks=ticks, format='%.1f', orientation='vertical')
+                    cbar_ax.set_title('$k_x$')
+                tmp_pdfname = 'tmp'+str(tmp_pdf_id)
+                gplot.save_plot(tmp_pdfname, run, ifile)
+                pdflist.append(tmp_pdfname)
+                tmp_pdf_id = tmp_pdf_id+1
         merged_pdfname = 'box_ballooning'
         gplot.merge_pdfs(pdflist, merged_pdfname, run, ifile)
+
+        # Plot linear growth rates.
+        if len(ky) == 2:
+            # If only one finite ky, plot line for this ky vs kx.
+            fig = plt.figure(figsize=(12,8))
+            ax = fig.gca()
+            kxs  = [ bloonkxs[0][i][ (len(bloonkxs[0][0])-1)//2 ] for i in range(len(bloonkxs[0])) ]
+            gplot.plot_1d(kxs, gammas[0], '$k_x$', axes=ax, ylab=r'$\gamma\frac{a}{v_{t}}$')
+            gplot.save_plot('box_growthrates', run, ifile)
+        else:
+            # If multiple finite ky, plot 2d colormap with kx vs ky.
+            print("Not implemented yet!")            
+            
+   # Scans in linear growth rates, changing in two parameters, x and y.
+def kyscan(run):
+ # Only execute if plotting
+    if run.no_plot:
+        return
+    Nfile = len(run.fnames)
+
+    # Init arrays of data used in scan.
+    full_bb = [dict() for ifile in range(Nfile)]
+    
+    # Get boxballoon data from .dat file.
+    for ifile in range(Nfile):
+        datfile_name = run.work_dir + run.dirs[ifile] + run.out_dir + run.files[ifile] + '.boxballoon.dat'
+        with open(datfile_name,'rb') as datfile:
+            full_bb[ifile] = pickle.load(datfile)
+    
+    ky = sorted(list(set( [full_bb[ifile]['ky'][1] for ifile in range(Nfile)] )))
+    print("ky values: " + str(ky))
+    gammas = np.zeros(( len(ky) ))
+    kys = np.zeros(( len(ky) ))
+    for ifile in range(Nfile):
+        gammas[ifile] = full_bb[ifile]['gammas'][0][0]
+        kys[ifile] = full_bb[ifile]['ky'][1]
+    pdflist = [] 
+    tmp_pdf_id=0
+    gplot.plot_1d(kys, gammas, 'ky')
+    gplot.save_plot('ky_scan', run, None)
+    
 

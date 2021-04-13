@@ -6,18 +6,43 @@ out_varnames = [
         't', 'kx', 'ky',
         'theta', 'theta0',
         'phi',
+        'apar',
+        'bpar',
         # modulus squared, avged over theta, kx and ky [t]
         'phi2',
         # modulus squared, avged over theta [t,ky,kx]
         'phi2_by_mode',
         # modulus squared, avged over theta and kx [t,ky]
         'phi2_by_ky',
+        # modulus squared, avged over theta and ky [t,kx]
+        'phi2_by_kx',
+        # modulus squared, avged over theta, kx and ky [t]
+        'apar2',
+        # modulus squared, avged over theta [t,ky,kx]
+        'apar2_by_mode',
+        # modulus squared, avged over theta and kx [t,ky]
+        'apar2_by_ky',
+        # modulus squared, avged over theta and ky [t,kx]
+        'apar2_by_kx',
+        # modulus squared, avged over theta, kx and ky [t]
+        'bpar2',
+        # modulus squared, avged over theta [t,ky,kx]
+        'bpar2_by_mode',
+        # modulus squared, avged over theta and kx [t,ky]
+        'bpar2_by_ky',
+        # modulus squared, avged over theta and ky [t,kx]
+        'bpar2_by_kx',
         # complex potential fluctuation [t,ky,kx,theta,imag]
         'phi_t',
+        # complex parallel magnetic potential fluctuation [t,ky,kx,theta,ri]
+        'apar_t',
+        # complex parallel magnetic field fluctuation [t,ky,kx,theta,ri]
+        'bpar_t',
         # complex frequency [t,ky,kx,imag]
         'omega',
         # complex frequency avged over navg time-steps [t,ky,kx,imag]
         'omega_average',
+        
         # electrostatic particle flux [t,spec]
         'es_part_flux',
         # electrostatic heat flux [t,spec]
@@ -32,6 +57,33 @@ out_varnames = [
         'es_heat_flux_by_mode',
         # electrostatic momentum flux by k [t,spec,ky,kx]
         'es_mom_flux_by_mode',
+        
+        # electromagnetic (apar) particle flux [t,spec]
+        'apar_part_flux',
+        # electromagnetic (apar) heat flux [t,spec]
+        'apar_heat_flux',
+        # electromagnetic (apar) momentum flux [t,spec]
+        'apar_mom_flux',
+        # electromagnetic (apar) particle flux by k [t,spec,ky,kx]
+        'apar_part_flux_by_mode',
+        # electromagnetic (apar) heat flux by k [t,spec,ky,kx]
+        'apar_heat_flux_by_mode',
+        # electromagnetic (apar) momentum flux by k [t,spec,ky,kx]
+        'apar_mom_flux_by_mode',
+      
+        # electromagnetic (bpar) particle flux [t,spec]
+        'bpar_part_flux',
+        # electromagnetic (bpar) heat flux [t,spec]
+        'bpar_heat_flux',
+        # electromagnetic (bpar) momentum flux [t,spec]
+        'bpar_mom_flux',
+        # electromagnetic (bpar) particle flux by k [t,spec,ky,kx]
+        'bpar_part_flux_by_mode',
+        # electromagnetic (bpar) heat flux by k [t,spec,ky,kx]
+        'bpar_heat_flux_by_mode',
+        # electromagnetic (bpar) momentum flux by k [t,spec,ky,kx]
+        'bpar_mom_flux_by_mode',
+        
         # parallel velocity grid
         'vpa',
         # electrostatic particle flux function of vpa and theta [t,spec,vpa,theta]
@@ -56,9 +108,8 @@ out_varnames = [
         'gbdrift',
         'cvdrift',
         'gbdrift0',
-        'cvdrift0',
-        'bmag',
-        'apar'
+        'cvdrift0'
+#        'bmag',
         ]
 
 def get_output(ifile, run):
@@ -78,7 +129,7 @@ def get_output(ifile, run):
         get_single_output(ncfile, 'phi0', myout, 'phi_igomega_by_mode')
     
     marconi_crashed = False
-    indices_to_delete = [myout['t'].size-2, myout['t'].size-1] # for ollie_badshear_old_id_3
+    indices_to_delete = np.arange(myout['t'].size-100, myout['t'].size)
     if(marconi_crashed):
         myout['t'] = np.delete(myout['t'],indices_to_delete)
         myout['phi2'] = np.delete(myout['phi2'],indices_to_delete)

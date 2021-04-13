@@ -1,9 +1,9 @@
 import numpy as np
 import numpy.fft as fft
 import scipy.special as sp
-import matplotlib as mpl
-from matplotlib import pyplot as plt
-from matplotlib import rcParams
+#import matplotlib as mpl
+#from matplotlib import pyplot as plt
+#from matplotlib import rcParams
 
 from gs2_fft import gs2fft
 
@@ -146,14 +146,3 @@ def form_complex(varname, myout, outdim):
     return arr
 
 
-def plot_power_spectrum(myfields, mytime):
-
-    xlab = '$\omega$'
-    fig = plt.figure(figsize=(12,8))
-    plt.plot(mytime.frequency, myfields.Ex_power_spectrum,label='$E_x$')
-    plt.plot(mytime.frequency, myfields.Ey_power_spectrum,label='$E_y$')
-    plt.xlabel(xlab)
-    plt.yscale('log')
-    plt.legend()
-    
-    return fig

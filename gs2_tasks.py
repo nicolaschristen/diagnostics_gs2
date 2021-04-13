@@ -14,7 +14,9 @@ import floquet
 import lingrowth
 import potential
 import boxballoon
-
+import real
+import wzonal
+import range_phi
 
 # Complete part of tasks that require a single in/out pair of files.
 
@@ -53,14 +55,17 @@ import boxballoon
 
 def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfields, mytxt, task_space):
 
-    if (task == 'fluxes'):
-       
+    if (task in ['fluxes']):#,'tri_kap_nl']):
+        
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
 
     if (task == 'fluxes_stitch'):
        
         stitching = True
         fluxes.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields,stitching)
+
+    if (task == 'along_tube'):
+        along_tube.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
 
     if (task == 'zonal'):
 
@@ -79,20 +84,26 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 
     if (task == 'floquet'):
 
-        floquet.my_task_single(ifile, run, myin, myout, task_space)
+        floquet.my_task_single(ifile, run, myin, myout, mytime, task_space)
 
-    if (task == 'lingrowth'):
+    if (task in ['lingrowth','tri_kap_lin' , 'kap_lin', 'bprim_lin', 'lin_compare']):
 
         lingrowth.my_task_single(ifile, run, myin, myout)
 
     if (task == 'potential'):
 
-        potential.my_task_single(ifile, run, myin, myout, mygrids, mytime)
+        potential.my_task_single(ifile, run, myin, myout, mygrids)
+    
+    if (task == 'real'):
+        real.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
 
+    if task == 'wzonal':
+        wzonal.my_single_task(ifile,run,myin,myout,mygrids,mytime,myfields)
+
+    if (task == 'range_pot'):
+        range_phi.my_task_single(ifile, run, myin, myout)
     if (task == 'boxballoon'):
-
-        boxballoon.my_task_single(ifile, run, myin, myout)
-
+        boxballoon.my_task_single(ifile,run,myin,myout)
 # Complete part of tasks that require the collection of in/out pairs (e.g. plotting a parameter scan).
 
 # TODO: add a case for 'your_task' in the function complete_task_scan below and execute the
@@ -112,17 +123,89 @@ def complete_task_single(ifile, task, run, myin, myout, mygrids, mytime, myfield
 def complete_task_scan(task, run, full_space):
 
     if (task in ('basic','fluxes','zonal','tcorr')):
-        
         return
+    
+    # OB ~ Scan in triangularity and elongation.
+    if (task == 'tri_kap_nl'):
+        fluxes.trikap(run)
+    elif (task == 'beta_kap_lin'):
+        lingrowth.betakap(run)
+    elif (task == 'tri_kap_lin'):
+        lingrowth.trikap(run)
+    elif (task=='kap_lin'):
+        lingrowth.kap(run)
+    elif (task=='bprim_lin'):
+        lingrowth.bprim(run)
+    if (task == 'lin_compare'):
+        lingrowth.compare(run)
 
     if (task == 'flowtest'):
 
         flowtest.plot(run, full_space)
 
-    if (task == 'floquet_scan'):
-
-        floquet.task_scan(run, full_space)
-
     if (task == 'fluxes_stitch'):
        
         fluxes.stitching_fluxes(run)
+    if (task == 'compare_phit'):
+        fluxes.compare_time_traces(run)
+    if (task == 'resolution'):
+        fluxes.compare_flux_tavg(run)
+
+    if task == 'box_scan':
+        boxballoon.kyscan(run)
+    
+    elif '_scan' in task:
+        if task.count('_') == 1:
+            range_phi.scan1d(run,task[:task.index('_')])
+            return
+        elif task.count('_') == 2:
+            x = task[:task.index('_')]
+            task = task[(task.index('_')+1):]
+            y = task[:task.index('_')]
+            range_phi.scan2d(run,x,y)
+    elif '_fsscan' in task:
+        if task.count('_') == 1:
+            floquet.scan1d(run,task[:task.index('_')])
+            return
+        elif task.count('_') == 2:
+            x = task[:task.index('_')]
+            task = task[(task.index('_')+1):]
+            y = task[:task.index('_')] 
+            floquet.scan2d(run,x,y)
+    elif 'linflxcompare' in task:
+        range_phi.compare_fluxes(run)
+    elif 'flxcompare' in task:
+        fluxes.compare_fluxes(run)
+    elif '_compare' in task:
+        task = task[:task.rfind('_')]
+        jobs = []
+        sameplot = []        
+        while '_' in task or '-' in task:
+            # Sort frome end to avoid -1 errors from task.find()
+            ichar = max(task.rfind('-'), task.rfind('_'))
+            split = task[ichar] == '_'
+            sameplot.append(task[(ichar+1):])
+            task = task[:ichar]
+            if split:
+                jobs.append(sameplot[::-1])
+                sameplot = []
+        sameplot.append(task)
+        jobs.append(sameplot[::-1])
+        range_phi.compare(run, jobs[::-1])
+    elif '_nlcompare' in task:
+        task = task[:task.rfind('_')]
+        jobs = []
+        sameplot = []        
+        while '_' in task or '-' in task:
+            # Sort frome end to avoid -1 errors from task.find()
+            ichar = max(task.rfind('-'), task.rfind('_'))
+            split = task[ichar] == '_'
+            sameplot.append(task[(ichar+1):])
+            task = task[:ichar]
+            if split:
+                jobs.append(sameplot[::-1])
+                sameplot = []
+        sameplot.append(task)
+        jobs.append(sameplot[::-1])
+        fluxes.compare(run, jobs[::-1])
+
